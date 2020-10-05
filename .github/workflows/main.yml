@@ -65,7 +65,7 @@ jobs:
     name: ✨ Deploy
     needs: [ test, build ]
     runs-on: ubuntu-latest
-#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
