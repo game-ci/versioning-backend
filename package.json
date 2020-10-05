@@ -1,0 +1,27 @@
+{
+  "name": "versioning-backend",
+  "version": "1.0.0",
+  "description": "Stateful backend to keep track of unity versions and docker build queues",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Unity-CI/versioning-backend.git"
+  },
+  "keywords": [
+    "unity",
+    "ci",
+    "versioning"
+  ],
+  "author": "Unity CI",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Unity-CI/versioning-backend/issues"
+  },
+  "homepage": "https://github.com/Unity-CI/versioning-backend#readme",
+  "dependencies": {
+    "prettier": "^2.1.2"
+  }
+}
