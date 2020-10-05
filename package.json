@@ -4,7 +4,8 @@
   "description": "Stateful backend to keep track of unity versions and docker build queues",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\" \"functions/src/**/*.{js,jsx,ts,tsx}\"",
+    "test": "echo \"No tests yet, feel free to add\" && exit 0"
   },
   "repository": {
     "type": "git",
