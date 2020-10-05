@@ -27,11 +27,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: install dependencies
-        run: npm install && npm --prefix ./functions install ./functions && ls -alph ./functions
+        run: npm install && npm --prefix ./functions install ./functions
       - name: run linter
-        run: npm run lint
+        run: npm run lint && npm --prefix ./functions run lint
       - name: run tests
-        run: npm run test && npm run test --prefix functions
+        run: npm run test && npm --prefix ./functions run test
 #      - name: Upload test results
 #        uses: actions/upload-artifact@v1
 #        with:
@@ -59,7 +59,7 @@ jobs:
       - name: install dependencies
         run: npm install && npm --prefix ./functions install ./functions
       - name: build
-        run: npm run build --prefix functions
+        run: npm --prefix functions run build
 
   deploy:
     name: ✨ Deploy
