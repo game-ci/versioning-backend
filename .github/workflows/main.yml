@@ -27,7 +27,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: install dependencies
-        run: npm install && npm --prefix ./functions install ./functions && ls -alph
+        run: npm install && npm --prefix ./functions install ./functions && ls -alph ./functions
       - name: run linter
         run: npm run lint
       - name: run tests
@@ -84,6 +84,6 @@ jobs:
       - name: install dependencies
         run: npm install && npm --prefix ./functions install ./functions
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v1.1.0
+        uses: w9jds/firebase-action@v1.5.0
         with:
           args: deploy
