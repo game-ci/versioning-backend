@@ -27,7 +27,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: install dependencies
-        run: npm install && npm install --prefix functions
+        run: npm install && npm --prefix ./functions install ./functions && ls -alph
       - name: run linter
         run: npm run lint
       - name: run tests
@@ -57,7 +57,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: install dependencies
-        run: npm install && npm install --prefix functions
+        run: npm install && npm --prefix ./functions install ./functions
       - name: build
         run: npm run build --prefix functions
 
@@ -65,7 +65,7 @@ jobs:
     name: ✨ Deploy
     needs: [ test, build ]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
@@ -82,7 +82,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - name: install dependencies
-        run: npm install && npm install --prefix functions
+        run: npm install && npm --prefix ./functions install ./functions
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@v1.1.0
         with:
