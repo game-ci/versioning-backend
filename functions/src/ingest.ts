@@ -7,7 +7,7 @@ const Browser = require('./services/browser');
  * Based on https://github.com/BLaZeKiLL/unity-scraper
  */
 export const ingest = functions
-  .runWith({ memory: '512MB' })
+  .runWith({ memory: '512MB', timeoutSeconds: 90 })
   .https.onRequest(async (request: Request, response: any) => {
     const browser = await Browser.getInstance();
 
