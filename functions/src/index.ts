@@ -1,3 +1,4 @@
 const { helloWorld } = require('./helloWorld');
+const { ingest } = require('./ingest');
 
-exports.helloWorld = helloWorld;
+export { helloWorld, ingest };
