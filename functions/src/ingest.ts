@@ -12,7 +12,6 @@ export const ingest = functions.https.onRequest(async (request: Request, respons
 
     const document = await getDocumentFromUrl(archiveUrl);
     const versionInfo = Array.from(
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
       document.querySelectorAll('.unityhub') as NodeListOf<HTMLAnchorElement>,
       (a) => {
         const link = a.href.replace('unityhub://', '');
