@@ -11,5 +11,5 @@ export const onItemCreated = functions.firestore
     // Todo - Lock record on successful dispatch
 
     const newValue = snap.data();
-    firebase.logger.info(newValue);
+    firebase.logger.info('buildQueue item created', newValue);
   });
