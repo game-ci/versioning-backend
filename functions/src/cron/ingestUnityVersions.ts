@@ -1,11 +1,7 @@
 import { EventContext } from 'firebase-functions';
 import { firebase, functions } from '../config/firebase';
 import { scrapeVersionInfoFromUnity } from '../logic/scrapeVersionInfoFromUnity';
-import {
-  getVersionInfoList,
-  updateVersionInfoFromList,
-  UnityVersionInfo,
-} from '../model/unityVersionInfo';
+import { UnityVersionInfo } from '../model/unityVersionInfo';
 import { generateBuildQueueFromNewVersionInfoList } from '../logic/generateBuildQueueFromNewVersionInfo';
 
 export const ingestUnityVersions = functions.pubsub
@@ -13,7 +9,7 @@ export const ingestUnityVersions = functions.pubsub
   .onRun(async (context: EventContext) => {
     try {
       const scrapedInfoList = await scrapeVersionInfoFromUnity();
-      const currentInfoList = await getVersionInfoList();
+      const currentInfoList = await UnityVersionInfo.getAll();
       const currentVersions = currentInfoList.map((currentInfo) => currentInfo.version);
 
       const newInfoList: UnityVersionInfo[] = [];
@@ -23,7 +19,7 @@ export const ingestUnityVersions = functions.pubsub
         }
       });
 
-      await updateVersionInfoFromList(scrapedInfoList);
+      await UnityVersionInfo.updateMany(scrapedInfoList);
       firebase.logger.info('Version information was successfully updated.');
 
       if (newInfoList.length <= 0) {
