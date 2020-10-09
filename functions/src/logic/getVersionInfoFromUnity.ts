@@ -9,18 +9,21 @@ const UNITY_ARCHIVE_URL = 'https://unity3d.com/get-unity/download/archive';
 export const getVersionInfoFromUnity = async (): Promise<VersionInfo[]> => {
   const document = await getDocumentFromUrl(UNITY_ARCHIVE_URL);
 
-  const versionInfo = Array.from(
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    document.querySelectorAll('.unityhub') as NodeListOf<HTMLAnchorElement>,
-    (a) => {
-      const link = a.href.replace('unityhub://', '');
+  const links = Array.from(document.querySelectorAll('a.unityhub[href]'));
+  const hrefs = links.map((a) => a.getAttribute('href')) as string[];
 
-      return {
-        version: link.split('/')[0],
-        changeSet: link.split('/')[1],
-      };
-    },
-  );
+  const versionInfoList = hrefs.map((href) => {
+    const [version, changeSet] = href.split('/');
+    const [major, minor, patch] = version.split('.');
 
-  return versionInfo;
+    return {
+      version,
+      changeSet,
+      major: Number(major),
+      minor: Number(minor),
+      patch,
+    };
+  });
+
+  return versionInfoList;
 };
