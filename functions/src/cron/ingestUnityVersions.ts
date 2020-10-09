@@ -1,18 +1,22 @@
 import { EventContext } from 'firebase-functions';
 import { firebase, functions } from '../config/firebase';
-import { getVersionInfoFromUnity } from '../logic/getVersionInfoFromUnity';
-import { getVersionInfoList, updateVersionInfoFromList, VersionInfo } from '../model/versionInfo';
+import { scrapeVersionInfoFromUnity } from '../logic/scrapeVersionInfoFromUnity';
+import {
+  getVersionInfoList,
+  updateVersionInfoFromList,
+  UnityVersionInfo,
+} from '../model/unityVersionInfo';
 import { generateBuildQueueFromNewVersionInfoList } from '../logic/generateBuildQueueFromNewVersionInfo';
 
 export const ingestUnityVersions = functions.pubsub
   .schedule('every 30 minutes')
   .onRun(async (context: EventContext) => {
     try {
-      const scrapedInfoList = await getVersionInfoFromUnity();
+      const scrapedInfoList = await scrapeVersionInfoFromUnity();
       const currentInfoList = await getVersionInfoList();
       const currentVersions = currentInfoList.map((currentInfo) => currentInfo.version);
 
-      const newInfoList: VersionInfo[] = [];
+      const newInfoList: UnityVersionInfo[] = [];
       scrapedInfoList.forEach((scrapedInfo) => {
         if (!currentVersions.includes(scrapedInfo.version)) {
           newInfoList.push(scrapedInfo);

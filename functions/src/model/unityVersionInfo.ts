@@ -3,7 +3,7 @@ import Timestamp = admin.firestore.Timestamp;
 
 const COLLECTION = 'unityVersions';
 
-export interface VersionInfo {
+export interface UnityVersionInfo {
   version: string;
   changeSet: string;
   major: number;
@@ -13,7 +13,7 @@ export interface VersionInfo {
   modifiedDate?: Timestamp;
 }
 
-export const getVersionInfoList = async (): Promise<VersionInfo[]> => {
+export const getVersionInfoList = async (): Promise<UnityVersionInfo[]> => {
   const snapshot = await db
     .collection(COLLECTION)
     .orderBy('major', 'desc')
@@ -21,10 +21,10 @@ export const getVersionInfoList = async (): Promise<VersionInfo[]> => {
     .orderBy('patch', 'desc')
     .get();
 
-  return snapshot.docs.map((doc) => doc.data()) as VersionInfo[];
+  return snapshot.docs.map((doc) => doc.data()) as UnityVersionInfo[];
 };
 
-export const updateVersionInfoFromList = async (versionInfoList: VersionInfo[]) => {
+export const updateVersionInfoFromList = async (versionInfoList: UnityVersionInfo[]) => {
   try {
     const batch = db.batch();
 
