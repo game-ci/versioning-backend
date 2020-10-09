@@ -1,6 +1,6 @@
 import { EventContext } from 'firebase-functions';
 import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
-import { firebase, functions } from '../shared';
+import { firebase, functions } from '../config/firebase';
 
 export const onItemCreated = functions.firestore
   .document('buildQueue/{itemId}')

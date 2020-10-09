@@ -1,4 +1,4 @@
-import { firebase, functions } from '../shared';
+import { firebase, functions } from '../config/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 

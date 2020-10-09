@@ -3,7 +3,7 @@
 
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
-import { firebase, functions } from '../shared';
+import { firebase, functions } from '../config/firebase';
 
 export const authorise = functions.https.onRequest((request: Request, response: Response) => {
   firebase.logger.info('authorise was called', { structuredData: true });
