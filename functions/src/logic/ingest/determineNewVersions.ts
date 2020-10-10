@@ -30,12 +30,12 @@ export const updateDatabaseWithNewVersionInformation = async (
 
   if (newVersions.length >= 1) {
     await UnityVersionInfo.createMany(newVersions);
-    message += `${ingestedInfoList.length} versions added. `;
+    message += `${ingestedInfoList.length} new versions detected. `;
   }
 
   if (updatedVersions.length >= 1) {
     await UnityVersionInfo.updateMany(updatedVersions);
-    message += `${ingestedInfoList.length} versions updated. `;
+    message += `${ingestedInfoList.length} updated versions detected. `;
   }
 
   message = message.trimEnd();
