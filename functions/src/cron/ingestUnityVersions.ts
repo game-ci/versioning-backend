@@ -21,6 +21,12 @@ export const ingestUnityVersions = functions.pubsub
 
       await Discord.sendMessageToMaintainers(message);
     } catch (err) {
-      firebase.logger.error('Something went wrong while importing new versions from unity', err);
+      const message = `
+        Something went wrong while importing new versions from unity:
+        ${err.maintainers} (${err.status})\n
+        ${err.stackTrace}`;
+
+      firebase.logger.error(message);
+      await Discord.sendAlert(message);
     }
   });

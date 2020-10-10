@@ -4,37 +4,49 @@ import { settings } from './settings';
 
 const { token } = firebase.config().discord;
 
-let instance: Eris.Client;
+let instance: Eris.Client | null = null;
 
 export class Discord {
   static async sendNews(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
-  ) {
-    const i = await this.getInstance();
-
-    await i.createMessage(settings.discord.channels.news, message, files);
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.news, message, files);
   }
 
   static async sendAlert(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
-  ) {
-    const i = await this.getInstance();
-
-    await i.createMessage(settings.discord.channels.alerts, message, files);
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.alerts, message, files);
   }
 
   static async sendMessageToMaintainers(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
-  ) {
-    const i = await this.getInstance();
-
-    await i.createMessage(settings.discord.channels.maintainers, message, files);
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.maintainers, message, files);
   }
 
-  static async getInstance() {
+  static async sendMessage(
+    channelId: string,
+    message: Eris.MessageContent,
+    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+  ): Promise<boolean> {
+    try {
+      const i = await this.getInstance();
+
+      // Todo - retry mechanism
+
+      await i.createMessage(channelId, message, files);
+      return true;
+    } catch (err) {
+      firebase.logger.error('An error occurred while trying to send a message to discord.', err);
+      return false;
+    }
+  }
+
+  static async getInstance(): Promise<Eris.Client> {
     if (instance) {
       return instance;
     }
@@ -58,5 +70,11 @@ export class Discord {
 
     instance = discord;
     return instance;
+  }
+
+  static async disconnect(): Promise<void> {
+    if (!instance) return;
+
+    instance.disconnect({ reconnect: false });
   }
 }
