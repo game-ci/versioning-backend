@@ -25,6 +25,24 @@ export class UnityVersionInfo {
     return snapshot.docs.map((doc) => doc.data()) as UnityVersionInfo[];
   };
 
+  static createMany = async (versionInfoList: UnityVersionInfo[]) => {
+    try {
+      const batch = db.batch();
+
+      versionInfoList.forEach((versionInfo) => {
+        const { version } = versionInfo;
+
+        const ref = db.collection(COLLECTION).doc(version);
+        const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
+        batch.set(ref, data, { merge: false });
+      });
+
+      await batch.commit();
+    } catch (err) {
+      firebase.logger.error('Error occurred during batch commit of new version', err);
+    }
+  };
+
   static updateMany = async (versionInfoList: UnityVersionInfo[]) => {
     try {
       const batch = db.batch();
@@ -33,7 +51,7 @@ export class UnityVersionInfo {
         const { version } = versionInfo;
 
         const ref = db.collection(COLLECTION).doc(version);
-        const data = { ...versionInfo, addedDate: Timestamp.now() };
+        const data = { ...versionInfo, modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: true });
       });
 
