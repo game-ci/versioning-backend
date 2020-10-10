@@ -1,4 +1,23 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "unityVersions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "major",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "minor",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "patch",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
