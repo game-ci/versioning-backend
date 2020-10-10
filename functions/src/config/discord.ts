@@ -5,6 +5,7 @@ import { settings } from './settings';
 const { token } = firebase.config().discord;
 
 let instance: Eris.Client | null = null;
+let ready = false;
 
 export class Discord {
   static async sendNews(
@@ -51,30 +52,38 @@ export class Discord {
       return instance;
     }
 
-    const discord = new Eris.Client(token);
+    instance = new Eris.Client(token);
 
-    discord.on('messageCreate', async (message) => {
+    instance.on('messageCreate', async (message) => {
       if (message.content === '!ping') {
         firebase.logger.info('[discord] pong!');
         await message.channel.createMessage('Pong!');
       }
     });
 
-    discord.on('ready', async () => {
-      firebase.logger.info('[discord] ready');
-      await discord.createMessage(settings.discord.channels.maintainers, 'ready');
-    });
+    await instance.connect();
+    await this.becomeReady();
 
-    await discord.connect();
-    firebase.logger.info('[discord] connected');
-
-    instance = discord;
     return instance;
+  }
+
+  static async becomeReady(): Promise<void> {
+    let secondsWaited = 0;
+    while (!ready && secondsWaited <= 5) {
+      if (instance?.startTime) {
+        ready = true;
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      secondsWaited += 1;
+    }
+    throw new Error('Bot never became ready');
   }
 
   static async disconnect(): Promise<void> {
     if (!instance) return;
 
     instance.disconnect({ reconnect: false });
+    instance = null;
   }
 }

@@ -16,7 +16,7 @@ export const ingestUnityVersions = functions.pubsub
       await UnityVersionInfo.updateMany(scrapedInfoList);
       await generateBuildQueueFromNewVersionInfoList(newInfoList);
 
-      const message = `${newInfoList.length} new versions were added.`;
+      const message = `${scrapedInfoList.length} versions found.`;
       firebase.logger.info(message);
 
       await Discord.sendMessageToMaintainers(message);
@@ -28,5 +28,7 @@ export const ingestUnityVersions = functions.pubsub
 
       firebase.logger.error(message);
       await Discord.sendAlert(message);
+    } finally {
+      await Discord.disconnect();
     }
   });

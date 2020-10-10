@@ -13,7 +13,8 @@ export const scrapeVersionInfoFromUnity = async (): Promise<UnityVersionInfo[]> 
   const hrefs = links.map((a) => a.getAttribute('href')) as string[];
 
   const versionInfoList = hrefs.map((href) => {
-    const [version, changeSet] = href.split('/');
+    const info = href.replace('unityhub://', '');
+    const [version, changeSet] = info.split('/');
     const [major, minor, patch] = version.split('.');
 
     return {
