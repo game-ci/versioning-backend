@@ -5,7 +5,6 @@ import { settings } from './settings';
 const { token } = firebase.config().discord;
 
 let instance: Eris.Client | null = null;
-let ready = false;
 
 export class Discord {
   static async sendNews(
@@ -69,15 +68,14 @@ export class Discord {
 
   static async becomeReady(): Promise<void> {
     let secondsWaited = 0;
-    while (!ready && secondsWaited <= 5) {
-      if (instance?.startTime) {
-        ready = true;
-        return;
-      }
+    while (!instance?.startTime) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       secondsWaited += 1;
+
+      if (secondsWaited >= 8) {
+        throw new Error('Bot never became ready');
+      }
     }
-    throw new Error('Bot never became ready');
   }
 
   static async disconnect(): Promise<void> {
