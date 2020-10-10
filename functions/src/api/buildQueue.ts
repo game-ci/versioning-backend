@@ -1,9 +1,16 @@
 import { firebase, functions } from '../config/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
+import { BuildQueue } from '../model/buildQueue';
 
 // Todo - implement bearer token
 // https://github.com/firebase/functions-samples/blob/master/authorized-https-endpoint/functions/index.js
+
+export const status = functions.https.onRequest(async (request: Request, response: Response) => {
+  const builds = await BuildQueue.getAll();
+
+  response.status(200).send(builds);
+});
 
 export const reportFailure = functions.https.onRequest(
   async (request: Request, response: Response) => {
