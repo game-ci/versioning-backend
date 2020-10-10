@@ -1,5 +1,5 @@
-import { UnityVersionInfo } from '../model/unityVersionInfo';
-import { db } from '../config/firebase';
+import { UnityVersionInfo } from '../../model/unityVersionInfo';
+import { db } from '../../config/firebase';
 
 export const generateBuildQueueFromNewVersionInfoList = async (
   versionInfoList: UnityVersionInfo[],

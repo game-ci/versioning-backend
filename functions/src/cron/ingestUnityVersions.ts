@@ -1,34 +1,21 @@
 import { EventContext } from 'firebase-functions';
 import { firebase, functions } from '../config/firebase';
-import { scrapeVersionInfoFromUnity } from '../logic/scrapeVersionInfoFromUnity';
+import { scrapeVersionInfoFromUnity } from '../logic/ingest/scrapeVersionInfoFromUnity';
 import { UnityVersionInfo } from '../model/unityVersionInfo';
-import { generateBuildQueueFromNewVersionInfoList } from '../logic/generateBuildQueueFromNewVersionInfo';
+import { generateBuildQueueFromNewVersionInfoList } from '../logic/buildQueue/generateBuildQueueFromNewVersionInfo';
+import { determineNewVersions } from '../logic/ingest/determineNewVersions';
 
 export const ingestUnityVersions = functions.pubsub
   .schedule('every 30 minutes')
   .onRun(async (context: EventContext) => {
     try {
       const scrapedInfoList = await scrapeVersionInfoFromUnity();
-      const currentInfoList = await UnityVersionInfo.getAll();
-      const currentVersions = currentInfoList.map((currentInfo) => currentInfo.version);
-
-      const newInfoList: UnityVersionInfo[] = [];
-      scrapedInfoList.forEach((scrapedInfo) => {
-        if (!currentVersions.includes(scrapedInfo.version)) {
-          newInfoList.push(scrapedInfo);
-        }
-      });
+      const newInfoList = await determineNewVersions(scrapedInfoList);
 
       await UnityVersionInfo.updateMany(scrapedInfoList);
-      firebase.logger.info('Version information was successfully updated.');
-
-      if (newInfoList.length <= 0) {
-        firebase.logger.info('No new versions were added.');
-        return;
-      }
-
       await generateBuildQueueFromNewVersionInfoList(newInfoList);
-      firebase.logger.info('New versions were added to the build queue.');
+
+      firebase.logger.info(`${newInfoList.length} new versions were added.`);
     } catch (err) {
       firebase.logger.error('Something went wrong while importing new versions from unity', err);
     }

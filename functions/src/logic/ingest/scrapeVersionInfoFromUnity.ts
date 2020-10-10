@@ -1,5 +1,5 @@
 import { getDocumentFromUrl } from '../utils/get-document-from-url';
-import { UnityVersionInfo } from '../model/unityVersionInfo';
+import { UnityVersionInfo } from '../../model/unityVersionInfo';
 
 const UNITY_ARCHIVE_URL = 'https://unity3d.com/get-unity/download/archive';
 
