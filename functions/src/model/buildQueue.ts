@@ -13,15 +13,25 @@ enum Status {
   failure,
 }
 
-export interface BuildQueueItem {
-  unityVersionInfo: UnityVersionInfo;
-  status: Status;
-  addedDate: Timestamp;
-  modifiedDate: Timestamp;
+interface DockerInfo {
+  tag: string;
+  hash: string;
+}
+
+interface MetaData {
   lastBuildStart: Timestamp | null;
   failureCount: number;
   lastBuildFailure: Timestamp | null;
-  publishedDate: Timestamp | null;
+}
+
+export interface BuildQueueItem {
+  status: Status;
+  meta: MetaData;
+  unityVersionInfo: UnityVersionInfo;
+  dockerInfo: DockerInfo | null;
+  addedDate: Timestamp;
+  modifiedDate: Timestamp;
+  publishedDate: Timestamp;
 }
 
 export class BuildQueue {
@@ -33,16 +43,21 @@ export class BuildQueue {
 
   static enqueue = async (unityVersionInfo: UnityVersionInfo) => {
     try {
-      await db.collection(COLLECTION).doc('some elaborate id').set({
-        unityVersionInfo,
-        status: Status.created,
-        addedDate: Timestamp.now(),
-        modifiedDate: Timestamp.now(),
-        lastBuildStart: null,
-        failureCount: 0,
-        lastBuildFailure: null,
-        publishedDate: null,
-      });
+      await db
+        .collection(COLLECTION)
+        .doc('some elaborate id')
+        .set({
+          status: Status.created,
+          unityVersionInfo,
+          dockerInfo: null,
+          meta: {
+            lastBuildStart: null,
+            failureCount: 0,
+            lastBuildFailure: null,
+          },
+          addedDate: Timestamp.now(),
+          modifiedDate: Timestamp.now(),
+        });
     } catch (err) {
       firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }
@@ -53,7 +68,7 @@ export class BuildQueue {
 
     await build.update({
       status: Status.inProgress,
-      lastBuildStart: Timestamp.now(),
+      'meta.lastBuildStart': Timestamp.now(),
     });
   };
 
@@ -62,17 +77,18 @@ export class BuildQueue {
 
     await build.update({
       status: Status.failure,
-      lastBuildFailure: Timestamp.now(),
-      failures: FieldValue.increment(1),
+      'meta.lastBuildFailure': Timestamp.now(),
+      'meta.failures': FieldValue.increment(1),
     });
   };
 
-  static markBuildAsPublished = async (id: string, hash: string) => {
+  static markBuildAsPublished = async (id: string, dockerInfo: DockerInfo) => {
     const build = await db.collection(COLLECTION).doc(id);
 
     await build.update({
       status: Status.published,
-      publishedDate: Timestamp.now(),
+      dockerInfo,
+      'meta.publishedDate': Timestamp.now(),
     });
   };
 }
