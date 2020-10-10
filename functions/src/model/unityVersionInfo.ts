@@ -31,12 +31,10 @@ export class UnityVersionInfo {
 
       versionInfoList.forEach((versionInfo) => {
         const { version } = versionInfo;
+
         const ref = db.collection(COLLECTION).doc(version);
-
         const data = { ...versionInfo, addedDate: Timestamp.now() };
-        const mergeFields = ['changeSet'];
-
-        batch.set(ref, data, { mergeFields });
+        batch.set(ref, data, { merge: true });
       });
 
       await batch.commit();
