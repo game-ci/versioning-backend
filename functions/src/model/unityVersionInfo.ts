@@ -36,7 +36,7 @@ export class UnityVersionInfo {
         const data = { ...versionInfo, addedDate: Timestamp.now() };
         const mergeFields = ['changeSet'];
 
-        batch.set(ref, data, { merge: true, mergeFields });
+        batch.set(ref, data, { mergeFields });
       });
 
       await batch.commit();
