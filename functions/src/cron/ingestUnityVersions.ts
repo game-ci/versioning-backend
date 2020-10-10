@@ -4,6 +4,7 @@ import { scrapeVersionInfoFromUnity } from '../logic/ingest/scrapeVersionInfoFro
 import { UnityVersionInfo } from '../model/unityVersionInfo';
 import { generateBuildQueueFromNewVersionInfoList } from '../logic/buildQueue/generateBuildQueueFromNewVersionInfo';
 import { determineNewVersions } from '../logic/ingest/determineNewVersions';
+import { discord } from '../config/discord';
 
 export const ingestUnityVersions = functions.pubsub
   .schedule('every 30 minutes')
@@ -15,7 +16,9 @@ export const ingestUnityVersions = functions.pubsub
       await UnityVersionInfo.updateMany(scrapedInfoList);
       await generateBuildQueueFromNewVersionInfoList(newInfoList);
 
-      firebase.logger.info(`${newInfoList.length} new versions were added.`);
+      const message = `${newInfoList.length} new versions were added.`;
+      firebase.logger.info(message);
+      await discord.createMessage('764289922663841792', message);
     } catch (err) {
       firebase.logger.error('Something went wrong while importing new versions from unity', err);
     }
