@@ -3,6 +3,10 @@ import { isMatch } from 'lodash';
 import { firebase } from '../../config/firebase';
 import { Discord } from '../../config/discord';
 
+const plural = (amount: number) => {
+  return amount === 1 ? 'version' : 'versions';
+};
+
 export const updateDatabaseWithNewVersionInformation = async (
   ingestedInfoList: UnityVersionInfo[],
 ): Promise<void> => {
@@ -30,12 +34,12 @@ export const updateDatabaseWithNewVersionInformation = async (
 
   if (newVersions.length >= 1) {
     await UnityVersionInfo.createMany(newVersions);
-    message += `${newVersions.length} new versions detected. `;
+    message += `${newVersions.length} new ${plural(newVersions.length)} detected. `;
   }
 
   if (updatedVersions.length >= 1) {
     await UnityVersionInfo.updateMany(updatedVersions);
-    message += `${updatedVersions.length} updated versions detected. `;
+    message += `${updatedVersions.length} updated ${plural(updatedVersions.length)} detected. `;
   }
 
   message = message.trimEnd();
