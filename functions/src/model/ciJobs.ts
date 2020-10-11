@@ -2,14 +2,15 @@ import { db, admin, firebase } from '../config/firebase';
 import { UnityVersionInfo } from './unityVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
+import { RepoVersionInfo } from './repoVersions';
 
 const COLLECTION = 'buildQueue';
 
-enum Status {
+enum JobStatus {
   created,
-  awaitingWorker,
+  scheduled,
   inProgress,
-  published,
+  completed,
   failure,
 }
 
@@ -24,30 +25,31 @@ interface MetaData {
   lastBuildFailure: Timestamp | null;
 }
 
-export interface BuildQueueItem {
-  status: Status;
+export interface CiJob {
+  status: JobStatus;
   meta: MetaData;
+  repoVersionInfo: RepoVersionInfo;
   unityVersionInfo: UnityVersionInfo;
   dockerInfo: DockerInfo | null;
   addedDate: Timestamp;
   modifiedDate: Timestamp;
-  publishedDate: Timestamp;
 }
 
-export class BuildQueue {
-  static getAll = async (): Promise<BuildQueueItem[]> => {
+export class CiJobs {
+  static getAll = async (): Promise<CiJob[]> => {
     const snapshot = await db.collection(COLLECTION).get();
 
-    return snapshot.docs.map((doc) => doc.data()) as BuildQueueItem[];
+    return snapshot.docs.map((doc) => doc.data()) as CiJob[];
   };
 
-  static enqueue = async (unityVersionInfo: UnityVersionInfo) => {
+  static create = async (unityVersionInfo: UnityVersionInfo, repoVersionInfo: RepoVersionInfo) => {
     try {
       await db
         .collection(COLLECTION)
         .doc('some elaborate id')
         .set({
-          status: Status.created,
+          status: JobStatus.created,
+          repoVersionInfo,
           unityVersionInfo,
           dockerInfo: null,
           meta: {
@@ -63,31 +65,44 @@ export class BuildQueue {
     }
   };
 
-  static markBuildAsInProgress = async (id: string) => {
+  static markJobAsInProgress = async (id: string) => {
     const build = await db.collection(COLLECTION).doc(id);
 
+    const snapshot = await build.get();
+    const currentBuild = snapshot.data() as CiJob;
+
+    // TODO - move this logic out of the model
+    // Do not override failure or completed
+    let { status } = currentBuild;
+    if ([JobStatus.created, JobStatus.scheduled].includes(status)) {
+      status = JobStatus.inProgress;
+    }
+
     await build.update({
-      status: Status.inProgress,
+      status,
       'meta.lastBuildStart': Timestamp.now(),
+      modifiedDate: Timestamp.now(),
     });
   };
 
-  static markBuildAsFailed = async (id: string) => {
+  static markJobAsFailed = async (id: string) => {
     const build = await db.collection(COLLECTION).doc(id);
 
     await build.update({
-      status: Status.failure,
-      'meta.lastBuildFailure': Timestamp.now(),
+      status: JobStatus.failure,
       'meta.failures': FieldValue.increment(1),
+      'meta.lastBuildFailure': Timestamp.now(),
+      modifiedDate: Timestamp.now(),
     });
   };
 
-  static markBuildAsPublished = async (id: string, dockerInfo: DockerInfo) => {
+  static markJobAsCompleted = async (id: string, dockerInfo: DockerInfo) => {
     const build = await db.collection(COLLECTION).doc(id);
 
     await build.update({
-      status: Status.published,
+      status: JobStatus.completed,
       dockerInfo,
+      modifiedDate: Timestamp.now(),
       'meta.publishedDate': Timestamp.now(),
     });
   };
