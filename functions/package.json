@@ -16,6 +16,8 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@octokit/auth-app": "^2.6.0",
+    "@octokit/rest": "^18.0.6",
     "eris": "^0.13.3",
     "firebase-admin": "^8.10.0",
     "firebase-functions": "^3.6.1",
