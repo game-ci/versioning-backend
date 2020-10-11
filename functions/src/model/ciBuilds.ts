@@ -1,39 +1,50 @@
 import { db, admin, firebase } from '../config/firebase';
 import { UnityVersionInfo } from './unityVersionInfo';
-import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersions';
+import FieldValue = admin.firestore.FieldValue;
 
-const COLLECTION = 'ciJobs';
+const COLLECTION = 'ciBuilds';
 
-enum JobStatus {
-  created,
-  scheduled,
+enum BuildStatus {
   inProgress,
-  completed,
-  failure,
+  failed,
+  published,
+}
+
+interface DockerInfo {
+  tag: string;
+  hash: string;
+  // date with docker as source of truth?
 }
 
 interface MetaData {
   lastBuildStart: Timestamp | null;
   failureCount: number;
   lastBuildFailure: Timestamp | null;
+  publishedDate: Timestamp | null;
 }
 
-export interface CiJob {
-  status: JobStatus;
+export interface CiBuild {
+  status: BuildStatus;
   meta: MetaData;
+  failure: CiBuildFailure | null;
   repoVersionInfo: RepoVersionInfo;
   unityVersionInfo: UnityVersionInfo;
+  dockerInfo: DockerInfo | null;
   addedDate: Timestamp;
   modifiedDate: Timestamp;
 }
 
-export class CiJobs {
-  static getAll = async (): Promise<CiJob[]> => {
+export interface CiBuildFailure {
+  reason: string;
+}
+
+export class CiBuilds {
+  static getAll = async (): Promise<CiBuild[]> => {
     const snapshot = await db.collection(COLLECTION).get();
 
-    return snapshot.docs.map((doc) => doc.data()) as CiJob[];
+    return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
   static create = async (unityVersionInfo: UnityVersionInfo, repoVersionInfo: RepoVersionInfo) => {
@@ -42,11 +53,12 @@ export class CiJobs {
         .collection(COLLECTION)
         .doc('some elaborate id')
         .set({
-          status: JobStatus.created,
+          status: BuildStatus.inProgress,
           repoVersionInfo,
           unityVersionInfo,
+          failure: null,
           meta: {
-            lastBuildStart: null,
+            lastBuildStart: Timestamp.now(),
             failureCount: 0,
             lastBuildFailure: null,
           },
@@ -54,47 +66,30 @@ export class CiJobs {
           modifiedDate: Timestamp.now(),
         });
     } catch (err) {
-      firebase.logger.error('Error occurred while trying to enqueue a new job', err);
+      firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }
   };
 
-  static reportBuildStart = async (id: string) => {
+  static markBuildAsFailed = async (id: string, failure: CiBuildFailure) => {
     const build = await db.collection(COLLECTION).doc(id);
 
-    const snapshot = await build.get();
-    const currentBuild = snapshot.data() as CiJob;
-
-    // TODO - move this logic out of the model
-    // Do not override failure or completed
-    let { status } = currentBuild;
-    if ([JobStatus.created, JobStatus.scheduled].includes(status)) {
-      status = JobStatus.inProgress;
-    }
-
     await build.update({
-      status,
-      'meta.lastBuildStart': Timestamp.now(),
+      status: BuildStatus.failed,
+      failure,
       modifiedDate: Timestamp.now(),
-    });
-  };
-
-  static reportBuildFailure = async (id: string) => {
-    const build = await db.collection(COLLECTION).doc(id);
-
-    await build.update({
-      status: JobStatus.failure,
-      'meta.failures': FieldValue.increment(1),
+      'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
-      modifiedDate: Timestamp.now(),
     });
   };
 
-  static markJobAsCompleted = async (id: string) => {
+  static markBuildAsPublished = async (id: string, dockerInfo: DockerInfo) => {
     const build = await db.collection(COLLECTION).doc(id);
 
     await build.update({
-      status: JobStatus.completed,
+      status: BuildStatus.published,
+      dockerInfo,
       modifiedDate: Timestamp.now(),
+      'meta.publishedDate': Timestamp.now(),
     });
   };
 }
