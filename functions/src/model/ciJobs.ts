@@ -29,6 +29,9 @@ export interface CiJob {
   modifiedDate: Timestamp;
 }
 
+/**
+ * A CI job is a high level job, that schedules builds on a [repoVersion-unityVersion] level
+ */
 export class CiJobs {
   static getAll = async (): Promise<CiJob[]> => {
     const snapshot = await db.collection(COLLECTION).get();

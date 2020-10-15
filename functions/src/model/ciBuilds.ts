@@ -1,5 +1,4 @@
 import { db, admin, firebase } from '../config/firebase';
-import { UnityVersionInfo } from './unityVersionInfo';
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersions';
 import FieldValue = admin.firestore.FieldValue;
@@ -7,13 +6,32 @@ import FieldValue = admin.firestore.FieldValue;
 const COLLECTION = 'ciBuilds';
 
 enum BuildStatus {
-  inProgress,
+  started,
   failed,
   published,
 }
 
-interface DockerInfo {
-  tag: string;
+type ImageType = 'base' | 'hub' | 'editor';
+
+// Used in Start API
+export interface BuildVersionInfo {
+  baseOs: string;
+  repoVersion: string;
+  unityVersion: string;
+  targetPlatform: string;
+}
+
+// Used in Failure API
+export interface BuildFailure {
+  reason: string;
+}
+
+// Used in Publish API
+export interface DockerInfo {
+  imageRepo: string;
+  imageName: string;
+  friendlyTag: string;
+  specificTag: string;
   hash: string;
   // date with docker as source of truth?
 }
@@ -26,20 +44,23 @@ interface MetaData {
 }
 
 export interface CiBuild {
+  jobId: string;
+  BuildId: string;
   status: BuildStatus;
+  imageType: ImageType;
   meta: MetaData;
-  failure: CiBuildFailure | null;
-  repoVersionInfo: RepoVersionInfo;
-  unityVersionInfo: UnityVersionInfo;
+  unityVersionInfo: BuildVersionInfo;
+  failure: BuildFailure | null;
   dockerInfo: DockerInfo | null;
   addedDate: Timestamp;
   modifiedDate: Timestamp;
 }
 
-export interface CiBuildFailure {
-  reason: string;
-}
-
+/**
+ * A CI Build represents a single [baseOs-unityVersion-targetPlatform] build.
+ * These builds are reported in and run on GitHub Actions.
+ * Statuses (failures and publications) are also reported back on this level.
+ */
 export class CiBuilds {
   static getAll = async (): Promise<CiBuild[]> => {
     const snapshot = await db.collection(COLLECTION).get();
@@ -47,15 +68,21 @@ export class CiBuilds {
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
-  static create = async (unityVersionInfo: UnityVersionInfo, repoVersionInfo: RepoVersionInfo) => {
+  static create = async (
+    jobId: string,
+    imageType: ImageType,
+    buildVersionInfo: BuildVersionInfo,
+    repoVersionInfo: RepoVersionInfo,
+  ) => {
     try {
       await db
         .collection(COLLECTION)
         .doc('some elaborate id')
         .set({
-          status: BuildStatus.inProgress,
-          repoVersionInfo,
-          unityVersionInfo,
+          jobId,
+          imageType,
+          status: BuildStatus.started,
+          buildVersionInfo,
           failure: null,
           meta: {
             lastBuildStart: Timestamp.now(),
@@ -70,8 +97,8 @@ export class CiBuilds {
     }
   };
 
-  static markBuildAsFailed = async (id: string, failure: CiBuildFailure) => {
-    const build = await db.collection(COLLECTION).doc(id);
+  static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
+    const build = await db.collection(COLLECTION).doc(buildId);
 
     await build.update({
       status: BuildStatus.failed,
@@ -82,8 +109,8 @@ export class CiBuilds {
     });
   };
 
-  static markBuildAsPublished = async (id: string, dockerInfo: DockerInfo) => {
-    const build = await db.collection(COLLECTION).doc(id);
+  static markBuildAsPublished = async (buildId: string, dockerInfo: DockerInfo) => {
+    const build = await db.collection(COLLECTION).doc(buildId);
 
     await build.update({
       status: BuildStatus.published,

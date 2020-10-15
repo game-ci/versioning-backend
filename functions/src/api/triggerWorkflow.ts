@@ -17,8 +17,10 @@ export const triggerWorkflow = functions.https.onRequest(
       //   repo: 'docker',
       //   event_type: 'new_base_image_requested',
       //   client_payload: {
-      //     patchTag: '0.1.0',
-      //     minorTag: '0.1',
+      //     jobId: 'someJobId',
+      //     buildId: 'someBuildId',
+      //     patchTag: '0.2.0',
+      //     minorTag: '0.2',
       //     majorTag: '0',
       //   },
       // });
@@ -29,8 +31,10 @@ export const triggerWorkflow = functions.https.onRequest(
       //   repo: 'docker',
       //   event_type: 'new_hub_image_requested',
       //   client_payload: {
-      //     patchTag: '0.1.0',
-      //     minorTag: '0.1',
+      //     jobId: 'someJobId',
+      //     buildId: 'someBuildId',
+      //     patchTag: '0.2.0',
+      //     minorTag: '0.2',
       //     majorTag: '0',
       //   },
       // });
@@ -41,10 +45,12 @@ export const triggerWorkflow = functions.https.onRequest(
       //   repo: 'docker',
       //   event_type: 'new_editor_image_requested',
       //   client_payload: {
+      //     jobId: 'someJobId',
+      //     buildId: 'someBuildId',
       //     unityVersion: '2019.3.11f1',
       //     changeSet: 'ceef2d848e70',
-      //     patchTag: '0.1.0',
-      //     minorTag: '0.1',
+      //     patchTag: '0.2.0',
+      //     minorTag: '0.2',
       //     majorTag: '0',
       //   },
       // });
