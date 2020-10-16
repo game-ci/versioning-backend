@@ -43,6 +43,17 @@ export github.client-secret="my_github_app_client_secret"`
 export github.private-key="my_github_app_private_key"
 ```
 
+__Internal__
+
+_Internal token is used for self-authentication and for communication with th
+[docker repo](https://github.com/Unity-CI/docker)._
+
+```
+export internal.token="my_internal_token"
+```
+
+_(value can be any single-line string, as long as it's the same in the docker repo)_
+
 ## Local Commands
 
 In order to run firebase locally simply use
@@ -71,4 +82,5 @@ _(only when migrating to new firebase project / environment)_
 firebase functions:config:set discord.token="my_discord_token"
 firebase functions:config:set github.client-secret="my_github_app_client_secret"
 firebase functions:config:set discord.private-key="my_github_app_private_key"
+firebase functions:config:set internal.token="my_internal_token"
 ```

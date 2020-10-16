@@ -7,9 +7,7 @@ const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabaseWithNewVersionInformation = async (
-  ingestedInfoList: UnityVersionInfo[],
-): Promise<void> => {
+export const updateDatabase = async (ingestedInfoList: UnityVersionInfo[]): Promise<void> => {
   const existingInfoList = await UnityVersionInfo.getAll();
 
   const newVersions: UnityVersionInfo[] = [];
