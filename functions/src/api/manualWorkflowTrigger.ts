@@ -3,7 +3,7 @@ import { Response } from 'express-serve-static-core';
 import { firebase, functions } from '../config/firebase';
 import { GitHub } from '../config/github';
 
-export const triggerWorkflow = functions.https.onRequest(
+export const manualWorkflowTrigger = functions.https.onRequest(
   async (request: Request, response: Response) => {
     try {
       // @ts-ignore

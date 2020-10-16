@@ -7,7 +7,9 @@ export class Token {
     return token;
   }
 
-  static isValid(providedToken: string) {
-    return providedToken === this.internal;
+  static isValid(providedToken: string | null | undefined) {
+    if (!providedToken) return false;
+
+    return providedToken === this.internal || providedToken === `Bearer ${this.internal}`;
   }
 }
