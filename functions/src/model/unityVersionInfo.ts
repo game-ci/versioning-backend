@@ -14,6 +14,17 @@ export interface UnityVersionInfo {
 }
 
 export class UnityVersionInfo {
+  static getAllIds = async (): Promise<string[]> => {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .orderBy('major', 'desc')
+      .orderBy('minor', 'desc')
+      .orderBy('patch', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => doc.id);
+  };
+
   static getAll = async (): Promise<UnityVersionInfo[]> => {
     const snapshot = await db
       .collection(COLLECTION)

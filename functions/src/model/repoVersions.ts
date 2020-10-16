@@ -25,6 +25,28 @@ export class RepoVersionInfo {
     return snapshot.docs[0].data() as RepoVersionInfo;
   };
 
+  static getAllIds = async (): Promise<string[]> => {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .orderBy('major', 'desc')
+      .orderBy('minor', 'desc')
+      .orderBy('patch', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => doc.id);
+  };
+
+  static getAll = async (): Promise<RepoVersionInfo[]> => {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .orderBy('major', 'desc')
+      .orderBy('minor', 'desc')
+      .orderBy('patch', 'desc')
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data()) as RepoVersionInfo[];
+  };
+
   static create = async (repoVersion: RepoVersionInfo) => {
     const { version } = repoVersion;
     await db

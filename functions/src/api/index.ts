@@ -1,4 +1,6 @@
-export * as buildQueue from './buildQueue';
-export { authorise } from './authorise';
+export { queueStatus } from './queueStatus';
+export { reportBuildFailure } from './reportBuildFailure';
+export { reportNewBuild } from './reportNewBuild';
+export { reportPublication } from './reportPublication';
 export { unityVersions } from './unityVersions';
-export { triggerWorkflow } from './triggerWorkflow';
+export { manualWorkflowTrigger } from './manualWorkflowTrigger';

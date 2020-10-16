@@ -1,12 +1,12 @@
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { firebase, functions } from '../config/firebase';
-import { UnityVersionInfo } from '../model/unityVersionInfo';
+import { RepoVersionInfo } from '../model/repoVersions';
 
-export const unityVersions = functions.https.onRequest(
+export const repoVersions = functions.https.onRequest(
   async (request: Request, response: Response) => {
     try {
-      const versions = await UnityVersionInfo.getAllIds();
+      const versions = await RepoVersionInfo.getAllIds();
 
       response.send(versions);
     } catch (err) {
