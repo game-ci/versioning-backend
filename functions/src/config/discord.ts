@@ -113,7 +113,7 @@ export class Discord {
         messageSize -= 3;
       }
 
-      messages[i] = `${prefix}${message.substring(pointer, messageSize)}${suffix}`;
+      messages[i] = `${prefix}${message.substr(pointer, messageSize)}${suffix}`;
       pointer += messageSize;
     }
 
