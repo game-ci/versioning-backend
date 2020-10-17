@@ -32,12 +32,14 @@ export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Pro
 
   if (newVersions.length >= 1) {
     await EditorVersionInfo.createMany(newVersions);
-    message += `${newVersions.length} new ${plural(newVersions.length)} detected. `;
+    message += `${newVersions.length} new Unity editor ${plural(newVersions.length)} detected. `;
   }
 
   if (updatedVersions.length >= 1) {
     await EditorVersionInfo.updateMany(updatedVersions);
-    message += `${updatedVersions.length} updated ${plural(updatedVersions.length)} detected. `;
+    message += `${updatedVersions.length} updated Unity editor ${plural(
+      updatedVersions.length,
+    )} detected. `;
   }
 
   message = message.trimEnd();

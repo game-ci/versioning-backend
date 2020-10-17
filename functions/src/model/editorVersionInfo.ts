@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
-const COLLECTION = 'unityVersions';
+const COLLECTION = 'editorVersions';
 
 export interface EditorVersionInfo {
   version: string;
@@ -42,11 +42,11 @@ export class EditorVersionInfo {
     return snapshot.docs.map((doc) => doc.data()) as EditorVersionInfo[];
   };
 
-  static createMany = async (versionInfoList: EditorVersionInfo[]) => {
+  static createMany = async (editorVersionList: EditorVersionInfo[]) => {
     try {
       const batch = db.batch();
 
-      versionInfoList.forEach((versionInfo) => {
+      editorVersionList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
         const ref = db.collection(COLLECTION).doc(version);
@@ -56,7 +56,7 @@ export class EditorVersionInfo {
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new version', err);
+      firebase.logger.error('Error occurred during batch commit of new editor versions', err);
     }
   };
 
@@ -74,7 +74,7 @@ export class EditorVersionInfo {
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new version', err);
+      firebase.logger.error('Error occurred during batch commit of new editor versions', err);
     }
   };
 }

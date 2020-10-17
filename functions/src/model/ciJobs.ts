@@ -2,7 +2,7 @@ import { db, admin } from '../config/firebase';
 import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
-import { RepoVersionInfo } from './repoVersions';
+import { RepoVersionInfo } from './repoVersionInfo';
 import { ImageType } from './ciBuilds';
 
 const COLLECTION = 'ciJobs';

@@ -6,7 +6,7 @@ import { BuildInfo, CiBuilds, ImageType } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../config/discord';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
-import { RepoVersionInfo } from '../model/repoVersions';
+import { RepoVersionInfo } from '../model/repoVersionInfo';
 
 export const reportNewBuild = functions.https.onRequest(async (req: Request, res: Response) => {
   try {

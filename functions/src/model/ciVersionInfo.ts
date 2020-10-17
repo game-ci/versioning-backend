@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import { EditorVersionInfo } from './editorVersionInfo';
-import { RepoVersionInfo } from './repoVersions';
+import { RepoVersionInfo } from './repoVersionInfo';
 
 const COLLECTION = 'builtVersions';
 

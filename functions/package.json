@@ -18,13 +18,15 @@
   "dependencies": {
     "@octokit/auth-app": "^2.6.0",
     "@octokit/rest": "^18.0.6",
+    "@types/semver": "^7.3.4",
     "eris": "^0.13.3",
     "firebase-admin": "^8.10.0",
     "firebase-functions": "^3.6.1",
     "httpie": "^1.1.2",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.20",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "semver": "^7.3.2"
   },
   "devDependencies": {
     "@types/jsdom": "^16.2.4",
