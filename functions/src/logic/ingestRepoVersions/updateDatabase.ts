@@ -32,14 +32,16 @@ export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promi
 
   if (newVersions.length >= 1) {
     await RepoVersionInfo.createMany(newVersions);
-    message += `${newVersions.length} new repository ${plural(newVersions.length)} detected. `;
+    message += `
+      ${newVersions.length} new repository ${plural(newVersions.length)} detected.
+      (${newVersions.map((version) => version.version).join(', ')}`;
   }
 
   if (updatedVersions.length >= 1) {
     await RepoVersionInfo.updateMany(updatedVersions);
-    message += `${updatedVersions.length} updated repository ${plural(
-      updatedVersions.length,
-    )} detected. `;
+    message += `
+      ${updatedVersions.length} updated repository ${plural(updatedVersions.length)} detected.
+      (${updatedVersions.map((version) => version.version).join(', ')})`;
   }
 
   message = message.trimEnd();
