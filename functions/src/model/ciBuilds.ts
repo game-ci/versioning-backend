@@ -92,7 +92,15 @@ export class CiBuilds {
         modifiedDate: Timestamp.now(),
       };
 
-      await db.collection(COLLECTION).doc(buildId).create({ data });
+      const ref = await db.collection(COLLECTION).doc(buildId);
+      const snapshot = await ref.get();
+
+      if (snapshot.exists) {
+        // noinspection ExceptionCaughtLocallyJS
+        throw new Error('A build with this identifier already exists');
+      }
+
+      await ref.create({ data });
     } catch (err) {
       firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }
