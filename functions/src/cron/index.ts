@@ -20,8 +20,6 @@ export const trigger = functions.pubsub
 
       firebase.logger.error(message);
       await Discord.sendAlert(message);
-    } finally {
-      await Discord.disconnect();
     }
   });
 

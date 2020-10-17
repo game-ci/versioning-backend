@@ -1,6 +1,5 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
-import { RepoVersionInfo } from './repoVersions';
 import FieldValue = admin.firestore.FieldValue;
 
 const COLLECTION = 'ciBuilds';
@@ -11,13 +10,13 @@ enum BuildStatus {
   published,
 }
 
-type ImageType = 'base' | 'hub' | 'editor';
+export type ImageType = 'base' | 'hub' | 'editor';
 
 // Used in Start API
-export interface BuildVersionInfo {
+export interface BuildInfo {
   baseOs: string;
   repoVersion: string;
-  unityVersion: string;
+  editorVersion: string;
   targetPlatform: string;
 }
 
@@ -32,7 +31,7 @@ export interface DockerInfo {
   imageName: string;
   friendlyTag: string;
   specificTag: string;
-  hash: string;
+  digest: string;
   // date with docker as source of truth?
 }
 
@@ -44,12 +43,12 @@ interface MetaData {
 }
 
 export interface CiBuild {
-  jobId: string;
-  BuildId: string;
+  buildId: string;
+  relatedJobId: string;
   status: BuildStatus;
   imageType: ImageType;
   meta: MetaData;
-  unityVersionInfo: BuildVersionInfo;
+  buildInfo: BuildInfo;
   failure: BuildFailure | null;
   dockerInfo: DockerInfo | null;
   addedDate: Timestamp;
@@ -68,30 +67,32 @@ export class CiBuilds {
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
-  static create = async (
-    jobId: string,
+  static registerNewBuild = async (
+    buildId: string,
+    relatedJobId: string,
     imageType: ImageType,
-    buildVersionInfo: BuildVersionInfo,
-    repoVersionInfo: RepoVersionInfo,
+    buildInfo: BuildInfo,
   ) => {
     try {
-      await db
-        .collection(COLLECTION)
-        .doc('some elaborate id')
-        .set({
-          jobId,
-          imageType,
-          status: BuildStatus.started,
-          buildVersionInfo,
-          failure: null,
-          meta: {
-            lastBuildStart: Timestamp.now(),
-            failureCount: 0,
-            lastBuildFailure: null,
-          },
-          addedDate: Timestamp.now(),
-          modifiedDate: Timestamp.now(),
-        });
+      const data: CiBuild = {
+        status: BuildStatus.started,
+        buildId,
+        relatedJobId,
+        imageType,
+        buildInfo,
+        failure: null,
+        dockerInfo: null,
+        meta: {
+          lastBuildStart: Timestamp.now(),
+          failureCount: 0,
+          lastBuildFailure: null,
+          publishedDate: null,
+        },
+        addedDate: Timestamp.now(),
+        modifiedDate: Timestamp.now(),
+      };
+
+      await db.collection(COLLECTION).doc(buildId).set({ data });
     } catch (err) {
       firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }
@@ -118,5 +119,19 @@ export class CiBuilds {
       modifiedDate: Timestamp.now(),
       'meta.publishedDate': Timestamp.now(),
     });
+  };
+
+  static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where('jobId', '==', jobId)
+      // @ts-ignore
+      .where('status', '!=', BuildStatus.published)
+      .limit(1)
+      .get();
+
+    firebase.logger.info(snapshot.docs);
+
+    return snapshot.docs.length <= 1;
   };
 }

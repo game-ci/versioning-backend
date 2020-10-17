@@ -1,8 +1,8 @@
-import { UnityVersionInfo } from '../../model/unityVersionInfo';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { db } from '../../config/firebase';
 
 export const generateBuildQueueFromNewVersionInfoList = async (
-  versionInfoList: UnityVersionInfo[],
+  versionInfoList: EditorVersionInfo[],
 ) => {
   const batch = db.batch();
 

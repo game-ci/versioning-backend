@@ -37,8 +37,8 @@ export class Discord {
       const i = await this.getInstance();
 
       // Todo - retry mechanism
-
       await i.createMessage(channelId, message, files);
+      await this.disconnect();
       return true;
     } catch (err) {
       firebase.logger.error('An error occurred while trying to send a message to discord.', err);
@@ -72,7 +72,7 @@ export class Discord {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       secondsWaited += 1;
 
-      if (secondsWaited >= 8) {
+      if (secondsWaited >= 15) {
         throw new Error('Bot never became ready');
       }
     }

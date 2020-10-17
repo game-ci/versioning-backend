@@ -3,7 +3,7 @@ import Timestamp = admin.firestore.Timestamp;
 
 const COLLECTION = 'unityVersions';
 
-export interface UnityVersionInfo {
+export interface EditorVersionInfo {
   version: string;
   changeSet: string;
   major: number;
@@ -13,7 +13,13 @@ export interface UnityVersionInfo {
   modifiedDate?: Timestamp;
 }
 
-export class UnityVersionInfo {
+export class EditorVersionInfo {
+  static get = async (version: string): Promise<EditorVersionInfo> => {
+    const snapshot = await db.collection(COLLECTION).doc(version).get();
+
+    return snapshot.data() as EditorVersionInfo;
+  };
+
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db
       .collection(COLLECTION)
@@ -25,7 +31,7 @@ export class UnityVersionInfo {
     return snapshot.docs.map((doc) => doc.id);
   };
 
-  static getAll = async (): Promise<UnityVersionInfo[]> => {
+  static getAll = async (): Promise<EditorVersionInfo[]> => {
     const snapshot = await db
       .collection(COLLECTION)
       .orderBy('major', 'desc')
@@ -33,10 +39,10 @@ export class UnityVersionInfo {
       .orderBy('patch', 'desc')
       .get();
 
-    return snapshot.docs.map((doc) => doc.data()) as UnityVersionInfo[];
+    return snapshot.docs.map((doc) => doc.data()) as EditorVersionInfo[];
   };
 
-  static createMany = async (versionInfoList: UnityVersionInfo[]) => {
+  static createMany = async (versionInfoList: EditorVersionInfo[]) => {
     try {
       const batch = db.batch();
 
@@ -54,7 +60,7 @@ export class UnityVersionInfo {
     }
   };
 
-  static updateMany = async (versionInfoList: UnityVersionInfo[]) => {
+  static updateMany = async (versionInfoList: EditorVersionInfo[]) => {
     try {
       const batch = db.batch();
 
