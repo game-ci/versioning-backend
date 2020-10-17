@@ -72,7 +72,7 @@ export class Discord {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       secondsWaited += 1;
 
-      if (secondsWaited >= 8) {
+      if (secondsWaited >= 15) {
         throw new Error('Bot never became ready');
       }
     }
