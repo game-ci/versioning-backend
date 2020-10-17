@@ -96,7 +96,7 @@ export class CiJobs {
 
     await job.update({
       status: JobStatus.failure,
-      'meta.failures': FieldValue.increment(1),
+      'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
