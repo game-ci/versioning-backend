@@ -8,8 +8,9 @@ import { ingestRepoVersions } from '../logic/ingestRepoVersions';
  * CPU-time for pubSub is not part of the free quota, so we'll keep it light weight.
  * This will call the cloud function `cron/worker`, using an authentication token.
  */
-export const trigger = functions.pubsub
-  .schedule('every 15 minutes')
+export const trigger = functions
+  .runWith({ timeoutSeconds: 60, memory: '512MB' })
+  .pubsub.schedule('every 15 minutes')
   .onRun(async (context: EventContext) => {
     try {
       await routineTasks();
