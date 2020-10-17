@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
-const COLLECTION = 'editorVersions';
+export const COLLECTION = 'editorVersions';
 
 export interface EditorVersionInfo {
   version: string;

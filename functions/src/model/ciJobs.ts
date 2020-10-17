@@ -35,6 +35,21 @@ export interface CiJob {
  * A CI job is a high level job, that schedules builds on a [repoVersion-unityVersion] level
  */
 export class CiJobs {
+  static get = async (jobId: string): Promise<CiJob | null> => {
+    const ref = await db.collection(COLLECTION).doc(jobId);
+    const snapshot = await ref.get();
+
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return snapshot.data() as CiJob;
+  };
+
+  static exists = async (jobId: string): Promise<boolean> => {
+    return (await CiJobs.get(jobId)) === null;
+  };
+
   static getAll = async (): Promise<CiJob[]> => {
     const snapshot = await db.collection(COLLECTION).get();
 
