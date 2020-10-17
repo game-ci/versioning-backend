@@ -1,4 +1,4 @@
-import { db, admin } from '../config/firebase';
+import { db, admin, firebase } from '../config/firebase';
 import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
@@ -42,12 +42,12 @@ export class CiJobs {
   };
 
   static create = async (
+    jobId: string,
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
-    const jobId = await CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
-    await db
+    const result = await db
       .collection(COLLECTION)
       .doc(jobId)
       .set({
@@ -63,21 +63,28 @@ export class CiJobs {
         addedDate: Timestamp.now(),
         modifiedDate: Timestamp.now(),
       });
+
+    firebase.logger.debug('Job created', result);
   };
 
   static markJobAsInProgress = async (jobId: string) => {
-    const job = await db.collection(COLLECTION).doc(jobId);
-    const snapshot = await job.get();
-    const currentBuild = snapshot.data() as CiJob;
+    const ref = await db.collection(COLLECTION).doc(jobId);
+    const snapshot = await ref.get();
 
-    // TODO - move this logic out of the model
+    if (!snapshot.exists) {
+      throw new Error(`Trying to mark job '${jobId}' as in progress. But it does not exist.`);
+    }
+
+    const currentBuild = snapshot.data() as CiJob;
+    firebase.logger.warn(currentBuild);
+
     // Do not override failure or completed
     let { status } = currentBuild;
     if ([JobStatus.created, JobStatus.scheduled].includes(status)) {
       status = JobStatus.inProgress;
     }
 
-    await job.update({
+    await ref.update({
       status,
       'meta.lastBuildStart': Timestamp.now(),
       modifiedDate: Timestamp.now(),

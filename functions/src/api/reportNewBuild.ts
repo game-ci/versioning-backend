@@ -27,8 +27,8 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
       targetPlatform,
     };
 
-    if (jobId === 'dryRun') {
-      await createDryRunJob(imageType, editorVersion);
+    if (jobId.toString().startsWith('dryRun')) {
+      await createDryRunJob(jobId, imageType, editorVersion);
     }
 
     await CiJobs.markJobAsInProgress(jobId);
@@ -47,14 +47,14 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
   }
 });
 
-const createDryRunJob = async (imageType: ImageType, editorVersion: string) => {
+const createDryRunJob = async (jobId: string, imageType: ImageType, editorVersion: string) => {
   firebase.logger.debug('running dryrun for image', imageType, editorVersion);
   const repoVersionInfo = await RepoVersionInfo.getLatest();
 
   if (imageType === 'editor') {
     const editorVersionInfo = await EditorVersionInfo.get(editorVersion);
-    await CiJobs.create(imageType, repoVersionInfo, editorVersionInfo);
+    await CiJobs.create(jobId, imageType, repoVersionInfo, editorVersionInfo);
   } else {
-    await CiJobs.create(imageType, repoVersionInfo);
+    await CiJobs.create(jobId, imageType, repoVersionInfo);
   }
 };
