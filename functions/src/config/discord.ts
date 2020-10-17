@@ -37,8 +37,8 @@ export class Discord {
       const i = await this.getInstance();
 
       // Todo - retry mechanism
-
       await i.createMessage(channelId, message, files);
+      await this.disconnect();
       return true;
     } catch (err) {
       firebase.logger.error('An error occurred while trying to send a message to discord.', err);

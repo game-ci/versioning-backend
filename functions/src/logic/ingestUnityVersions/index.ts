@@ -15,7 +15,5 @@ export const ingestUnityVersions = async () => {
 
     firebase.logger.error(message);
     await Discord.sendAlert(message);
-  } finally {
-    await Discord.disconnect();
   }
 };

@@ -31,7 +31,5 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
     firebase.logger.error(message);
     await Discord.sendAlert(message);
     res.status(500).send('Something went wrong');
-  } finally {
-    await Discord.disconnect();
   }
 });
