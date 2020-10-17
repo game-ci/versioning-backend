@@ -107,6 +107,17 @@ export class CiBuilds {
     }
   };
 
+  /**
+   * Only dryRun builds should be deleted. Mark other builds as published or failed instead.
+   */
+  static async removeBuild(buildId: string) {
+    try {
+      await db.collection(COLLECTION).doc(buildId).delete();
+    } catch (err) {
+      firebase.logger.error('Error occurred while trying to remove build', err);
+    }
+  }
+
   static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
     const build = await db.collection(COLLECTION).doc(buildId);
 

@@ -43,6 +43,11 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
     `;
     firebase.logger.error(message, err);
     await Discord.sendAlert(message);
+
+    if (req.body?.jobId?.toString().startsWith('dryRun')) {
+      await CiBuilds.removeBuild(req.body.jobId);
+    }
+
     res.status(500).send('Something went wrong');
   }
 });
