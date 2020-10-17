@@ -8,8 +8,8 @@ import { Discord } from '../config/discord';
 
 export const reportBuildFailure = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
-    if (!Token.isValid(req.header('Authorisation'))) {
-      firebase.logger.warn('unauthorised request', req);
+    if (!Token.isValid(req.header('authorization'))) {
+      firebase.logger.warn('unauthorised request', req.headers);
       res.status(403).send('Unauthorized');
       return;
     }

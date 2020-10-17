@@ -10,13 +10,13 @@ enum BuildStatus {
   published,
 }
 
-type ImageType = 'base' | 'hub' | 'editor';
+export type ImageType = 'base' | 'hub' | 'editor';
 
 // Used in Start API
 export interface BuildInfo {
   baseOs: string;
   repoVersion: string;
-  unityVersion: string;
+  editorVersion: string;
   targetPlatform: string;
 }
 

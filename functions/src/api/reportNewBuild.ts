@@ -2,26 +2,32 @@ import { firebase, functions } from '../config/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
-import { BuildInfo, CiBuilds } from '../model/ciBuilds';
+import { BuildInfo, CiBuilds, ImageType } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../config/discord';
+import { EditorVersionInfo } from '../model/editorVersionInfo';
+import { RepoVersionInfo } from '../model/repoVersions';
 
 export const reportNewBuild = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
-    if (!Token.isValid(req.header('Authorisation'))) {
-      firebase.logger.warn('unauthorised request', req);
+    if (!Token.isValid(req.header('authorization'))) {
+      firebase.logger.warn('unauthorised request', req.headers);
       res.status(403).send('Unauthorized');
       return;
     }
 
     const { body } = req;
-    const { buildId, jobId, imageType, baseOs, repoVersion, unityVersion, targetPlatform } = body;
+    const { buildId, jobId, imageType, baseOs, repoVersion, editorVersion, targetPlatform } = body;
     const buildInfo: BuildInfo = {
       baseOs,
       repoVersion,
-      unityVersion,
+      editorVersion,
       targetPlatform,
     };
+
+    if (jobId === 'dryRun') {
+      await createDryRunJob(imageType, editorVersion);
+    }
 
     await CiJobs.markJobAsInProgress(jobId);
     await CiBuilds.registerNewBuild(buildId, jobId, imageType, buildInfo);
@@ -40,3 +46,14 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
     await Discord.disconnect();
   }
 });
+
+const createDryRunJob = async (imageType: ImageType, editorVersion: string) => {
+  const repoVersionInfo = await RepoVersionInfo.getLatest();
+
+  if (imageType === 'editor') {
+    const editorVersionInfo = await EditorVersionInfo.get(editorVersion);
+    await CiJobs.create(imageType, repoVersionInfo, editorVersionInfo);
+  } else {
+    await CiJobs.create(imageType, repoVersionInfo);
+  }
+};

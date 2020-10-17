@@ -1,8 +1,9 @@
-import { db, admin, firebase } from '../config/firebase';
-import { UnityVersionInfo } from './unityVersionInfo';
+import { db, admin } from '../config/firebase';
+import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersions';
+import { ImageType } from './ciBuilds';
 
 const COLLECTION = 'ciJobs';
 
@@ -23,8 +24,9 @@ interface MetaData {
 export interface CiJob {
   status: JobStatus;
   meta: MetaData;
+  imageType: ImageType;
   repoVersionInfo: RepoVersionInfo;
-  unityVersionInfo: UnityVersionInfo;
+  editorVersionInfo: EditorVersionInfo | null;
   addedDate: Timestamp;
   modifiedDate: Timestamp;
 }
@@ -39,31 +41,32 @@ export class CiJobs {
     return snapshot.docs.map((doc) => doc.data()) as CiJob[];
   };
 
-  static create = async (unityVersionInfo: UnityVersionInfo, repoVersionInfo: RepoVersionInfo) => {
-    try {
-      await db
-        .collection(COLLECTION)
-        .doc('some elaborate id')
-        .set({
-          status: JobStatus.created,
-          repoVersionInfo,
-          unityVersionInfo,
-          meta: {
-            lastBuildStart: null,
-            failureCount: 0,
-            lastBuildFailure: null,
-          },
-          addedDate: Timestamp.now(),
-          modifiedDate: Timestamp.now(),
-        });
-    } catch (err) {
-      firebase.logger.error('Error occurred while trying to enqueue a new job', err);
-    }
+  static create = async (
+    imageType: ImageType,
+    repoVersionInfo: RepoVersionInfo,
+    editorVersionInfo: EditorVersionInfo | null = null,
+  ) => {
+    const jobId = await CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
+    await db
+      .collection(COLLECTION)
+      .doc(jobId)
+      .set({
+        status: JobStatus.created,
+        imageType,
+        repoVersionInfo,
+        editorVersionInfo,
+        meta: {
+          lastBuildStart: null,
+          failureCount: 0,
+          lastBuildFailure: null,
+        },
+        addedDate: Timestamp.now(),
+        modifiedDate: Timestamp.now(),
+      });
   };
 
   static markJobAsInProgress = async (jobId: string) => {
     const job = await db.collection(COLLECTION).doc(jobId);
-
     const snapshot = await job.get();
     const currentBuild = snapshot.data() as CiJob;
 
@@ -100,4 +103,23 @@ export class CiJobs {
       modifiedDate: Timestamp.now(),
     });
   };
+
+  static generateJobId(
+    imageType: string,
+    repoVersionInfo: RepoVersionInfo,
+    editorVersionInfo: EditorVersionInfo | null,
+  ) {
+    const { version: repoVersion } = repoVersionInfo;
+
+    if (imageType !== 'editor') {
+      return `${imageType}-${repoVersion}`;
+    }
+
+    if (editorVersionInfo === null) {
+      throw new Error('editorVersionInfo must be provided for editor build jobs.');
+    }
+
+    const { version: editorVersion } = editorVersionInfo;
+    return `${imageType}-${editorVersion}-${repoVersion}`;
+  }
 }

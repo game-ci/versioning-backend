@@ -1,4 +1,4 @@
-import { UnityVersionInfo } from '../../model/unityVersionInfo';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { isMatch } from 'lodash';
 import { firebase } from '../../config/firebase';
 import { Discord } from '../../config/discord';
@@ -7,11 +7,11 @@ const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabase = async (ingestedInfoList: UnityVersionInfo[]): Promise<void> => {
-  const existingInfoList = await UnityVersionInfo.getAll();
+export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Promise<void> => {
+  const existingInfoList = await EditorVersionInfo.getAll();
 
-  const newVersions: UnityVersionInfo[] = [];
-  const updatedVersions: UnityVersionInfo[] = [];
+  const newVersions: EditorVersionInfo[] = [];
+  const updatedVersions: EditorVersionInfo[] = [];
 
   ingestedInfoList.forEach((scrapedInfo) => {
     const { version } = scrapedInfo;
@@ -31,12 +31,12 @@ export const updateDatabase = async (ingestedInfoList: UnityVersionInfo[]): Prom
   let message = '';
 
   if (newVersions.length >= 1) {
-    await UnityVersionInfo.createMany(newVersions);
+    await EditorVersionInfo.createMany(newVersions);
     message += `${newVersions.length} new ${plural(newVersions.length)} detected. `;
   }
 
   if (updatedVersions.length >= 1) {
-    await UnityVersionInfo.updateMany(updatedVersions);
+    await EditorVersionInfo.updateMany(updatedVersions);
     message += `${updatedVersions.length} updated ${plural(updatedVersions.length)} detected. `;
   }
 

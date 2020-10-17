@@ -1,12 +1,12 @@
 import { getDocumentFromUrl } from '../utils/get-document-from-url';
-import { UnityVersionInfo } from '../../model/unityVersionInfo';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
 const UNITY_ARCHIVE_URL = 'https://unity3d.com/get-unity/download/archive';
 
 /**
  * Based on https://github.com/BLaZeKiLL/unity-scraper
  */
-export const scrapeVersions = async (): Promise<UnityVersionInfo[]> => {
+export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
   const document = await getDocumentFromUrl(UNITY_ARCHIVE_URL);
 
   const links = Array.from(document.querySelectorAll('a.unityhub[href]'));
