@@ -2,7 +2,7 @@ import { firebase, functions } from '../config/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
-import { CiBuilds, DockerInfo } from '../model/ciBuilds';
+import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../config/discord';
 
@@ -17,9 +17,7 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     const { body } = req;
     firebase.logger.debug('Publication report incomfing.', body);
 
-    const { jobId, buildId, imageRepo, imageName, friendlyTag, specificTag, digest } = body;
-    const dockerInfo: DockerInfo = { imageRepo, imageName, friendlyTag, specificTag, digest };
-
+    const { jobId, buildId, dockerInfo } = body;
     await CiBuilds.markBuildAsPublished(buildId, dockerInfo);
     const jobHasCompleted = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
     firebase.logger.info('Publication reported.', body);
