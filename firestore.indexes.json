@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "ciBuilds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "jobId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "editorVersions",
       "queryScope": "COLLECTION",
       "fields": [
