@@ -1,7 +1,7 @@
-import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { isMatch } from 'lodash';
 import { firebase } from '../../config/firebase';
 import { Discord } from '../../config/discord';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
 const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
