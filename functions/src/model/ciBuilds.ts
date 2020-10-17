@@ -125,7 +125,6 @@ export class CiBuilds {
     const snapshot = await db
       .collection(COLLECTION)
       .where('jobId', '==', jobId)
-      // @ts-ignore
       .where('status', '!=', BuildStatus.published)
       .limit(1)
       .get();
