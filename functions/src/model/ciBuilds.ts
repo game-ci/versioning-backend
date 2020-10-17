@@ -100,7 +100,8 @@ export class CiBuilds {
         throw new Error('A build with this identifier already exists');
       }
 
-      await ref.create({ data });
+      const result = await ref.create(data);
+      firebase.logger.debug('Build created', result);
     } catch (err) {
       firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }

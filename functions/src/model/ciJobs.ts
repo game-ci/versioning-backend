@@ -47,23 +47,21 @@ export class CiJobs {
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
-    const result = await db
-      .collection(COLLECTION)
-      .doc(jobId)
-      .create({
-        status: JobStatus.created,
-        imageType,
-        repoVersionInfo,
-        editorVersionInfo,
-        meta: {
-          lastBuildStart: null,
-          failureCount: 0,
-          lastBuildFailure: null,
-        },
-        addedDate: Timestamp.now(),
-        modifiedDate: Timestamp.now(),
-      });
+    const job: CiJob = {
+      status: JobStatus.created,
+      imageType,
+      repoVersionInfo,
+      editorVersionInfo,
+      meta: {
+        lastBuildStart: null,
+        failureCount: 0,
+        lastBuildFailure: null,
+      },
+      addedDate: Timestamp.now(),
+      modifiedDate: Timestamp.now(),
+    };
 
+    const result = await db.collection(COLLECTION).doc(jobId).create(job);
     firebase.logger.debug('Job created', result);
   };
 
