@@ -92,7 +92,7 @@ export class CiBuilds {
         modifiedDate: Timestamp.now(),
       };
 
-      await db.collection(COLLECTION).doc(buildId).set({ data });
+      await db.collection(COLLECTION).doc(buildId).create({ data });
     } catch (err) {
       firebase.logger.error('Error occurred while trying to enqueue a new build', err);
     }
