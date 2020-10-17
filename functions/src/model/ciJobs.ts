@@ -1,4 +1,4 @@
-import { db, admin } from '../config/firebase';
+import { db, admin, firebase } from '../config/firebase';
 import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
@@ -42,42 +42,47 @@ export class CiJobs {
   };
 
   static create = async (
+    jobId: string,
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
-    const jobId = await CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
-    await db
-      .collection(COLLECTION)
-      .doc(jobId)
-      .set({
-        status: JobStatus.created,
-        imageType,
-        repoVersionInfo,
-        editorVersionInfo,
-        meta: {
-          lastBuildStart: null,
-          failureCount: 0,
-          lastBuildFailure: null,
-        },
-        addedDate: Timestamp.now(),
-        modifiedDate: Timestamp.now(),
-      });
+    const job: CiJob = {
+      status: JobStatus.created,
+      imageType,
+      repoVersionInfo,
+      editorVersionInfo,
+      meta: {
+        lastBuildStart: null,
+        failureCount: 0,
+        lastBuildFailure: null,
+      },
+      addedDate: Timestamp.now(),
+      modifiedDate: Timestamp.now(),
+    };
+
+    const result = await db.collection(COLLECTION).doc(jobId).create(job);
+    firebase.logger.debug('Job created', result);
   };
 
   static markJobAsInProgress = async (jobId: string) => {
-    const job = await db.collection(COLLECTION).doc(jobId);
-    const snapshot = await job.get();
-    const currentBuild = snapshot.data() as CiJob;
+    const ref = await db.collection(COLLECTION).doc(jobId);
+    const snapshot = await ref.get();
 
-    // TODO - move this logic out of the model
+    if (!snapshot.exists) {
+      throw new Error(`Trying to mark job '${jobId}' as in progress. But it does not exist.`);
+    }
+
+    const currentBuild = snapshot.data() as CiJob;
+    firebase.logger.warn(currentBuild);
+
     // Do not override failure or completed
     let { status } = currentBuild;
     if ([JobStatus.created, JobStatus.scheduled].includes(status)) {
       status = JobStatus.inProgress;
     }
 
-    await job.update({
+    await ref.update({
       status,
       'meta.lastBuildStart': Timestamp.now(),
       modifiedDate: Timestamp.now(),
@@ -89,7 +94,7 @@ export class CiJobs {
 
     await job.update({
       status: JobStatus.failure,
-      'meta.failures': FieldValue.increment(1),
+      'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
@@ -103,6 +108,14 @@ export class CiJobs {
       modifiedDate: Timestamp.now(),
     });
   };
+
+  static async removeDryRunJob(jobId: string) {
+    if (!jobId.startsWith('dryRun')) {
+      throw new Error('Expect only dryRun jobs to be deleted.');
+    }
+
+    await db.collection(COLLECTION).doc(jobId).delete();
+  }
 
   static generateJobId(
     imageType: string,

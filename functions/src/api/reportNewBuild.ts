@@ -17,6 +17,8 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
     }
 
     const { body } = req;
+    firebase.logger.debug('new incoming build report', body);
+
     const { buildId, jobId, imageType, baseOs, repoVersion, editorVersion, targetPlatform } = body;
     const buildInfo: BuildInfo = {
       baseOs,
@@ -25,8 +27,8 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
       targetPlatform,
     };
 
-    if (jobId === 'dryRun') {
-      await createDryRunJob(imageType, editorVersion);
+    if (jobId.toString().startsWith('dryRun')) {
+      await createDryRunJob(jobId, imageType, editorVersion);
     }
 
     await CiJobs.markJobAsInProgress(jobId);
@@ -37,21 +39,28 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
   } catch (err) {
     const message = `
       Something went wrong while wrong while reporting a new build.
-      ${err.message} (${err.status})\n${err.stackTrace}
+      ${err.message}
     `;
-    firebase.logger.error(message);
+    firebase.logger.error(message, err);
     await Discord.sendAlert(message);
+
+    if (req.body?.jobId?.toString().startsWith('dryRun')) {
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
+    }
+
     res.status(500).send('Something went wrong');
   }
 });
 
-const createDryRunJob = async (imageType: ImageType, editorVersion: string) => {
+const createDryRunJob = async (jobId: string, imageType: ImageType, editorVersion: string) => {
+  firebase.logger.debug('running dryrun for image', imageType, editorVersion);
   const repoVersionInfo = await RepoVersionInfo.getLatest();
 
   if (imageType === 'editor') {
     const editorVersionInfo = await EditorVersionInfo.get(editorVersion);
-    await CiJobs.create(imageType, repoVersionInfo, editorVersionInfo);
+    await CiJobs.create(jobId, imageType, repoVersionInfo, editorVersionInfo);
   } else {
-    await CiJobs.create(imageType, repoVersionInfo);
+    await CiJobs.create(jobId, imageType, repoVersionInfo);
   }
 };

@@ -28,7 +28,7 @@ export class RepoVersionInfo {
       .limit(1)
       .get();
 
-    if (snapshot.docs.length <= 1) {
+    if (snapshot.docs.length <= 0) {
       throw new Error('No repository versions have been ingested yet');
     }
 

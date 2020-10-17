@@ -2,7 +2,7 @@ import { firebase, functions } from '../config/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
-import { CiBuilds, DockerInfo } from '../model/ciBuilds';
+import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../config/discord';
 
@@ -15,28 +15,42 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     }
 
     const { body } = req;
-    const { jobId, buildId, imageRepo, imageName, friendlyTag, specificTag, digest } = body;
-    const dockerInfo: DockerInfo = { imageRepo, imageName, friendlyTag, specificTag, digest };
+    firebase.logger.debug('Publication report incoming.', body);
+    const isDryRun = req.body.jobId?.toString().startsWith('dryRun');
 
+    const { jobId, buildId, dockerInfo } = body;
     await CiBuilds.markBuildAsPublished(buildId, dockerInfo);
     const jobHasCompleted = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
-    firebase.logger.info('Publication reported.', body);
 
     if (jobHasCompleted) {
       await CiJobs.markJobAsCompleted(jobId);
-      const message = `Job completed for ${jobId}.`;
+      const message = `New images published for ${jobId}.`;
       firebase.logger.info(message);
-      await Discord.sendMessageToMaintainers(message);
+      if (!isDryRun) {
+        await Discord.sendMessageToMaintainers(message);
+      }
+    }
+
+    firebase.logger.info('Publication reported.', body);
+    if (isDryRun) {
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
     }
 
     res.status(200).send('OK');
   } catch (err) {
     const message = `
       Something went wrong while wrong while reporting a new publication
-      ${err.message} (${err.status})\n${err.stackTrace}
+      ${err.message}
     `;
-    firebase.logger.error(message);
+    firebase.logger.error(message, err);
     await Discord.sendAlert(message);
+
+    if (req.body?.jobId?.toString().startsWith('dryRun')) {
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
+    }
+
     res.status(500).send('Something went wrong');
   }
 });

@@ -15,6 +15,8 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
     }
 
     const { body } = req;
+    firebase.logger.debug('Build failure report incoming.', body);
+
     const { jobId, buildId, reason } = body;
     const failure: BuildFailure = { reason };
 
@@ -26,10 +28,16 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
   } catch (err) {
     const message = `
       Something went wrong while wrong while reporting a build failure
-      ${err.message} (${err.status})\n${err.stackTrace}
+      ${err.message}
     `;
-    firebase.logger.error(message);
+    firebase.logger.error(message, err);
     await Discord.sendAlert(message);
+
+    if (req.body?.jobId?.toString().startsWith('dryRun')) {
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
+    }
+
     res.status(500).send('Something went wrong');
   }
 });

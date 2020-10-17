@@ -73,30 +73,47 @@ export class CiBuilds {
     imageType: ImageType,
     buildInfo: BuildInfo,
   ) => {
-    try {
-      const data: CiBuild = {
-        status: BuildStatus.started,
-        buildId,
-        relatedJobId,
-        imageType,
-        buildInfo,
-        failure: null,
-        dockerInfo: null,
-        meta: {
-          lastBuildStart: Timestamp.now(),
-          failureCount: 0,
-          lastBuildFailure: null,
-          publishedDate: null,
-        },
-        addedDate: Timestamp.now(),
-        modifiedDate: Timestamp.now(),
-      };
+    const data: CiBuild = {
+      status: BuildStatus.started,
+      buildId,
+      relatedJobId,
+      imageType,
+      buildInfo,
+      failure: null,
+      dockerInfo: null,
+      meta: {
+        lastBuildStart: Timestamp.now(),
+        failureCount: 0,
+        lastBuildFailure: null,
+        publishedDate: null,
+      },
+      addedDate: Timestamp.now(),
+      modifiedDate: Timestamp.now(),
+    };
 
-      await db.collection(COLLECTION).doc(buildId).set({ data });
-    } catch (err) {
-      firebase.logger.error('Error occurred while trying to enqueue a new build', err);
+    const ref = await db.collection(COLLECTION).doc(buildId);
+    const snapshot = await ref.get();
+
+    if (snapshot.exists) {
+      // noinspection ExceptionCaughtLocallyJS
+      throw new Error('A build with this identifier already exists');
     }
+
+    const result = await ref.create(data);
+    firebase.logger.debug('Build created', result);
   };
+
+  static async removeDryRunBuild(buildId: string) {
+    if (!buildId.startsWith('dryRun')) {
+      throw new Error('Unexpected behaviour, expected only dryRun builds to be deleted');
+    }
+
+    const ref = await db.collection(COLLECTION).doc(buildId);
+    const doc = await ref.get();
+    firebase.logger.info('dryRun produced this build endResult', doc.data());
+
+    await ref.delete();
+  }
 
   static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
     const build = await db.collection(COLLECTION).doc(buildId);
@@ -125,7 +142,6 @@ export class CiBuilds {
     const snapshot = await db
       .collection(COLLECTION)
       .where('jobId', '==', jobId)
-      // @ts-ignore
       .where('status', '!=', BuildStatus.published)
       .limit(1)
       .get();

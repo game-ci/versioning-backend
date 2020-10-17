@@ -49,6 +49,6 @@ export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Pro
     firebase.logger.info(message);
     await Discord.sendMessageToMaintainers(message);
   } else {
-    firebase.logger.info('Database is up-to-date. (no updated info found)');
+    firebase.logger.info('Database is up-to-date. (no updated Unity versions found)');
   }
 };
