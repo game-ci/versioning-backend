@@ -73,49 +73,41 @@ export class CiBuilds {
     imageType: ImageType,
     buildInfo: BuildInfo,
   ) => {
-    try {
-      const data: CiBuild = {
-        status: BuildStatus.started,
-        buildId,
-        relatedJobId,
-        imageType,
-        buildInfo,
-        failure: null,
-        dockerInfo: null,
-        meta: {
-          lastBuildStart: Timestamp.now(),
-          failureCount: 0,
-          lastBuildFailure: null,
-          publishedDate: null,
-        },
-        addedDate: Timestamp.now(),
-        modifiedDate: Timestamp.now(),
-      };
+    const data: CiBuild = {
+      status: BuildStatus.started,
+      buildId,
+      relatedJobId,
+      imageType,
+      buildInfo,
+      failure: null,
+      dockerInfo: null,
+      meta: {
+        lastBuildStart: Timestamp.now(),
+        failureCount: 0,
+        lastBuildFailure: null,
+        publishedDate: null,
+      },
+      addedDate: Timestamp.now(),
+      modifiedDate: Timestamp.now(),
+    };
 
-      const ref = await db.collection(COLLECTION).doc(buildId);
-      const snapshot = await ref.get();
+    const ref = await db.collection(COLLECTION).doc(buildId);
+    const snapshot = await ref.get();
 
-      if (snapshot.exists) {
-        // noinspection ExceptionCaughtLocallyJS
-        throw new Error('A build with this identifier already exists');
-      }
-
-      const result = await ref.create(data);
-      firebase.logger.debug('Build created', result);
-    } catch (err) {
-      firebase.logger.error('Error occurred while trying to enqueue a new build', err);
+    if (snapshot.exists) {
+      // noinspection ExceptionCaughtLocallyJS
+      throw new Error('A build with this identifier already exists');
     }
+
+    const result = await ref.create(data);
+    firebase.logger.debug('Build created', result);
   };
 
   /**
    * Only dryRun builds should be deleted. Mark other builds as published or failed instead.
    */
   static async removeBuild(buildId: string) {
-    try {
-      await db.collection(COLLECTION).doc(buildId).delete();
-    } catch (err) {
-      firebase.logger.error('Error occurred while trying to remove build', err);
-    }
+    await db.collection(COLLECTION).doc(buildId).delete();
   }
 
   static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
