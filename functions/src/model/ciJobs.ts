@@ -50,7 +50,7 @@ export class CiJobs {
     const result = await db
       .collection(COLLECTION)
       .doc(jobId)
-      .set({
+      .create({
         status: JobStatus.created,
         imageType,
         repoVersionInfo,
