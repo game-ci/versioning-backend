@@ -15,6 +15,8 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     }
 
     const { body } = req;
+    firebase.logger.debug('Publication report incomfing.', body);
+
     const { jobId, buildId, imageRepo, imageName, friendlyTag, specificTag, digest } = body;
     const dockerInfo: DockerInfo = { imageRepo, imageName, friendlyTag, specificTag, digest };
 

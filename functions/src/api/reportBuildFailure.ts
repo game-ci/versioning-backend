@@ -15,6 +15,8 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
     }
 
     const { body } = req;
+    firebase.logger.debug('Build failure report incoming.', body);
+
     const { jobId, buildId, reason } = body;
     const failure: BuildFailure = { reason };
 

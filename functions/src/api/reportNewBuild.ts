@@ -17,6 +17,8 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
     }
 
     const { body } = req;
+    firebase.logger.debug('new incoming build report', body);
+
     const { buildId, jobId, imageType, baseOs, repoVersion, editorVersion, targetPlatform } = body;
     const buildInfo: BuildInfo = {
       baseOs,
