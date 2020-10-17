@@ -1,7 +1,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "repoVersions",
+      "collectionGroup": "editorVersions",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "collectionGroup": "unityVersions",
+      "collectionGroup": "repoVersions",
       "queryScope": "COLLECTION",
       "fields": [
         {
