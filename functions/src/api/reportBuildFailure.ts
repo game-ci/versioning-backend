@@ -28,9 +28,9 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
   } catch (err) {
     const message = `
       Something went wrong while wrong while reporting a build failure
-      ${err.message} (${err.status})\n${err.stackTrace}
+      ${err.message}
     `;
-    firebase.logger.error(message);
+    firebase.logger.error(message, err);
     await Discord.sendAlert(message);
     res.status(500).send('Something went wrong');
   }
