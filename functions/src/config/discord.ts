@@ -30,20 +30,29 @@ export class Discord {
 
   static async sendMessage(
     channelId: string,
-    message: Eris.MessageContent,
+    messageContent: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
   ): Promise<boolean> {
+    let success = false;
     try {
-      const i = await this.getInstance();
+      const discord = await this.getInstance();
 
-      // Todo - retry mechanism
-      await i.createMessage(channelId, message, files);
-      await this.disconnect();
-      return true;
+      if (typeof messageContent === 'string') {
+        for (const message of Discord.splitMessage(messageContent)) {
+          await discord.createMessage(channelId, message, files);
+        }
+      } else {
+        await discord.createMessage(channelId, messageContent, files);
+      }
+
+      success = true;
     } catch (err) {
       firebase.logger.error('An error occurred while trying to send a message to discord.', err);
-      return false;
+    } finally {
+      await this.disconnect();
     }
+
+    return success;
   }
 
   static async getInstance(): Promise<Eris.Client> {
@@ -83,5 +92,31 @@ export class Discord {
 
     instance.disconnect({ reconnect: false });
     instance = null;
+  }
+
+  static splitMessage(message: string, maxMessageSize: number = 1950): Array<string> {
+    const numberOfMessages = Math.ceil(message.length / maxMessageSize);
+    const messages: Array<string> = new Array<string>(numberOfMessages);
+
+    for (let i = 0, pointer = 0; i < numberOfMessages; i++) {
+      let messageSize = maxMessageSize;
+
+      let prefix = '';
+      if (i !== 0) {
+        prefix = '...';
+        messageSize -= 3;
+      }
+
+      let suffix = '';
+      if (i !== numberOfMessages - 1) {
+        suffix = '...';
+        messageSize -= 3;
+      }
+
+      messages[i] = `${prefix}${message.substring(pointer, messageSize)}${suffix}`;
+      pointer += messageSize;
+    }
+
+    return messages;
   }
 }
