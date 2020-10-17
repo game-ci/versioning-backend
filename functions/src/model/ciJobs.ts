@@ -118,21 +118,36 @@ export class CiJobs {
   }
 
   static generateJobId(
-    imageType: string,
+    imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null,
   ) {
     const { version: repoVersion } = repoVersionInfo;
-
     if (imageType !== 'editor') {
-      return `${imageType}-${repoVersion}`;
+      return CiJobs.parseJobId(imageType, repoVersion);
     }
 
     if (editorVersionInfo === null) {
       throw new Error('editorVersionInfo must be provided for editor build jobs.');
     }
-
     const { version: editorVersion } = editorVersionInfo;
+
+    return CiJobs.parseJobId(imageType, repoVersion, editorVersion);
+  }
+
+  static parseJobId(
+    imageType: ImageType,
+    repoVersion: string,
+    editorVersion: string | null = null,
+  ) {
+    if (imageType !== 'editor') {
+      return `${imageType}-${repoVersion}`;
+    }
+
+    if (editorVersion === null) {
+      throw new Error('editorVersion must be provided for editor build jobs.');
+    }
+
     return `${imageType}-${editorVersion}-${repoVersion}`;
   }
 }
