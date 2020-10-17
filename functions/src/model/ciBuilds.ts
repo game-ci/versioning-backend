@@ -103,11 +103,16 @@ export class CiBuilds {
     firebase.logger.debug('Build created', result);
   };
 
-  /**
-   * Only dryRun builds should be deleted. Mark other builds as published or failed instead.
-   */
-  static async removeBuild(buildId: string) {
-    await db.collection(COLLECTION).doc(buildId).delete();
+  static async removeDryRunBuild(buildId: string) {
+    if (!buildId.startsWith('dryRun')) {
+      throw new Error('Unexpected behaviour, expected only dryRun builds to be deleted');
+    }
+
+    const ref = await db.collection(COLLECTION).doc(buildId);
+    const doc = await ref.get();
+    firebase.logger.info('dryRun produced this build endResult', doc.data());
+
+    await ref.delete();
   }
 
   static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {

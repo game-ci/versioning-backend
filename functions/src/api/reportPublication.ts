@@ -15,23 +15,26 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     }
 
     const { body } = req;
-    firebase.logger.debug('Publication report incomfing.', body);
+    firebase.logger.debug('Publication report incoming.', body);
+    const isDryRun = req.body.jobId?.toString().startsWith('dryRun');
 
     const { jobId, buildId, dockerInfo } = body;
     await CiBuilds.markBuildAsPublished(buildId, dockerInfo);
     const jobHasCompleted = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
-    firebase.logger.info('Publication reported.', body);
 
     if (jobHasCompleted) {
       await CiJobs.markJobAsCompleted(jobId);
-      const message = `Job completed for ${jobId}.`;
+      const message = `New images published for ${jobId}.`;
       firebase.logger.info(message);
-      await Discord.sendMessageToMaintainers(message);
+      if (!isDryRun) {
+        await Discord.sendMessageToMaintainers(message);
+      }
     }
 
-    if (req.body.jobId?.toString().startsWith('dryRun')) {
-      await CiBuilds.removeBuild(req.body.buildId);
-      await CiJobs.removeJob(req.body.jobId);
+    firebase.logger.info('Publication reported.', body);
+    if (isDryRun) {
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
     }
 
     res.status(200).send('OK');
@@ -44,8 +47,8 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     await Discord.sendAlert(message);
 
     if (req.body?.jobId?.toString().startsWith('dryRun')) {
-      await CiBuilds.removeBuild(req.body.buildId);
-      await CiJobs.removeJob(req.body.jobId);
+      await CiBuilds.removeDryRunBuild(req.body.buildId);
+      await CiJobs.removeDryRunJob(req.body.jobId);
     }
 
     res.status(500).send('Something went wrong');

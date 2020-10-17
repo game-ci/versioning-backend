@@ -109,10 +109,11 @@ export class CiJobs {
     });
   };
 
-  /**
-   * Only dryRun builds should be deleted. Mark other builds as published or failed instead.
-   */
-  static async removeJob(jobId: string) {
+  static async removeDryRunJob(jobId: string) {
+    if (!jobId.startsWith('dryRun')) {
+      throw new Error('Expect only dryRun jobs to be deleted.');
+    }
+
     await db.collection(COLLECTION).doc(jobId).delete();
   }
 
