@@ -6,8 +6,6 @@ import { updateDatabase } from './updateDatabase';
 export const ingestRepoVersions = async () => {
   try {
     const scrapedInfoList = await scrapeVersions();
-    firebase.logger.info('Found versions', scrapedInfoList);
-
     await updateDatabase(scrapedInfoList);
   } catch (err) {
     const message = `

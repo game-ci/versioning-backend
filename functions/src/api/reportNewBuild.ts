@@ -48,6 +48,7 @@ export const reportNewBuild = functions.https.onRequest(async (req: Request, res
 });
 
 const createDryRunJob = async (imageType: ImageType, editorVersion: string) => {
+  firebase.logger.debug('running dryrun for image', imageType, editorVersion);
   const repoVersionInfo = await RepoVersionInfo.getLatest();
 
   if (imageType === 'editor') {
