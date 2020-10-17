@@ -1,7 +1,7 @@
-import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { isMatch } from 'lodash';
 import { firebase } from '../../config/firebase';
 import { Discord } from '../../config/discord';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
 const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
@@ -32,12 +32,16 @@ export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Pro
 
   if (newVersions.length >= 1) {
     await EditorVersionInfo.createMany(newVersions);
-    message += `${newVersions.length} new ${plural(newVersions.length)} detected. `;
+    message += `
+      ${newVersions.length} new Unity editor ${plural(newVersions.length)} detected.
+      (${newVersions.map((version) => version.version).join(', ')}`;
   }
 
   if (updatedVersions.length >= 1) {
     await EditorVersionInfo.updateMany(updatedVersions);
-    message += `${updatedVersions.length} updated ${plural(updatedVersions.length)} detected. `;
+    message += `
+      ${updatedVersions.length} updated Unity editor ${plural(updatedVersions.length)} detected.
+      (${updatedVersions.map((version) => version.version).join(', ')})`;
   }
 
   message = message.trimEnd();

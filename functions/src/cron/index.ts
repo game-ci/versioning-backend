@@ -2,6 +2,7 @@ import { EventContext } from 'firebase-functions';
 import { firebase, functions } from '../config/firebase';
 import { Discord } from '../config/discord';
 import { ingestUnityVersions } from '../logic/ingestUnityVersions';
+import { ingestRepoVersions } from '../logic/ingestRepoVersions';
 
 /**
  * CPU-time for pubSub is not part of the free quota, so we'll keep it light weight.
@@ -24,5 +25,6 @@ export const trigger = functions.pubsub
   });
 
 const routineTasks = async () => {
+  await ingestRepoVersions();
   await ingestUnityVersions();
 };
