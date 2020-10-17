@@ -34,7 +34,8 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
     await Discord.sendAlert(message);
 
     if (req.body?.jobId?.toString().startsWith('dryRun')) {
-      await CiBuilds.removeBuild(req.body.jobId);
+      await CiBuilds.removeBuild(req.body.buildId);
+      await CiJobs.removeJob(req.body.jobId);
     }
 
     res.status(500).send('Something went wrong');

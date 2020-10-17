@@ -109,6 +109,17 @@ export class CiJobs {
     });
   };
 
+  /**
+   * Only dryRun builds should be deleted. Mark other builds as published or failed instead.
+   */
+  static async removeJob(jobId: string) {
+    try {
+      await db.collection(COLLECTION).doc(jobId).delete();
+    } catch (err) {
+      firebase.logger.error('Error occurred while trying to remove build', err);
+    }
+  }
+
   static generateJobId(
     imageType: string,
     repoVersionInfo: RepoVersionInfo,

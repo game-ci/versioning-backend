@@ -29,6 +29,11 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
       await Discord.sendMessageToMaintainers(message);
     }
 
+    if (req.body.jobId?.toString().startsWith('dryRun')) {
+      await CiBuilds.removeBuild(req.body.buildId);
+      await CiJobs.removeJob(req.body.jobId);
+    }
+
     res.status(200).send('OK');
   } catch (err) {
     const message = `
@@ -39,7 +44,8 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     await Discord.sendAlert(message);
 
     if (req.body?.jobId?.toString().startsWith('dryRun')) {
-      await CiBuilds.removeBuild(req.body.jobId);
+      await CiBuilds.removeBuild(req.body.buildId);
+      await CiJobs.removeJob(req.body.jobId);
     }
 
     res.status(500).send('Something went wrong');
