@@ -61,10 +61,10 @@ export class CiJobs {
     }
   };
 
-  static reportBuildStart = async (id: string) => {
-    const build = await db.collection(COLLECTION).doc(id);
+  static markJobAsInProgress = async (jobId: string) => {
+    const job = await db.collection(COLLECTION).doc(jobId);
 
-    const snapshot = await build.get();
+    const snapshot = await job.get();
     const currentBuild = snapshot.data() as CiJob;
 
     // TODO - move this logic out of the model
@@ -74,17 +74,17 @@ export class CiJobs {
       status = JobStatus.inProgress;
     }
 
-    await build.update({
+    await job.update({
       status,
       'meta.lastBuildStart': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
   };
 
-  static reportBuildFailure = async (id: string) => {
-    const build = await db.collection(COLLECTION).doc(id);
+  static markFailureForJob = async (jobId: string) => {
+    const job = await db.collection(COLLECTION).doc(jobId);
 
-    await build.update({
+    await job.update({
       status: JobStatus.failure,
       'meta.failures': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
@@ -92,10 +92,10 @@ export class CiJobs {
     });
   };
 
-  static markJobAsCompleted = async (id: string) => {
-    const build = await db.collection(COLLECTION).doc(id);
+  static markJobAsCompleted = async (jobId: string) => {
+    const job = await db.collection(COLLECTION).doc(jobId);
 
-    await build.update({
+    await job.update({
       status: JobStatus.completed,
       modifiedDate: Timestamp.now(),
     });
