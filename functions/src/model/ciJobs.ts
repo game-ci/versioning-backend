@@ -7,13 +7,13 @@ import { ImageType } from './ciBuilds';
 
 const COLLECTION = 'ciJobs';
 
-enum JobStatus {
-  created,
-  scheduled,
-  inProgress,
-  completed,
-  failure,
-}
+export type JobStatus =
+  | 'created'
+  | 'scheduled'
+  | 'inProgress'
+  | 'completed'
+  | 'failure'
+  | 'superseded';
 
 interface MetaData {
   lastBuildStart: Timestamp | null;
@@ -79,7 +79,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ): Promise<CiJob> => {
     const job: CiJob = {
-      status: JobStatus.created,
+      status: 'created',
       imageType,
       repoVersionInfo,
       editorVersionInfo,
@@ -108,8 +108,8 @@ export class CiJobs {
 
     // Do not override failure or completed
     let { status } = currentBuild;
-    if ([JobStatus.created, JobStatus.scheduled].includes(status)) {
-      status = JobStatus.inProgress;
+    if (['created', 'scheduled'].includes(status)) {
+      status = 'inProgress';
     }
 
     await ref.update({
@@ -123,7 +123,7 @@ export class CiJobs {
     const job = await db.collection(COLLECTION).doc(jobId);
 
     await job.update({
-      status: JobStatus.failure,
+      status: 'failure',
       'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
@@ -134,7 +134,7 @@ export class CiJobs {
     const job = await db.collection(COLLECTION).doc(jobId);
 
     await job.update({
-      status: JobStatus.completed,
+      status: 'completed',
       modifiedDate: Timestamp.now(),
     });
   };

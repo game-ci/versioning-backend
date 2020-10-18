@@ -4,12 +4,7 @@ import FieldValue = admin.firestore.FieldValue;
 
 const COLLECTION = 'ciBuilds';
 
-enum BuildStatus {
-  started,
-  failed,
-  published,
-}
-
+export type BuildStatus = 'started' | 'failed' | 'published';
 export type ImageType = 'base' | 'hub' | 'editor';
 
 // Used in Start API
@@ -74,7 +69,7 @@ export class CiBuilds {
     buildInfo: BuildInfo,
   ) => {
     const data: CiBuild = {
-      status: BuildStatus.started,
+      status: 'started',
       buildId,
       relatedJobId,
       imageType,
@@ -119,7 +114,7 @@ export class CiBuilds {
     const build = await db.collection(COLLECTION).doc(buildId);
 
     await build.update({
-      status: BuildStatus.failed,
+      status: 'failed',
       failure,
       modifiedDate: Timestamp.now(),
       'meta.failureCount': FieldValue.increment(1),
@@ -131,7 +126,7 @@ export class CiBuilds {
     const build = await db.collection(COLLECTION).doc(buildId);
 
     await build.update({
-      status: BuildStatus.published,
+      status: 'published',
       dockerInfo,
       modifiedDate: Timestamp.now(),
       'meta.publishedDate': Timestamp.now(),
@@ -142,7 +137,7 @@ export class CiBuilds {
     const snapshot = await db
       .collection(COLLECTION)
       .where('jobId', '==', jobId)
-      .where('status', '!=', BuildStatus.published)
+      .where('status', '!=', 'published')
       .limit(1)
       .get();
 
