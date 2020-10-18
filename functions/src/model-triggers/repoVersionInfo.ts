@@ -69,12 +69,11 @@ export const onCreate = functions.firestore
 
         if (existingJobIds.includes(editorJobId)) {
           skippedVersions.push(editorJobId);
-          return;
+        } else {
+          const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
+          const editorJobRef = db.collection(CI_JOBS_COLLECTION).doc(editorJobId);
+          batch.create(editorJobRef, editorJobData);
         }
-
-        const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-        const editorJobRef = db.collection(CI_JOBS_COLLECTION).doc(editorJobId);
-        batch.create(editorJobRef, editorJobData);
       }
       await batch.commit();
     }
