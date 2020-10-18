@@ -54,7 +54,7 @@ export class Scheduler {
     }
 
     // Schedule it
-    if (job.status === 'created') {
+    if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
@@ -93,7 +93,7 @@ export class Scheduler {
     }
 
     // Schedule it
-    if (job.status === 'created') {
+    if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
