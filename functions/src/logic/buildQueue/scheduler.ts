@@ -68,7 +68,7 @@ export class Scheduler {
         },
       });
 
-      if (response.status !== 200) {
+      if (response.status >= 200 && response.status < 300) {
         const failureMessage = `failed to schedule job ${jobId}`;
         firebase.logger.error(failureMessage, response);
         await Discord.sendAlert(failureMessage);
@@ -107,7 +107,7 @@ export class Scheduler {
         },
       });
 
-      if (response.status !== 200) {
+      if (response.status >= 200 && response.status < 300) {
         const failureMessage = `failed to schedule job ${jobId}`;
         firebase.logger.error(failureMessage, response);
         await Discord.sendAlert(failureMessage);
@@ -178,7 +178,7 @@ export class Scheduler {
         },
       });
 
-      if (response.status !== 200) {
+      if (response.status >= 200 && response.status < 300) {
         const failureMessage = `failed to schedule job ${jobId}`;
         firebase.logger.error(failureMessage, response);
         await Discord.sendAlert(failureMessage);
