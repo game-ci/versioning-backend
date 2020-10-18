@@ -95,7 +95,7 @@ export const onCreate = functions.firestore
     const newJobs = CiJobs.pluralise(totalNewJobs);
     const newJobsMessage = `Created ${newJobs} based on new repository version \`${currentRepoVersion}\``;
     firebase.logger.info(newJobsMessage);
-    await Discord.sendMessageToMaintainers(newJobsMessage);
+    await Discord.sendNews(newJobsMessage);
 
     // Supersede any non-complete jobs before the current version
     const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(currentRepoVersion);
