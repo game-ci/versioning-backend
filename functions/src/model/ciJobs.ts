@@ -78,10 +78,15 @@ export class CiJobs {
       .limit(settings.maxConcurrentJobs)
       .get();
 
+    firebase.logger.debug(`BuildQueue size: ${snapshot.docs.length}`);
+
     const queue: CiJobQueue = [];
     snapshot.docs.forEach((doc) => {
       queue.push({ id: doc.id, job: doc.data() as CiJob });
     });
+
+    firebase.logger.debug(`BuildQueue`, queue);
+
     return queue;
   };
 
