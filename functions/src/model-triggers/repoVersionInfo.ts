@@ -100,7 +100,7 @@ export const onCreate = functions.firestore
     const supersededIds: string[] = [];
     const currentVersion = repoVersionInfo.version;
     for (const existingJobId of existingJobIds) {
-      if (existingJobId.endsWith(currentVersion)) {
+      if (!existingJobId.endsWith(currentVersion)) {
         supersededIds.push(existingJobId);
       }
     }
