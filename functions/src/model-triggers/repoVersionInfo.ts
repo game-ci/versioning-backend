@@ -88,7 +88,9 @@ export const onCreate = functions.firestore
     }
 
     // Report that probably many new jobs have now been scheduled
-    const totalNewJobs = editorVersionInfos.length - skippedVersions.length;
+    const baseCount = 1;
+    const hubCount = 1;
+    const totalNewJobs = editorVersionInfos.length + baseCount + hubCount - skippedVersions.length;
     const newJobsMessage = `
       Created ${totalNewJobs} new CiJobs.
       based on new repository version \`${repoVersionInfo.version}\``;
