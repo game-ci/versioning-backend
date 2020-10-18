@@ -47,7 +47,7 @@ export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promi
   message = message.trimEnd();
   if (message.length >= 1) {
     firebase.logger.info(message);
-    await Discord.sendMessageToMaintainers(message);
+    await Discord.sendNews(message);
   } else {
     firebase.logger.info('Database is up-to-date. (no updated repo versions found)');
   }

@@ -32,7 +32,14 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
       }
 
       // Report new publications as news
-      const message = `New images published for ${publicationName}.`;
+      let message = '';
+      if (dockerInfo.imageName === 'editor') {
+        // i.e. [editor-2020.1.6f1]
+        message = `New images published for ${publicationName}.`;
+      } else {
+        // i.e. [hub] or [base]
+        message = `New ${publicationName}-image published.`;
+      }
       firebase.logger.info(message);
       if (!isDryRun) {
         await Discord.sendNews(message);
