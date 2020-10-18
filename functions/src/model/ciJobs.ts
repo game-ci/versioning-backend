@@ -71,9 +71,9 @@ export class CiJobs {
     // Note: we can't simply do select distinct major, max(minor), max(patch) in nosql
     const snapshot = await db
       .collection(CI_JOBS_COLLECTION)
-      .orderBy('major', 'desc')
-      .orderBy('minor', 'desc')
-      .orderBy('patch', 'desc')
+      .orderBy('editorVersionInfo.major', 'desc')
+      .orderBy('editorVersionInfo.minor', 'desc')
+      .orderBy('editorVersionInfo.patch', 'desc')
       .where('status', '==', 'created')
       .limit(settings.maxConcurrentJobs)
       .get();
