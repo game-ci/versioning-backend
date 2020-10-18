@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/jsdom": "^16.2.4",
+    "@types/lodash": "^4.14.162",
     "@types/node": "^14.11.10",
     "@types/node-fetch": "^2.5.7",
     "@types/semver": "^7.3.4",

@@ -56,12 +56,28 @@ export class CiJobs {
     return snapshot.docs.map((doc) => doc.data()) as CiJob[];
   };
 
+  static getAllIds = async (): Promise<string[]> => {
+    const snapshot = await db.collection(COLLECTION).get();
+
+    return snapshot.docs.map((doc) => doc.id);
+  };
+
   static create = async (
     jobId: string,
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
+    const job = await CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
+    const result = await db.collection(COLLECTION).doc(jobId).create(job);
+    firebase.logger.debug('Job created', result);
+  };
+
+  static construct = async (
+    imageType: ImageType,
+    repoVersionInfo: RepoVersionInfo,
+    editorVersionInfo: EditorVersionInfo | null = null,
+  ): Promise<CiJob> => {
     const job: CiJob = {
       status: JobStatus.created,
       imageType,
@@ -76,8 +92,7 @@ export class CiJobs {
       modifiedDate: Timestamp.now(),
     };
 
-    const result = await db.collection(COLLECTION).doc(jobId).create(job);
-    firebase.logger.debug('Job created', result);
+    return job;
   };
 
   static markJobAsInProgress = async (jobId: string) => {
@@ -135,7 +150,7 @@ export class CiJobs {
   static generateJobId(
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
-    editorVersionInfo: EditorVersionInfo | null,
+    editorVersionInfo: EditorVersionInfo | null = null,
   ) {
     const { version: repoVersion } = repoVersionInfo;
     if (imageType !== 'editor') {

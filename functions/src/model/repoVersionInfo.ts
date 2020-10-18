@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
-const COLLECTION = 'repoVersions';
+export const COLLECTION = 'repoVersions';
 
 export interface RepoVersionInfo {
   id: number;

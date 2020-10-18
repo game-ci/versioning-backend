@@ -1,1 +1,1 @@
-export * as buildQueue from './editorVersionInfo';
+export * as editorVersion from './editorVersionInfo';
