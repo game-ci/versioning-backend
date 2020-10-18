@@ -93,7 +93,7 @@ export const onCreate = functions.firestore
     const hubCount = 1;
     const totalNewJobs = editorVersionInfos.length + baseCount + hubCount - skippedVersions.length;
     const newJobs = CiJobs.pluralise(totalNewJobs);
-    const newJobsMessage = `Created ${newJobs} based on new repository version \`${currentRepoVersion}\``;
+    const newJobsMessage = `Created ${newJobs} for version \`${currentRepoVersion}\` of unity-ci/docker.`;
     firebase.logger.info(newJobsMessage);
     await Discord.sendNews(newJobsMessage);
 
