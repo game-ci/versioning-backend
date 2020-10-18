@@ -2,7 +2,7 @@ import { EventContext } from 'firebase-functions';
 import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
 import { firebase, functions } from '../config/firebase';
 
-import { COLLECTION, EditorVersionInfo } from '../model/editorVersionInfo';
+import { EDITOR_VERSIONS_COLLECTION, EditorVersionInfo } from '../model/editorVersionInfo';
 import { CiJobs } from '../model/ciJobs';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 import { Discord } from '../config/discord';
@@ -10,7 +10,7 @@ import { Discord } from '../config/discord';
 const imageType = 'editor';
 
 export const onCreate = functions.firestore
-  .document(`${COLLECTION}/{itemId}`)
+  .document(`${EDITOR_VERSIONS_COLLECTION}/{itemId}`)
   .onCreate(async (snapshot: QueryDocumentSnapshot, context: EventContext) => {
     const editorVersionInfo = snapshot.data() as EditorVersionInfo;
     const repoVersionInfo = await RepoVersionInfo.getLatest();
