@@ -26,7 +26,7 @@ export const onCreate = functions.firestore
     }
 
     // Skip creating jobs that already exist.
-    const existingJobIds = await CiJobs.getAllIds();
+    const existingJobIds = await CiJobs.getAllNonSupersededIds();
     const editorVersionInfos = await EditorVersionInfo.getAll();
     const skippedVersions: string[] = [];
 
@@ -96,5 +96,19 @@ export const onCreate = functions.firestore
     firebase.logger.info(newJobsMessage);
     await Discord.sendMessageToMaintainers(newJobsMessage);
 
-    // Todo - deprecate all CiJobs that still belong to an old repoVersion
+    // Gather which IDs should be superseded
+    const supersededIds: string[] = [];
+    const currentVersion = repoVersionInfo.version;
+    for (const existingJobId of existingJobIds) {
+      if (existingJobId.endsWith(currentVersion)) {
+        supersededIds.push(existingJobId);
+      }
+    }
+
+    // Report the number of replacements.
+    await CiJobs.markManyIdsAsSuperseded(supersededIds);
+    const replacementMessage = `
+      ${CiJobs.pluralise(supersededIds.length)} existing jobs are now superseded.`;
+    firebase.logger.warn(replacementMessage);
+    await Discord.sendMessageToMaintainers(replacementMessage);
   });

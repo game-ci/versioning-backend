@@ -1,19 +1,16 @@
 /* prettier-ignore */
-export const updateBuildQueue = async () => {
-  // When unity versions get ingested,
-    // jobs are created
-  // When repo versions get ingested,
-    // all "created" jobs get "superseded"
-    // base image job gets created
-    // hub image job gets created
-    // editor image jobs are created for all existing editor versions
 
+export const processBuildQueue = async () => {
   /**
-   * Select latest repoVersion
+   * When a new Unity version gets ingested:
+   *   - a CI Job for that version gets created.
+   *
+   * When a new repository version gets ingested
+   *   - a CI Job for a new base image gets created
+   *   - a CI Job for a new hub image gets created
+   *   - a CI Job for every Unity version gets created
+   *   - Any CI Jobs for older repository versions get status "superseded"
    */
-
-  // if: any images from previous repoVersions
-    // mark them as superseeded
 
   // if: base image is not built for that version yet (or building right now)
     // build base image

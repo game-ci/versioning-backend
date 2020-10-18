@@ -4,6 +4,9 @@ import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersionInfo';
 import { ImageType } from './ciBuilds';
+import FieldPath = admin.firestore.FieldPath;
+import DocumentSnapshot = admin.firestore.DocumentSnapshot;
+import { chunk } from 'lodash';
 
 export const CI_JOBS_COLLECTION = 'ciJobs';
 
@@ -59,7 +62,16 @@ export class CiJobs {
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
 
-    return snapshot.docs.map((doc) => doc.id);
+    return snapshot.docs.map(({ id }) => id);
+  };
+
+  static getAllNonSupersededIds = async (): Promise<string[]> => {
+    const snapshot = await db
+      .collection(CI_JOBS_COLLECTION)
+      .where('status', '!=', 'superseded')
+      .get();
+
+    return snapshot.docs.map(({ id }) => id);
   };
 
   static create = async (
@@ -147,6 +159,25 @@ export class CiJobs {
     await db.collection(CI_JOBS_COLLECTION).doc(jobId).delete();
   }
 
+  static markManyIdsAsSuperseded = async (supersededIds: string[]) => {
+    const snapshot = await db
+      .collection(CI_JOBS_COLLECTION)
+      .where(FieldPath.documentId(), 'in', supersededIds)
+      .get();
+
+    // Batches can only have 20 document access calls per transaction
+    // See: https://firebase.google.com/docs/firestore/manage-data/transactions
+    const status: JobStatus = 'superseded';
+    const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 20);
+    for (const docsChunk of docsChunks) {
+      const batch = db.batch();
+      for (const doc of docsChunk) {
+        batch.set(doc.ref, { status }, { merge: true });
+      }
+      await batch.commit();
+    }
+  };
+
   static generateJobId(
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
@@ -179,5 +210,10 @@ export class CiJobs {
     }
 
     return `${imageType}-${editorVersion}-${repoVersion}`;
+  }
+
+  static pluralise(number: number) {
+    const word = number === 1 ? 'CI Job' : 'CI Jobs';
+    return `${number} ${word}`;
   }
 }
