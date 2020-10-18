@@ -5,7 +5,7 @@ import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersionInfo';
 import { ImageType } from './ciBuilds';
 
-const COLLECTION = 'ciJobs';
+export const CI_JOBS_COLLECTION = 'ciJobs';
 
 export type JobStatus =
   | 'created'
@@ -36,7 +36,7 @@ export interface CiJob {
  */
 export class CiJobs {
   static get = async (jobId: string): Promise<CiJob | null> => {
-    const ref = await db.collection(COLLECTION).doc(jobId);
+    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
@@ -51,13 +51,13 @@ export class CiJobs {
   };
 
   static getAll = async (): Promise<CiJob[]> => {
-    const snapshot = await db.collection(COLLECTION).get();
+    const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiJob[];
   };
 
   static getAllIds = async (): Promise<string[]> => {
-    const snapshot = await db.collection(COLLECTION).get();
+    const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
 
     return snapshot.docs.map((doc) => doc.id);
   };
@@ -69,7 +69,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
     const job = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-    const result = await db.collection(COLLECTION).doc(jobId).create(job);
+    const result = await db.collection(CI_JOBS_COLLECTION).doc(jobId).create(job);
     firebase.logger.debug('Job created', result);
   };
 
@@ -96,7 +96,7 @@ export class CiJobs {
   };
 
   static markJobAsInProgress = async (jobId: string) => {
-    const ref = await db.collection(COLLECTION).doc(jobId);
+    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
@@ -120,7 +120,7 @@ export class CiJobs {
   };
 
   static markFailureForJob = async (jobId: string) => {
-    const job = await db.collection(COLLECTION).doc(jobId);
+    const job = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
 
     await job.update({
       status: 'failure',
@@ -131,7 +131,7 @@ export class CiJobs {
   };
 
   static markJobAsCompleted = async (jobId: string) => {
-    const job = await db.collection(COLLECTION).doc(jobId);
+    const job = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
 
     await job.update({
       status: 'completed',
@@ -144,7 +144,7 @@ export class CiJobs {
       throw new Error('Expect only dryRun jobs to be deleted.');
     }
 
-    await db.collection(COLLECTION).doc(jobId).delete();
+    await db.collection(CI_JOBS_COLLECTION).doc(jobId).delete();
   }
 
   static generateJobId(

@@ -3,7 +3,7 @@ import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestor
 import { db, firebase, functions } from '../config/firebase';
 
 import { REPO_VERSIONS_COLLECTION, RepoVersionInfo } from '../model/repoVersionInfo';
-import { CiJobs } from '../model/ciJobs';
+import { CI_JOBS_COLLECTION, CiJobs } from '../model/ciJobs';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import semver from 'semver/preload';
 import { Discord } from '../config/discord';
@@ -39,7 +39,7 @@ export const onCreate = functions.firestore
       skippedVersions.push(baseJobId);
     } else {
       const baseJobData = CiJobs.construct('base', repoVersionInfo);
-      const baseJobRef = db.collection(REPO_VERSIONS_COLLECTION).doc(baseJobId);
+      const baseJobRef = db.collection(CI_JOBS_COLLECTION).doc(baseJobId);
       baseAndHubBatch.create(baseJobRef, baseJobData);
     }
 
@@ -49,7 +49,7 @@ export const onCreate = functions.firestore
       skippedVersions.push(hubJobId);
     } else {
       const hubJobData = CiJobs.construct('hub', repoVersionInfo);
-      const hubJobRef = db.collection(REPO_VERSIONS_COLLECTION).doc(hubJobId);
+      const hubJobRef = db.collection(CI_JOBS_COLLECTION).doc(hubJobId);
       baseAndHubBatch.create(hubJobRef, hubJobData);
     }
 
@@ -73,7 +73,7 @@ export const onCreate = functions.firestore
         }
 
         const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-        const editorJobRef = db.collection(REPO_VERSIONS_COLLECTION).doc(editorJobId);
+        const editorJobRef = db.collection(CI_JOBS_COLLECTION).doc(editorJobId);
         batch.create(editorJobRef, editorJobData);
       }
       await batch.commit();
