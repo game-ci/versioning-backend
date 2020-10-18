@@ -89,12 +89,17 @@ export class CiBuilds {
     const ref = await db.collection(COLLECTION).doc(buildId);
     const snapshot = await ref.get();
 
+    let result;
     if (snapshot.exists) {
-      // noinspection ExceptionCaughtLocallyJS
-      throw new Error('A build with this identifier already exists');
+      if (snapshot.data()?.status === 'failed') {
+        result = await ref.set(data, { merge: false });
+      } else {
+        throw new Error('A build with this identifier already exists');
+      }
+    } else {
+      result = await ref.create(data);
     }
 
-    const result = await ref.create(data);
     firebase.logger.debug('Build created', result);
   };
 
