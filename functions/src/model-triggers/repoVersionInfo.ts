@@ -105,10 +105,12 @@ export const onCreate = functions.firestore
       }
     }
 
-    // Report the number of replacements.
-    await CiJobs.markManyIdsAsSuperseded(supersededIds);
-    const replacementMessage = `
+    // Report the number of replacements, if any.
+    if (supersededIds.length >= 1) {
+      await CiJobs.markManyIdsAsSuperseded(supersededIds);
+      const replacementMessage = `
       ${CiJobs.pluralise(supersededIds.length)} existing jobs are now superseded.`;
-    firebase.logger.warn(replacementMessage);
-    await Discord.sendMessageToMaintainers(replacementMessage);
+      firebase.logger.warn(replacementMessage);
+      await Discord.sendMessageToMaintainers(replacementMessage);
+    }
   });
