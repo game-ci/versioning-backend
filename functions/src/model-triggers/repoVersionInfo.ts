@@ -13,10 +13,11 @@ export const onCreate = functions.firestore
   .document(`${REPO_VERSIONS_COLLECTION}/{itemId}`)
   .onCreate(async (snapshot: QueryDocumentSnapshot, context: EventContext) => {
     const repoVersionInfo = snapshot.data() as RepoVersionInfo;
-    const latestRepoVersion = await RepoVersionInfo.getLatest();
+    const currentRepoVersion = repoVersionInfo.version;
+    const latestRepoVersionInfo = await RepoVersionInfo.getLatest();
 
     // Only create new builds for tags that are newer semantic versions.
-    if (semver.compare(repoVersionInfo.version, latestRepoVersion.version) !== 0) {
+    if (semver.compare(currentRepoVersion, latestRepoVersionInfo.version) !== 0) {
       const semverMessage = `
         Skipped scheduling all editorVersions for new repoVersion,
         as it does not seem to be the newest version.`;
@@ -82,7 +83,7 @@ export const onCreate = functions.firestore
     // Report skipped versions
     if (skippedVersions.length >= 1) {
       const skippedVersionsMessage = `
-        Skipped creating CiJobs for the following jobs ${skippedVersions.join(', ')}.`;
+        Skipped creating CiJobs for the following jobs \`${skippedVersions.join('`, `')}\`.`;
       firebase.logger.warn(skippedVersionsMessage);
       await Discord.sendAlert(skippedVersionsMessage);
     }
@@ -91,18 +92,16 @@ export const onCreate = functions.firestore
     const baseCount = 1;
     const hubCount = 1;
     const totalNewJobs = editorVersionInfos.length + baseCount + hubCount - skippedVersions.length;
-    const newJobsMessage = `
-      Created ${totalNewJobs} new CiJobs.
-      based on new repository version \`${repoVersionInfo.version}\``;
+    const newJobs = CiJobs.pluralise(totalNewJobs);
+    const newJobsMessage = `Created ${newJobs} based on new repository version \`${currentRepoVersion}\``;
     firebase.logger.info(newJobsMessage);
     await Discord.sendMessageToMaintainers(newJobsMessage);
 
     // Supersede any non-complete jobs before the current version
-    const currentRepoVersion = repoVersionInfo.version;
     const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(currentRepoVersion);
     if (numSuperseded >= 1) {
       const replacementMessage = `
-      ${CiJobs.pluralise(numSuperseded)} existing jobs are now superseded.`;
+      ${CiJobs.pluralise(numSuperseded)} that were for older versions are now superseded.`;
       firebase.logger.warn(replacementMessage);
       await Discord.sendMessageToMaintainers(replacementMessage);
     } else {
