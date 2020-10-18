@@ -47,7 +47,7 @@ export class CiJobs {
   };
 
   static exists = async (jobId: string): Promise<boolean> => {
-    return (await CiJobs.get(jobId)) === null;
+    return (await CiJobs.get(jobId)) !== null;
   };
 
   static getAll = async (): Promise<CiJob[]> => {
