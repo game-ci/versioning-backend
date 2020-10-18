@@ -26,7 +26,7 @@ export const onCreate = functions.firestore
     }
 
     // Skip creating jobs that already exist.
-    const existingJobIds = await CiJobs.getAllNonSupersededIds();
+    const existingJobIds = await CiJobs.getAllIds();
     const editorVersionInfos = await EditorVersionInfo.getAll();
     const skippedVersions: string[] = [];
 

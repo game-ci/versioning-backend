@@ -65,15 +65,6 @@ export class CiJobs {
     return snapshot.docs.map(({ id }) => id);
   };
 
-  static getAllNonSupersededIds = async (): Promise<string[]> => {
-    const snapshot = await db
-      .collection(CI_JOBS_COLLECTION)
-      .where('status', '!=', 'superseded')
-      .get();
-
-    return snapshot.docs.map(({ id }) => id);
-  };
-
   static create = async (
     jobId: string,
     imageType: ImageType,
@@ -160,6 +151,7 @@ export class CiJobs {
   }
 
   static markManyIdsAsSuperseded = async (supersededIds: string[]) => {
+    firebase.logger.info('superseding ids', supersededIds);
     const snapshot = await db
       .collection(CI_JOBS_COLLECTION)
       .where(FieldPath.documentId(), 'in', supersededIds)
@@ -175,6 +167,7 @@ export class CiJobs {
         batch.set(doc.ref, { status }, { merge: true });
       }
       await batch.commit();
+      firebase.logger.info('superseding batch');
     }
   };
 
