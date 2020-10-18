@@ -164,8 +164,9 @@ export class CiJobs {
 
     // Batches can only have 20 document access calls per transaction
     // See: https://firebase.google.com/docs/firestore/manage-data/transactions
+    // Note: Set counts as 2 access calls
     const status: JobStatus = 'superseded';
-    const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 20);
+    const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 10);
     for (const docsChunk of docsChunks) {
       const batch = db.batch();
       for (const doc of docsChunk) {
