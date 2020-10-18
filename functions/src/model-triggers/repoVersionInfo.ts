@@ -28,11 +28,10 @@ export const onCreate = functions.firestore
     // Skip creating jobs that already exist.
     const existingJobIds = await CiJobs.getAllIds();
     const editorVersionInfos = await EditorVersionInfo.getAll();
+    const skippedVersions: string[] = [];
 
     // Create database batch transaction
-    const skippedVersions: string[] = [];
     const baseAndHubBatch = db.batch();
-    const collection = db.collection(COLLECTION);
 
     // Job for base image
     const baseJobId = CiJobs.generateJobId('base', repoVersionInfo);
@@ -40,7 +39,7 @@ export const onCreate = functions.firestore
       skippedVersions.push(baseJobId);
     } else {
       const baseJobData = CiJobs.construct('base', repoVersionInfo);
-      const baseJobRef = collection.doc(baseJobId);
+      const baseJobRef = db.collection(COLLECTION).doc(baseJobId);
       baseAndHubBatch.create(baseJobRef, baseJobData);
     }
 
@@ -50,7 +49,7 @@ export const onCreate = functions.firestore
       skippedVersions.push(hubJobId);
     } else {
       const hubJobData = CiJobs.construct('hub', repoVersionInfo);
-      const hubJobRef = collection.doc(hubJobId);
+      const hubJobRef = db.collection(COLLECTION).doc(hubJobId);
       baseAndHubBatch.create(hubJobRef, hubJobData);
     }
 
@@ -74,7 +73,7 @@ export const onCreate = functions.firestore
         }
 
         const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-        const editorJobRef = collection.doc(editorJobId);
+        const editorJobRef = db.collection(COLLECTION).doc(editorJobId);
         batch.create(editorJobRef, editorJobData);
       }
       await batch.commit();
@@ -96,4 +95,6 @@ export const onCreate = functions.firestore
       based on new repository version \`${repoVersionInfo.version}\``;
     firebase.logger.info(newJobsMessage);
     await Discord.sendMessageToMaintainers(newJobsMessage);
+
+    // Todo - deprecate all CiJobs that still belong to an old repoVersion
   });
