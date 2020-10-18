@@ -151,11 +151,12 @@ export class CiJobs {
 
   static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
     firebase.logger.info('superseding jobs before repo version', repoVersion);
+
+    // Note: Cannot have inequality filters on multiple properties
     const snapshot = await db
       .collection(CI_JOBS_COLLECTION)
       .where('repoVersionInfo.version', '<', repoVersion)
-      // Cannot have inequality filters on multiple properties: [repoVersionInfo.version, status]
-      // .where('status', '!=', 'completed')
+      .where('status', '==', 'created')
       .get();
 
     const numSuperseded = snapshot.docs.length;
