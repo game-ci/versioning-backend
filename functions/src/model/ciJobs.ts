@@ -68,16 +68,16 @@ export class CiJobs {
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
-    const job = await CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
+    const job = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
     const result = await db.collection(COLLECTION).doc(jobId).create(job);
     firebase.logger.debug('Job created', result);
   };
 
-  static construct = async (
+  static construct = (
     imageType: ImageType,
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
-  ): Promise<CiJob> => {
+  ): CiJob => {
     const job: CiJob = {
       status: 'created',
       imageType,
