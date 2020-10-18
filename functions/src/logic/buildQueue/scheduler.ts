@@ -31,7 +31,9 @@ export class Scheduler {
     this.maxConcurrentJobs = settings.maxConcurrentJobs;
 
     if (this.repoVersionFull !== this.repoVersion) {
-      throw new Error('Expected version information to be reliable');
+      throw new Error(`
+        Expected version information to be reliable
+        Received ${this.repoVersionFull} vs ${this.repoVersion}`);
     }
 
     return this;
