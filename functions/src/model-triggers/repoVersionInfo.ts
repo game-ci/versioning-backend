@@ -83,7 +83,7 @@ export const onCreate = functions.firestore
     if (skippedVersions.length >= 1) {
       const skippedVersionsMessage = `
         Skipped creating CiJobs for the following jobs ${skippedVersions.join(', ')}.`;
-      firebase.logger.error(skippedVersionsMessage);
+      firebase.logger.warn(skippedVersionsMessage);
       await Discord.sendAlert(skippedVersionsMessage);
     }
 
