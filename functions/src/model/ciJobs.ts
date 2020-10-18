@@ -155,6 +155,7 @@ export class CiJobs {
     const snapshot = await db
       .collection(CI_JOBS_COLLECTION)
       .where(FieldPath.documentId(), 'in', supersededIds)
+      .where('status', 'not-in', ['inProgress', 'completed'])
       .get();
 
     // Batches can only have 20 document access calls per transaction
