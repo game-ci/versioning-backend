@@ -4,7 +4,6 @@ import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersionInfo';
 import { ImageType } from './ciBuilds';
-import FieldPath = admin.firestore.FieldPath;
 import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
 
@@ -150,13 +149,17 @@ export class CiJobs {
     await db.collection(CI_JOBS_COLLECTION).doc(jobId).delete();
   }
 
-  static markManyIdsAsSuperseded = async (supersededIds: string[]) => {
-    firebase.logger.info('superseding ids', supersededIds);
+  static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
+    firebase.logger.info('superseding jobs before repo version', repoVersion);
     const snapshot = await db
       .collection(CI_JOBS_COLLECTION)
-      .where(FieldPath.documentId(), 'in', supersededIds)
-      .where('status', '!=', 'completed')
+      .where('repoVersionInfo.version', '<', repoVersion)
+      // Cannot have inequality filters on multiple properties: [repoVersionInfo.version, status]
+      // .where('status', '!=', 'completed')
       .get();
+
+    const numSuperseded = snapshot.docs.length;
+    firebase.logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)}`);
 
     // Batches can only have 20 document access calls per transaction
     // See: https://firebase.google.com/docs/firestore/manage-data/transactions
@@ -168,8 +171,10 @@ export class CiJobs {
         batch.set(doc.ref, { status }, { merge: true });
       }
       await batch.commit();
-      firebase.logger.info('superseding batch');
+      firebase.logger.debug('committed batch of superseded jobs');
     }
+
+    return numSuperseded;
   };
 
   static generateJobId(

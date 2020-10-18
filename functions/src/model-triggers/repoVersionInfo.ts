@@ -95,21 +95,15 @@ export const onCreate = functions.firestore
     firebase.logger.info(newJobsMessage);
     await Discord.sendMessageToMaintainers(newJobsMessage);
 
-    // Gather which IDs should be superseded
-    const supersededIds: string[] = [];
-    const currentVersion = repoVersionInfo.version;
-    for (const existingJobId of existingJobIds) {
-      if (!existingJobId.endsWith(currentVersion)) {
-        supersededIds.push(existingJobId);
-      }
-    }
-
-    // Report the number of replacements, if any.
-    if (supersededIds.length >= 1) {
-      await CiJobs.markManyIdsAsSuperseded(supersededIds);
+    // Supersede any non-complete jobs before the current version
+    const currentRepoVersion = repoVersionInfo.version;
+    const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(currentRepoVersion);
+    if (numSuperseded >= 1) {
       const replacementMessage = `
-      ${CiJobs.pluralise(supersededIds.length)} existing jobs are now superseded.`;
+      ${CiJobs.pluralise(numSuperseded)} existing jobs are now superseded.`;
       firebase.logger.warn(replacementMessage);
       await Discord.sendMessageToMaintainers(replacementMessage);
+    } else {
+      firebase.logger.debug('no versions were superseded, as expected.');
     }
   });
