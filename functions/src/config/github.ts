@@ -7,7 +7,7 @@ const { 'private-key': privateKey, 'client-secret': clientSecret } = firebase.co
 
 export class GitHub {
   // https://octokit.github.io/rest.js/v18
-  static async init() {
+  static async init(): Promise<Octokit> {
     const appOctokit = new Octokit({
       authStrategy: createAppAuth,
       auth: {

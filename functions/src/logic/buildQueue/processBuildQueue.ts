@@ -1,40 +1,42 @@
-/* prettier-ignore */
+import { RepoVersionInfo } from '../../model/repoVersionInfo';
+import { firebase } from '../../config/firebase';
+import { Scheduler } from './scheduler';
 
+/**
+ * When a new Unity version gets ingested:
+ *   - a CI Job for that version gets created.
+ *
+ * When a new repository version gets ingested
+ *   - a CI Job for a new base image gets created
+ *   - a CI Job for a new hub image gets created
+ *   - a CI Job for every Unity version gets created
+ *   - Any CI Jobs for older repository versions get status "superseded"
+ *
+ * This schedule is based on that knowledge and assumption
+ */
 export const processBuildQueue = async () => {
-  /**
-   * When a new Unity version gets ingested:
-   *   - a CI Job for that version gets created.
-   *
-   * When a new repository version gets ingested
-   *   - a CI Job for a new base image gets created
-   *   - a CI Job for a new hub image gets created
-   *   - a CI Job for every Unity version gets created
-   *   - Any CI Jobs for older repository versions get status "superseded"
-   */
+  const repoVersionInfo = await RepoVersionInfo.getLatest();
+  const scheduler = await new Scheduler(repoVersionInfo).init();
 
-  // if: base image is not built for that version yet (or building right now)
-    // build base image
-    // return
+  if (!(await scheduler.ensureThatBaseImageHasBeenBuilt())) {
+    firebase.logger.info('base image is not yet ready.');
+    return;
+  }
 
-  // if: hub image is not built for that version yet (or building right now)
-    // build hub image
-    // return
+  if (!(await scheduler.ensureThatHubImageHasBeenBuilt())) {
+    firebase.logger.info('hub image is not yet ready.');
+    return;
+  }
 
-/**
- * checks before building editor images
- */
+  if (!(await scheduler.ensureThereAreNoFailedJobs())) {
+    firebase.logger.info('retrying failed jobs before continuing');
+    return;
+  }
 
-  // if: any failures in build queue?
-    // do nothing
+  if (!(await scheduler.buildLatestEditorImages())) {
+    firebase.logger.info('busy building those images!');
+    return;
+  }
 
-  // if: non-published amount bigger than settings.maxConcurrentBuilds
-    // do nothing
-
-/**
- * Select "created" jobs by editorVersion DESC
- */
-
-  // foreach unbuilt editorVersion
-    // dispatch build
-    // mark as scheduled
+  firebase.logger.info('The build queue is happy to take a rest 🎈');
 };

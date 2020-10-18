@@ -6,6 +6,7 @@ import { RepoVersionInfo } from './repoVersionInfo';
 import { ImageType } from './ciBuilds';
 import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
+import { settings } from '../config/settings';
 
 export const CI_JOBS_COLLECTION = 'ciJobs';
 
@@ -14,7 +15,7 @@ export type JobStatus =
   | 'scheduled'
   | 'inProgress'
   | 'completed'
-  | 'failure'
+  | 'failed'
   | 'superseded';
 
 interface MetaData {
@@ -32,6 +33,8 @@ export interface CiJob {
   addedDate: Timestamp;
   modifiedDate: Timestamp;
 }
+
+export type CiJobQueue = { id: string; job: CiJob }[];
 
 /**
  * A CI job is a high level job, that schedules builds on a [repoVersion-unityVersion] level
@@ -62,6 +65,40 @@ export class CiJobs {
     const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
 
     return snapshot.docs.map(({ id }) => id);
+  };
+
+  static getPrioritisedQueue = async (): Promise<CiJobQueue> => {
+    // Note: we can't simply do select distinct major, max(minor), max(patch) in nosql
+    const snapshot = await db
+      .collection(CI_JOBS_COLLECTION)
+      .orderBy('major', 'desc')
+      .orderBy('minor', 'desc')
+      .orderBy('patch', 'desc')
+      .where('status', '==', 'created')
+      .limit(settings.maxConcurrentJobs)
+      .get();
+
+    const queue: CiJobQueue = [];
+    snapshot.docs.forEach((doc) => {
+      queue.push({ id: doc.id, job: doc.data() as CiJob });
+    });
+    return queue;
+  };
+
+  static getFailingJobs = async (): Promise<CiJob[]> => {
+    const snapshot = await db.collection(CI_JOBS_COLLECTION).where('status', '==', 'failed').get();
+
+    return snapshot.docs.map((doc) => doc.data()) as CiJob[];
+  };
+
+  static getNumberOfScheduledJobs = async (): Promise<number> => {
+    const snapshot = await db
+      .collection(CI_JOBS_COLLECTION)
+      .where('status', 'in', ['scheduled', 'inProgress'])
+      .limit(settings.maxConcurrentJobs)
+      .get();
+
+    return snapshot.docs.length;
   };
 
   static create = async (
@@ -97,6 +134,29 @@ export class CiJobs {
     return job;
   };
 
+  static markJobAsScheduled = async (jobId: string) => {
+    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const snapshot = await ref.get();
+
+    if (!snapshot.exists) {
+      throw new Error(`Trying to mark job '${jobId}' as scheduled. But it does not exist.`);
+    }
+
+    const currentBuild = snapshot.data() as CiJob;
+    firebase.logger.warn(currentBuild);
+
+    // Do not override failure or completed
+    let { status } = currentBuild;
+    if (['created'].includes(status)) {
+      status = 'scheduled';
+    }
+
+    await ref.update({
+      status,
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
   static markJobAsInProgress = async (jobId: string) => {
     const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
     const snapshot = await ref.get();
@@ -110,7 +170,7 @@ export class CiJobs {
 
     // Do not override failure or completed
     let { status } = currentBuild;
-    if (['created', 'scheduled'].includes(status)) {
+    if (['scheduled'].includes(status)) {
       status = 'inProgress';
     }
 
@@ -125,7 +185,7 @@ export class CiJobs {
     const job = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
 
     await job.update({
-      status: 'failure',
+      status: 'failed',
       'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
