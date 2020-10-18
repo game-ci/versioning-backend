@@ -24,10 +24,18 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
 
     if (jobHasCompleted) {
       await CiJobs.markJobAsCompleted(jobId);
-      const message = `New images published for ${jobId}.`;
+      // Strip repo version from publication name
+      let publicationName = jobId;
+      const lastDashPos = publicationName.lastIndexOf('-');
+      if (lastDashPos >= 1) {
+        publicationName = publicationName.substr(0, lastDashPos);
+      }
+
+      // Report new publications as news
+      const message = `New images published for ${publicationName}.`;
       firebase.logger.info(message);
       if (!isDryRun) {
-        await Discord.sendMessageToMaintainers(message);
+        await Discord.sendNews(message);
       }
     }
 
