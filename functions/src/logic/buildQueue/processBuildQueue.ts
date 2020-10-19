@@ -19,24 +19,24 @@ export const processBuildQueue = async () => {
   const scheduler = await new Scheduler(repoVersionInfo).init();
 
   if (!(await scheduler.ensureThatBaseImageHasBeenBuilt())) {
-    firebase.logger.info('base image is not yet ready.');
+    firebase.logger.info('[Build queue] Waiting for base image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThatHubImageHasBeenBuilt())) {
-    firebase.logger.info('hub image is not yet ready.');
+    firebase.logger.info('[Build queue] Waiting for hub image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThereAreNoFailedJobs())) {
-    firebase.logger.info('retrying failed jobs before continuing');
+    firebase.logger.info('[Build queue] Retrying failed jobs before scheduling new jobs.');
     return;
   }
 
   if (!(await scheduler.buildLatestEditorImages())) {
-    firebase.logger.info('busy building those images!');
+    firebase.logger.info('[Build queue] Editor images are building.');
     return;
   }
 
-  firebase.logger.info('The build queue is happy to take a rest 🎈');
+  firebase.logger.info('[Build queue] Idle 🎈');
 };
