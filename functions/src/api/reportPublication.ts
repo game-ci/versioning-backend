@@ -35,7 +35,7 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
       let message = '';
       if (dockerInfo.imageName === 'editor') {
         // i.e. [editor-2020.1.6f1]
-        message = `New images published for ${publicationName}.`;
+        message = `Published ${publicationName} images.`;
       } else {
         // i.e. [hub] or [base]
         message = `New ${publicationName}-image published.`;
