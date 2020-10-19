@@ -3,7 +3,7 @@ export const settings = {
   maxFailuresPerBuild: 5,
   discord: {
     channels: {
-      news: '764289922663841792', // '731947345478156391'
+      news: '731947345478156391',
       maintainers: '764289922663841792',
       alerts: '763544776649605151',
     },

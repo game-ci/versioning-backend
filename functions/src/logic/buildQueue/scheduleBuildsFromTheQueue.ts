@@ -18,6 +18,12 @@ export const scheduleBuildsFromTheQueue = async () => {
   const repoVersionInfo = await RepoVersionInfo.getLatest();
   const scheduler = await new Scheduler(repoVersionInfo).init();
 
+  const testVersion = '0.1.0';
+  if (repoVersionInfo.version === testVersion) {
+    firebase.logger.info('[Build queue] No longer building test versions.');
+    return;
+  }
+
   if (!(await scheduler.ensureThatBaseImageHasBeenBuilt())) {
     firebase.logger.info('[Build queue] Waiting for base image to be ready.');
     return;
