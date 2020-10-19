@@ -23,12 +23,16 @@ export class Ingeminator {
 
   async rescheduleFailedJobs(jobs: CiJobQueue) {
     if (jobs.length <= 0) {
-      throw new Error('Expected ingeminator to be called with jobs to retry, none were given.');
+      throw new Error(
+        '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
+      );
     }
 
     for (const job of jobs) {
       if (job.data.imageType !== 'editor') {
-        throw new Error('Did not expect to be handling non-editor image type rescheduling.');
+        throw new Error(
+          '[Ingeminator] Did not expect to be handling non-editor image type rescheduling.',
+        );
       }
 
       await this.rescheduleFailedBuildsForJob(job);
@@ -40,7 +44,7 @@ export class Ingeminator {
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
       firebase.logger.info(
-        `Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
+        `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
       );
       return;
     }
@@ -50,7 +54,9 @@ export class Ingeminator {
 
       // Space for more?
       if (this.numberToSchedule <= 0) {
-        firebase.logger.debug(`waiting for more spots to become available for builds of ${jobId}.`);
+        firebase.logger.debug(
+          `[Ingeminator] waiting for more spots to become available for builds of ${jobId}.`,
+        );
         return;
       }
 
@@ -59,8 +65,8 @@ export class Ingeminator {
       const { lastBuildFailure, failureCount } = build.data.meta;
       if (failureCount >= maxFailuresPerBuild) {
         const maxRetriesReachedMessage = `
-          Reached the maximum amount of retries (${maxFailuresPerBuild - 1}) for ${buildId}.
-          Manual action is now required.
+          [Ingeminator] Reached the maximum amount of retries (${maxFailuresPerBuild - 1})
+          for ${buildId}. Manual action is now required.
         `;
         firebase.logger.error(maxRetriesReachedMessage);
         await Discord.sendAlert(maxRetriesReachedMessage);
@@ -73,7 +79,7 @@ export class Ingeminator {
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
         firebase.logger.debug(
-          `Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
+          `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
         );
         continue;
       }
@@ -86,7 +92,7 @@ export class Ingeminator {
     }
 
     await CiJobs.markJobAsScheduled(jobId);
-    firebase.logger.debug(`rescheduled all editor image build for ${jobId}.`);
+    firebase.logger.debug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
   }
 
   private async rescheduleBuild(
@@ -126,7 +132,9 @@ export class Ingeminator {
     });
 
     if (response.status <= 199 || response.status >= 300) {
-      const failureMessage = `failed to schedule job ${jobId}, status: ${response.status}, response: ${response.data}.`;
+      const failureMessage = `
+        [Ingeminator] failed to ingeminate job ${jobId},
+        status: ${response.status}, response: ${response.data}.`;
       firebase.logger.error(failureMessage);
       await Discord.sendAlert(failureMessage);
       return false;

@@ -59,7 +59,7 @@ export class Scheduler {
 
     if (repoVersionFull !== repoVersion) {
       throw new Error(`
-        Expected version information to be reliable
+        [Scheduler] Expected version information to be reliable
         Received ${repoVersionFull} vs ${repoVersion}`);
     }
 
@@ -82,7 +82,7 @@ export class Scheduler {
     const jobId = CiJobs.parseJobId('base', this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
-      throw new Error('Expected base job to be present');
+      throw new Error('[Scheduler] Expected base job to be present');
     }
 
     // Schedule it
@@ -101,14 +101,16 @@ export class Scheduler {
       });
 
       if (response.status <= 199 || response.status >= 300) {
-        const failureMessage = `failed to schedule job ${jobId}, status: ${response.status}, response: ${response.data}`;
+        const failureMessage = `
+          [Scheduler] failed to schedule job ${jobId},
+          status: ${response.status}, response: ${response.data}`;
         firebase.logger.error(failureMessage);
         await Discord.sendAlert(failureMessage);
         return false;
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('Scheduled new base image build', response);
+      firebase.logger.debug('[Scheduler] Scheduled new base image build', response);
       return false;
     }
 
@@ -121,7 +123,7 @@ export class Scheduler {
     const jobId = CiJobs.parseJobId('hub', this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
-      throw new Error('Expected hub job to be present');
+      throw new Error('[Scheduler] Expected hub job to be present');
     }
 
     // Schedule it
@@ -140,14 +142,16 @@ export class Scheduler {
       });
 
       if (response.status <= 199 || response.status >= 300) {
-        const failureMessage = `failed to schedule job ${jobId}, status: ${response.status}, response: ${response.data}`;
+        const failureMessage = `
+          [Scheduler] failed to schedule job ${jobId},
+          status: ${response.status}, response: ${response.data}`;
         firebase.logger.error(failureMessage);
         await Discord.sendAlert(failureMessage);
         return false;
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('Scheduled new hub image build', response);
+      firebase.logger.debug('[Scheduler] Scheduled new hub image build', response);
       return false;
     }
 
@@ -169,7 +173,7 @@ export class Scheduler {
 
     const openSpots = await this.determineOpenSpots();
     if (openSpots <= 0) {
-      firebase.logger.info('Not retrying any new jobs, as the queue is full');
+      firebase.logger.info('[Scheduler] Not retrying any new jobs, as the queue is full');
       return false;
     }
 
@@ -182,7 +186,7 @@ export class Scheduler {
   async buildLatestEditorImages(): Promise<boolean> {
     const openSpots = await this.determineOpenSpots();
     if (openSpots <= 0) {
-      firebase.logger.info('Not scheduling any new jobs, as the queue is full');
+      firebase.logger.info('[Scheduler] Not scheduling any new jobs, as the queue is full');
       return false;
     }
 
@@ -197,7 +201,7 @@ export class Scheduler {
 
     // Schedule each build, one by one
     const toBeScheduledJobs = take(queue, openSpots);
-    firebase.logger.info('took this from the queue', toBeScheduledJobs);
+    firebase.logger.info('[Scheduler] took this from the queue', toBeScheduledJobs);
     for (const toBeScheduledJob of toBeScheduledJobs) {
       const { id: jobId, data } = toBeScheduledJob;
       const { editorVersionInfo } = data;
@@ -218,14 +222,16 @@ export class Scheduler {
       });
 
       if (response.status <= 199 || response.status >= 300) {
-        const failureMessage = `failed to schedule job ${jobId}, status: ${response.status}, response: ${response.data}`;
+        const failureMessage = `
+          [Scheduler] failed to schedule job ${jobId},
+          status: ${response.status}, response: ${response.data}`;
         firebase.logger.error(failureMessage);
         await Discord.sendAlert(failureMessage);
         return false;
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('Scheduled new editor image build', response);
+      firebase.logger.debug('[Scheduler] Scheduled new editor image build', response);
     }
 
     // The queue was not empty, so we're not happy yet
