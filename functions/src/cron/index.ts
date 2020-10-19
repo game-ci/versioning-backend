@@ -3,7 +3,7 @@ import { firebase, functions } from '../config/firebase';
 import { Discord } from '../config/discord';
 import { ingestUnityVersions } from '../logic/ingestUnityVersions';
 import { ingestRepoVersions } from '../logic/ingestRepoVersions';
-import { processBuildQueue } from '../logic/buildQueue';
+import { scheduleBuildsFromTheQueue } from '../logic/buildQueue';
 
 /**
  * CPU-time for pubSub is not part of the free quota, so we'll keep it light weight.
@@ -29,5 +29,5 @@ export const trigger = functions
 const routineTasks = async () => {
   await ingestRepoVersions();
   await ingestUnityVersions();
-  await processBuildQueue();
+  await scheduleBuildsFromTheQueue();
 };

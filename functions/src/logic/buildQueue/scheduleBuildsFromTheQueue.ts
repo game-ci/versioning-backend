@@ -14,7 +14,7 @@ import { Scheduler } from './scheduler';
  *
  * This schedule is based on that knowledge and assumption
  */
-export const processBuildQueue = async () => {
+export const scheduleBuildsFromTheQueue = async () => {
   const repoVersionInfo = await RepoVersionInfo.getLatest();
   const scheduler = await new Scheduler(repoVersionInfo).init();
 

@@ -33,8 +33,8 @@ export interface CiJob {
   addedDate: Timestamp;
   modifiedDate: Timestamp;
 }
-
-export type CiJobQueue = { id: string; job: CiJob }[];
+export type CiJobQueueItem = { id: string; data: CiJob };
+export type CiJobQueue = CiJobQueueItem[];
 
 /**
  * A CI job is a high level job, that schedules builds on a [repoVersion-unityVersion] level
@@ -82,7 +82,7 @@ export class CiJobs {
 
     const queue: CiJobQueue = [];
     snapshot.docs.forEach((doc) => {
-      queue.push({ id: doc.id, job: doc.data() as CiJob });
+      queue.push({ id: doc.id, data: doc.data() as CiJob });
     });
 
     firebase.logger.debug(`BuildQueue`, queue);
@@ -90,10 +90,26 @@ export class CiJobs {
     return queue;
   };
 
-  static getFailingJobs = async (): Promise<CiJob[]> => {
-    const snapshot = await db.collection(CI_JOBS_COLLECTION).where('status', '==', 'failed').get();
+  static getFailingJobsQueue = async (): Promise<CiJobQueue> => {
+    const snapshot = await db
+      .collection(CI_JOBS_COLLECTION)
+      .orderBy('editorVersionInfo.major', 'desc')
+      .orderBy('editorVersionInfo.minor', 'desc')
+      .orderBy('editorVersionInfo.patch', 'desc')
+      .where('status', '==', 'failed')
+      .limit(settings.maxConcurrentJobs)
+      .get();
 
-    return snapshot.docs.map((doc) => doc.data()) as CiJob[];
+    firebase.logger.debug(`FailingQueue size: ${snapshot.docs.length}`);
+
+    const queue: CiJobQueue = [];
+    snapshot.docs.forEach((doc) => {
+      queue.push({ id: doc.id, data: doc.data() as CiJob });
+    });
+
+    firebase.logger.debug(`FailingQueue`, queue);
+
+    return queue;
   };
 
   static getNumberOfScheduledJobs = async (): Promise<number> => {

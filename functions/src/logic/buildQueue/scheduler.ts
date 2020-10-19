@@ -7,6 +7,7 @@ import { settings } from '../../config/settings';
 import { take } from 'lodash';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { Discord } from '../../config/discord';
+import { Ingeminator } from './ingeminator';
 
 export class Scheduler {
   private repoVersion: string;
@@ -15,6 +16,7 @@ export class Scheduler {
   private repoVersionMajor: string;
   private _gitHub: Octokit | undefined;
   private maxConcurrentJobs: number;
+  private repoVersionInfo: RepoVersionInfo;
 
   private get gitHub(): Octokit {
     // @ts-ignore
@@ -22,22 +24,52 @@ export class Scheduler {
   }
 
   constructor(repoVersionInfo: RepoVersionInfo) {
-    const { major, minor, patch, version: repoVersion } = repoVersionInfo;
-    this.repoVersion = repoVersion;
-    this.repoVersionFull = `${major}.${minor}.${patch}`;
-    this.repoVersionMajor = `${major}.${minor}`;
-    this.repoVersionMinor = `${major}`;
-
+    this.repoVersionInfo = repoVersionInfo;
     this.maxConcurrentJobs = settings.maxConcurrentJobs;
 
-    if (this.repoVersionFull !== this.repoVersion) {
-      throw new Error(`
-        Expected version information to be reliable
-        Received ${this.repoVersionFull} vs ${this.repoVersion}`);
-    }
+    const {
+      repoVersion,
+      repoVersionFull,
+      repoVersionMinor,
+      repoVersionMajor,
+    } = Scheduler.parseRepoVersions(repoVersionInfo);
+    this.repoVersion = repoVersion;
+    this.repoVersionFull = repoVersionFull;
+    this.repoVersionMinor = repoVersionMinor;
+    this.repoVersionMajor = repoVersionMajor;
 
     return this;
   }
+
+  /**
+   * Todo - Fix regrets as needed
+   *
+   * Note: The names of these may be very confusing at first.
+   * Note: This should be part of a proper model class after moving away logic from the scheduler.
+   * Note: All refactors have to be considering the action in unityci/docker.
+   */
+  static parseRepoVersions = (repoVersionInfo: RepoVersionInfo) => {
+    const { major, minor, patch, version: repoVersion } = repoVersionInfo;
+    // Full version tag, including patch number
+    const repoVersionFull = `${major}.${minor}.${patch}`;
+    // Reduced version tag, intended for allowing to pull latest minor version
+    const repoVersionMinor = `${major}.${minor}`;
+    // Reduced version tag, intended for people who want to have the latest version without breaking changes.
+    const repoVersionMajor = `${major}`;
+
+    if (repoVersionFull !== repoVersion) {
+      throw new Error(`
+        Expected version information to be reliable
+        Received ${repoVersionFull} vs ${repoVersion}`);
+    }
+
+    return {
+      repoVersion,
+      repoVersionFull,
+      repoVersionMinor,
+      repoVersionMajor,
+    };
+  };
 
   async init(): Promise<this> {
     this._gitHub = await GitHub.init();
@@ -124,20 +156,21 @@ export class Scheduler {
   }
 
   async ensureThereAreNoFailedJobs(): Promise<boolean> {
-    const failingJobs = await CiJobs.getFailingJobs();
+    const failingJobs = await CiJobs.getFailingJobsQueue();
     if (failingJobs.length <= 0) {
       return true;
     }
 
-    // Todo - retry mechanism
+    const openSpots = await this.determineOpenSpots();
+    if (openSpots <= 0) {
+      firebase.logger.info('Not retrying any new jobs, as the queue is full');
+      return false;
+    }
+
+    const ingeminator = new Ingeminator(openSpots, this.gitHub, this.repoVersionInfo);
+    await ingeminator.rescheduleFailedJobs(failingJobs);
 
     return false;
-  }
-
-  private async determineOpenSpots(): Promise<number> {
-    const currentlyRunningJobs = await CiJobs.getNumberOfScheduledJobs();
-    const openSpots = this.maxConcurrentJobs - currentlyRunningJobs;
-    return openSpots <= 0 ? 0 : openSpots;
   }
 
   async buildLatestEditorImages(): Promise<boolean> {
@@ -160,8 +193,8 @@ export class Scheduler {
     const toBeScheduledJobs = take(queue, openSpots);
     firebase.logger.info('took this from the queue', toBeScheduledJobs);
     for (const toBeScheduledJob of toBeScheduledJobs) {
-      const { id: jobId, job } = toBeScheduledJob;
-      const { editorVersionInfo } = job;
+      const { id: jobId, data } = toBeScheduledJob;
+      const { editorVersionInfo } = data;
       const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
 
       const response = await this.gitHub.repos.createDispatchEvent({
@@ -191,5 +224,11 @@ export class Scheduler {
 
     // The queue was not empty, so we're not happy yet
     return false;
+  }
+
+  private async determineOpenSpots(): Promise<number> {
+    const currentlyRunningJobs = await CiJobs.getNumberOfScheduledJobs();
+    const openSpots = this.maxConcurrentJobs - currentlyRunningJobs;
+    return openSpots <= 0 ? 0 : openSpots;
   }
 }

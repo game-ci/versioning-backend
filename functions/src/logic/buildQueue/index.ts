@@ -1,1 +1,1 @@
-export { processBuildQueue } from './processBuildQueue';
+export { scheduleBuildsFromTheQueue } from './scheduleBuildsFromTheQueue';
