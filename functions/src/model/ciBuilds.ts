@@ -141,7 +141,7 @@ export class CiBuilds {
   static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
     const snapshot = await db
       .collection(COLLECTION)
-      .where('jobId', '==', jobId)
+      .where('relatedJobId', '==', jobId)
       .where('status', '!=', 'published')
       .limit(1)
       .get();
