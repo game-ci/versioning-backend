@@ -27,7 +27,7 @@ export const reportBuildFailure = functions.https.onRequest(async (req: Request,
     res.status(200).send('OK');
   } catch (err) {
     const message = `
-      Something went wrong while wrong while reporting a build failure
+      Something went wrong while reporting a build failure
       ${err.message}
     `;
     firebase.logger.error(message, err);
