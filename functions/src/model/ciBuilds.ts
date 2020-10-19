@@ -106,8 +106,12 @@ export class CiBuilds {
 
     let result;
     if (snapshot.exists) {
+      // Builds can be retried after a failure.
       if (snapshot.data()?.status === 'failed') {
-        result = await ref.set(data, { merge: false });
+        // In case or reporting a new build during retry step, only overwrite these fields
+        result = await ref.set(data, {
+          mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
+        });
       } else {
         throw new Error('A build with this identifier already exists');
       }
