@@ -165,8 +165,6 @@ export class CiBuilds {
       .limit(1)
       .get();
 
-    firebase.logger.info(snapshot.docs);
-
-    return snapshot.docs.length <= 1;
+    return snapshot.docs.length === 0;
   };
 }
