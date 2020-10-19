@@ -1,5 +1,6 @@
 export const settings = {
-  maxConcurrentBuilds: 1,
+  maxConcurrentJobs: 5,
+  maxFailuresPerBuild: 5,
   discord: {
     channels: {
       news: '731947345478156391',

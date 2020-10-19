@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
-const COLLECTION = 'editorVersions';
+export const EDITOR_VERSIONS_COLLECTION = 'editorVersions';
 
 export interface EditorVersionInfo {
   version: string;
@@ -15,14 +15,14 @@ export interface EditorVersionInfo {
 
 export class EditorVersionInfo {
   static get = async (version: string): Promise<EditorVersionInfo> => {
-    const snapshot = await db.collection(COLLECTION).doc(version).get();
+    const snapshot = await db.collection(EDITOR_VERSIONS_COLLECTION).doc(version).get();
 
     return snapshot.data() as EditorVersionInfo;
   };
 
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(EDITOR_VERSIONS_COLLECTION)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -33,7 +33,7 @@ export class EditorVersionInfo {
 
   static getAll = async (): Promise<EditorVersionInfo[]> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(EDITOR_VERSIONS_COLLECTION)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -49,7 +49,7 @@ export class EditorVersionInfo {
       editorVersionList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(COLLECTION).doc(version);
+        const ref = db.collection(EDITOR_VERSIONS_COLLECTION).doc(version);
         const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: false });
       });
@@ -67,7 +67,7 @@ export class EditorVersionInfo {
       versionInfoList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(COLLECTION).doc(version);
+        const ref = db.collection(EDITOR_VERSIONS_COLLECTION).doc(version);
         const data = { ...versionInfo, modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: true });
       });

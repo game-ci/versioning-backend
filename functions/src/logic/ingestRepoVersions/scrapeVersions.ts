@@ -26,8 +26,8 @@ export const scrapeVersions = async (): Promise<RepoVersionInfo[]> => {
       throw new Error("Assumed versions to always be parsable, but they're not.");
     }
     const major = semver.major(version);
-    const minor = semver.major(version);
-    const patch = semver.major(version);
+    const minor = semver.minor(version);
+    const patch = semver.patch(version);
 
     return {
       version,

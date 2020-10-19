@@ -113,7 +113,15 @@ export class Discord {
         messageSize -= 3;
       }
 
-      messages[i] = `${prefix}${message.substr(pointer, messageSize)}${suffix}`;
+      // Break at spaces
+      let maxMessage = message.substr(pointer, messageSize);
+      const lastSpacePos = maxMessage.lastIndexOf(' ');
+      if (lastSpacePos >= maxMessageSize - 250) {
+        maxMessage = maxMessage.substr(pointer, lastSpacePos);
+        messageSize = lastSpacePos;
+      }
+
+      messages[i] = `${prefix}${maxMessage}${suffix}`;
       pointer += messageSize;
     }
 

@@ -1,7 +1,7 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
-const COLLECTION = 'repoVersions';
+export const REPO_VERSIONS_COLLECTION = 'repoVersions';
 
 export interface RepoVersionInfo {
   id: number;
@@ -21,7 +21,7 @@ export interface RepoVersionInfo {
 export class RepoVersionInfo {
   static getLatest = async (): Promise<RepoVersionInfo> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(REPO_VERSIONS_COLLECTION)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -37,7 +37,7 @@ export class RepoVersionInfo {
 
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(REPO_VERSIONS_COLLECTION)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -48,7 +48,7 @@ export class RepoVersionInfo {
 
   static getAll = async (): Promise<RepoVersionInfo[]> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(REPO_VERSIONS_COLLECTION)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -60,7 +60,7 @@ export class RepoVersionInfo {
   static create = async (repoVersion: RepoVersionInfo) => {
     const { version } = repoVersion;
     await db
-      .collection(COLLECTION)
+      .collection(REPO_VERSIONS_COLLECTION)
       .doc(version)
       .set(
         {
@@ -75,7 +75,7 @@ export class RepoVersionInfo {
   static update = async (repoVersion: RepoVersionInfo) => {
     const { version } = repoVersion;
     await db
-      .collection(COLLECTION)
+      .collection(REPO_VERSIONS_COLLECTION)
       .doc(version)
       .set(
         {
@@ -93,7 +93,7 @@ export class RepoVersionInfo {
       repoVersionList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(COLLECTION).doc(version);
+        const ref = db.collection(REPO_VERSIONS_COLLECTION).doc(version);
         const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: false });
       });
@@ -111,7 +111,7 @@ export class RepoVersionInfo {
       repoVersionList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(COLLECTION).doc(version);
+        const ref = db.collection(REPO_VERSIONS_COLLECTION).doc(version);
         const data = { ...versionInfo, modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: true });
       });

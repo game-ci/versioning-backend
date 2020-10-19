@@ -1,15 +1,11 @@
 import { db, admin, firebase } from '../config/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import FieldValue = admin.firestore.FieldValue;
+import { settings } from '../config/settings';
 
-const COLLECTION = 'ciBuilds';
+const CI_BUILDS_COLLECTION = 'ciBuilds';
 
-enum BuildStatus {
-  started,
-  failed,
-  published,
-}
-
+export type BuildStatus = 'started' | 'failed' | 'published';
 export type ImageType = 'base' | 'hub' | 'editor';
 
 // Used in Start API
@@ -55,6 +51,9 @@ export interface CiBuild {
   modifiedDate: Timestamp;
 }
 
+export type CiBuildQueueItem = { id: string; data: CiBuild };
+export type CiBuildQueue = CiBuildQueueItem[];
+
 /**
  * A CI Build represents a single [baseOs-unityVersion-targetPlatform] build.
  * These builds are reported in and run on GitHub Actions.
@@ -62,9 +61,20 @@ export interface CiBuild {
  */
 export class CiBuilds {
   static getAll = async (): Promise<CiBuild[]> => {
-    const snapshot = await db.collection(COLLECTION).get();
+    const snapshot = await db.collection(CI_BUILDS_COLLECTION).get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
+  };
+
+  static getFailedBuildsQueue = async (jobId: string): Promise<CiBuildQueue> => {
+    const snapshot = await db
+      .collection(CI_BUILDS_COLLECTION)
+      .where('relatedJobId', '==', jobId)
+      .where('status', '==', 'failed')
+      .limit(settings.maxConcurrentJobs)
+      .get();
+
+    return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiBuild }));
   };
 
   static registerNewBuild = async (
@@ -74,7 +84,7 @@ export class CiBuilds {
     buildInfo: BuildInfo,
   ) => {
     const data: CiBuild = {
-      status: BuildStatus.started,
+      status: 'started',
       buildId,
       relatedJobId,
       imageType,
@@ -91,15 +101,24 @@ export class CiBuilds {
       modifiedDate: Timestamp.now(),
     };
 
-    const ref = await db.collection(COLLECTION).doc(buildId);
+    const ref = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
     const snapshot = await ref.get();
 
+    let result;
     if (snapshot.exists) {
-      // noinspection ExceptionCaughtLocallyJS
-      throw new Error('A build with this identifier already exists');
+      // Builds can be retried after a failure.
+      if (snapshot.data()?.status === 'failed') {
+        // In case or reporting a new build during retry step, only overwrite these fields
+        result = await ref.set(data, {
+          mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
+        });
+      } else {
+        throw new Error('A build with this identifier already exists');
+      }
+    } else {
+      result = await ref.create(data);
     }
 
-    const result = await ref.create(data);
     firebase.logger.debug('Build created', result);
   };
 
@@ -108,7 +127,7 @@ export class CiBuilds {
       throw new Error('Unexpected behaviour, expected only dryRun builds to be deleted');
     }
 
-    const ref = await db.collection(COLLECTION).doc(buildId);
+    const ref = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
     const doc = await ref.get();
     firebase.logger.info('dryRun produced this build endResult', doc.data());
 
@@ -116,10 +135,10 @@ export class CiBuilds {
   }
 
   static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
-    const build = await db.collection(COLLECTION).doc(buildId);
+    const build = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
 
     await build.update({
-      status: BuildStatus.failed,
+      status: 'failed',
       failure,
       modifiedDate: Timestamp.now(),
       'meta.failureCount': FieldValue.increment(1),
@@ -128,10 +147,10 @@ export class CiBuilds {
   };
 
   static markBuildAsPublished = async (buildId: string, dockerInfo: DockerInfo) => {
-    const build = await db.collection(COLLECTION).doc(buildId);
+    const build = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
 
     await build.update({
-      status: BuildStatus.published,
+      status: 'published',
       dockerInfo,
       modifiedDate: Timestamp.now(),
       'meta.publishedDate': Timestamp.now(),
@@ -140,14 +159,12 @@ export class CiBuilds {
 
   static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
     const snapshot = await db
-      .collection(COLLECTION)
-      .where('jobId', '==', jobId)
-      .where('status', '!=', BuildStatus.published)
+      .collection(CI_BUILDS_COLLECTION)
+      .where('relatedJobId', '==', jobId)
+      .where('status', '!=', 'published')
       .limit(1)
       .get();
 
-    firebase.logger.info(snapshot.docs);
-
-    return snapshot.docs.length <= 1;
+    return snapshot.docs.length === 0;
   };
 }

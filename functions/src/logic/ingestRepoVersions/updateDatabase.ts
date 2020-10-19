@@ -32,22 +32,25 @@ export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promi
 
   if (newVersions.length >= 1) {
     await RepoVersionInfo.createMany(newVersions);
+    const pluralNew = newVersions.length === 1 ? 'New' : `${newVersions.length} new`;
     message += `
-      ${newVersions.length} new repository ${plural(newVersions.length)} detected.
-      (${newVersions.map((version) => version.version).join(', ')})`;
+      ${pluralNew} repository ${plural(newVersions.length)} detected.
+      (\`${newVersions.map((version) => version.version).join('`, `')}\`)`;
   }
 
   if (updatedVersions.length >= 1) {
     await RepoVersionInfo.updateMany(updatedVersions);
+    const pluralUpdated =
+      updatedVersions.length === 1 ? 'Updated' : `${updatedVersions.length} updated`;
     message += `
-      ${updatedVersions.length} updated repository ${plural(updatedVersions.length)} detected.
-      (${updatedVersions.map((version) => version.version).join(', ')})`;
+      ${pluralUpdated} repository ${plural(updatedVersions.length)} detected.
+      (\`${updatedVersions.map((version) => version.version).join('`, `')}\`)`;
   }
 
   message = message.trimEnd();
   if (message.length >= 1) {
     firebase.logger.info(message);
-    await Discord.sendMessageToMaintainers(message);
+    await Discord.sendNews(message);
   } else {
     firebase.logger.info('Database is up-to-date. (no updated repo versions found)');
   }
