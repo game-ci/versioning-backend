@@ -167,8 +167,10 @@ export class CiJobs {
     firebase.logger.warn(currentBuild);
 
     // Do not override failure or completed
+    // In CiJobs, "failure" is used to not race past failed jobs in the buildQueue, whereas
+    // in CiBuilds the status may be marked as "inProgress" when retrying.
     let { status } = currentBuild;
-    if (['created', 'failed'].includes(status)) {
+    if (['created'].includes(status)) {
       status = 'scheduled';
     }
 

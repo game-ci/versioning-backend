@@ -158,6 +158,12 @@ export class Scheduler {
   async ensureThereAreNoFailedJobs(): Promise<boolean> {
     const failingJobs = await CiJobs.getFailingJobsQueue();
     if (failingJobs.length <= 0) {
+      /**
+       * Note: this is an important check
+       * CiBuilds will go back to status "in progress", whereas
+       * CiJobs will stay "failed" until all builds complete.
+       * This will prevent creating failures on 1000+ builds
+       */
       return true;
     }
 

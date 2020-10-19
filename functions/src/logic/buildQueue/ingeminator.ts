@@ -39,7 +39,10 @@ export class Ingeminator {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      throw new Error(`Expected failed job with id \`${jobId}\` to have failed builds attached.`);
+      firebase.logger.info(
+        `Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
+      );
+      return;
     }
 
     for (const build of builds) {
