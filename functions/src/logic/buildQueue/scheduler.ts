@@ -243,7 +243,7 @@ export class Scheduler {
   private static getEventTypeForEditorJob(editorVersionInfo: EditorVersionInfo) {
     const { major, minor } = editorVersionInfo;
 
-    if (major >= 2019 && minor >= 3) {
+    if (major >= 2020 || (major === 2019 && minor >= 3)) {
       return 'new_2019_3_plus_editor_image_requested';
     } else {
       return 'new_legacy_editor_image_requested';
