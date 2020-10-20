@@ -204,13 +204,15 @@ export class Scheduler {
     firebase.logger.info('[Scheduler] took this from the queue', toBeScheduledJobs);
     for (const toBeScheduledJob of toBeScheduledJobs) {
       const { id: jobId, data } = toBeScheduledJob;
-      const { editorVersionInfo } = data;
-      const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
+
+      const editorVersionInfo = data.editorVersionInfo as EditorVersionInfo;
+      const { version: editorVersion, changeSet } = editorVersionInfo;
+      const eventType = Scheduler.getEventTypeForEditorJob(editorVersionInfo);
 
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: 'new_editor_image_requested',
+        event_type: eventType,
         client_payload: {
           jobId,
           editorVersion,
@@ -236,6 +238,16 @@ export class Scheduler {
 
     // The queue was not empty, so we're not happy yet
     return false;
+  }
+
+  private static getEventTypeForEditorJob(editorVersionInfo: EditorVersionInfo) {
+    const { major, minor } = editorVersionInfo;
+
+    if (major >= 2020 || (major === 2019 && minor >= 3)) {
+      return 'new_2019_3_plus_editor_image_requested';
+    } else {
+      return 'new_legacy_editor_image_requested';
+    }
   }
 
   private async determineOpenSpots(): Promise<number> {
