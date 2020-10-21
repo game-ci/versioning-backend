@@ -159,28 +159,30 @@ export class Scheduler {
     return job.status === 'completed';
   }
 
+  /**
+   * Note: this is an important check
+   * CiBuilds will go back to status "in progress", whereas
+   * CiJobs will stay "failed" until all builds complete.
+   * This will prevent creating failures on 1000+ builds
+   */
   async ensureThereAreNoFailedJobs(): Promise<boolean> {
+    const { maxToleratedFailures, maxExtraJobsForRescheduling } = settings;
     const failingJobs = await CiJobs.getFailingJobsQueue();
-    if (failingJobs.length <= 0) {
-      /**
-       * Note: this is an important check
-       * CiBuilds will go back to status "in progress", whereas
-       * CiJobs will stay "failed" until all builds complete.
-       * This will prevent creating failures on 1000+ builds
-       */
-      return true;
+
+    if (failingJobs.length >= 1) {
+      const openSpots = await this.determineOpenSpots();
+      const numberToReschedule = openSpots + maxExtraJobsForRescheduling;
+
+      if (numberToReschedule <= 0) {
+        firebase.logger.info('[Scheduler] Not retrying any new jobs, as the queue is full');
+        return false;
+      }
+
+      const ingeminator = new Ingeminator(numberToReschedule, this.gitHub, this.repoVersionInfo);
+      await ingeminator.rescheduleFailedJobs(failingJobs);
     }
 
-    const openSpots = await this.determineOpenSpots();
-    if (openSpots <= 0) {
-      firebase.logger.info('[Scheduler] Not retrying any new jobs, as the queue is full');
-      return false;
-    }
-
-    const ingeminator = new Ingeminator(openSpots, this.gitHub, this.repoVersionInfo);
-    await ingeminator.rescheduleFailedJobs(failingJobs);
-
-    return false;
+    return failingJobs.length <= maxToleratedFailures;
   }
 
   async buildLatestEditorImages(): Promise<boolean> {
