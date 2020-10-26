@@ -1,4 +1,5 @@
 export const settings = {
+  minutesBetweenScans: 15,
   maxConcurrentJobs: 9,
   maxExtraJobsForRescheduling: 1,
   maxToleratedFailures: 2,
