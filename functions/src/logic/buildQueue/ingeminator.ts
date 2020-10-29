@@ -63,18 +63,25 @@ export class Ingeminator {
       // Max retries check
       const { maxFailuresPerBuild } = settings;
       const { lastBuildFailure, failureCount } = build.data.meta;
+      const lastFailure = lastBuildFailure as Timestamp;
       if (failureCount >= maxFailuresPerBuild) {
+        // Log warning
+        const retries: number = maxFailuresPerBuild - 1;
         const maxRetriesReachedMessage = `
-          [Ingeminator] Reached the maximum amount of retries (${maxFailuresPerBuild - 1})
-          for ${buildId}. Manual action is now required.
-        `;
-        firebase.logger.error(maxRetriesReachedMessage);
-        await Discord.sendAlert(maxRetriesReachedMessage);
+          [Ingeminator] Reached the maximum amount of retries (${retries}) for ${buildId}. Manual action is now required.`;
+        firebase.logger.warn(maxRetriesReachedMessage);
+
+        // Only send alert to discord once
+        const alertingPeriodMinutes = settings.minutesBetweenScans;
+        const alertingPeriodMilliseconds = alertingPeriodMinutes * 60 * 1000;
+        if (lastFailure.toMillis() + alertingPeriodMilliseconds >= Timestamp.now().toMillis()) {
+          await Discord.sendAlert(maxRetriesReachedMessage);
+        }
+
         return;
       }
 
       // Incremental backoff
-      const lastFailure = lastBuildFailure as Timestamp;
       const backoffMinutes = failureCount * 15;
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
