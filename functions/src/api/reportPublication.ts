@@ -24,21 +24,19 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
 
     if (jobHasCompleted) {
       await CiJobs.markJobAsCompleted(jobId);
-      // Strip repo version from publication name
-      let publicationName = jobId;
-      const lastDashPos = publicationName.lastIndexOf('-');
-      if (lastDashPos >= 1) {
-        publicationName = publicationName.substr(0, lastDashPos);
-      }
 
       // Report new publications as news
       let message = '';
       if (dockerInfo.imageName === 'editor') {
-        // i.e. [editor-2020.1.6f1]
-        message = `Published ${publicationName} images.`;
+        // i.e. [editor-2017.1.0f3-0.5.0]
+        const [imageType, publicationName, version] = jobId.split('-');
+        // i.e. [v0.5.0] images for [editor] [2020.2.22f2]
+        message = `Published v${version} images for ${imageType} ${publicationName}.`;
       } else {
-        // i.e. [hub] or [base]
-        message = `New ${publicationName}-image published.`;
+        // i.e. [hub-0.5.0]
+        const [publicationName, version] = jobId.split('-');
+        // i.e. [hub] or [base] for v0.5.0
+        message = `New ${publicationName}-image published for v${version}.`;
       }
       firebase.logger.info(message);
       if (!isDryRun) {
