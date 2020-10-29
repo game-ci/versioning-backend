@@ -235,28 +235,31 @@ export class CiJobs {
   static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
     firebase.logger.info('superseding jobs before repo version', repoVersion);
 
-    // Note: Cannot have inequality filters on multiple properties
-    const snapshot = await db
-      .collection(CI_JOBS_COLLECTION)
-      .where('repoVersionInfo.version', '<', repoVersion)
-      .where('status', '==', 'created')
-      .get();
+    let numSuperseded = 0;
+    for (const state of ['created', 'failed']) {
+      // Note: Cannot have inequality filters on multiple properties (hence the forOf)
+      const snapshot = await db
+        .collection(CI_JOBS_COLLECTION)
+        .where('repoVersionInfo.version', '<', repoVersion)
+        .where('status', '==', state)
+        .get();
 
-    const numSuperseded = snapshot.docs.length;
-    firebase.logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)}`);
+      numSuperseded += snapshot.docs.length;
+      firebase.logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)} with ${state} status`);
 
-    // Batches can only have 20 document access calls per transaction
-    // See: https://firebase.google.com/docs/firestore/manage-data/transactions
-    // Note: Set counts as 2 access calls
-    const status: JobStatus = 'superseded';
-    const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 10);
-    for (const docsChunk of docsChunks) {
-      const batch = db.batch();
-      for (const doc of docsChunk) {
-        batch.set(doc.ref, { status }, { merge: true });
+      // Batches can only have 20 document access calls per transaction
+      // See: https://firebase.google.com/docs/firestore/manage-data/transactions
+      // Note: Set counts as 2 access calls
+      const status: JobStatus = 'superseded';
+      const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 10);
+      for (const docsChunk of docsChunks) {
+        const batch = db.batch();
+        for (const doc of docsChunk) {
+          batch.set(doc.ref, { status }, { merge: true });
+        }
+        await batch.commit();
+        firebase.logger.debug('committed batch of superseded jobs');
       }
-      await batch.commit();
-      firebase.logger.debug('committed batch of superseded jobs');
     }
 
     return numSuperseded;
