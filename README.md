@@ -6,7 +6,7 @@
 Install firebase globally
 
 ```bash
-npm i -g firebase
+npm i -g firebase-tools
 ```
 
 Install dependencies

@@ -16,7 +16,8 @@ export type JobStatus =
   | 'inProgress'
   | 'completed'
   | 'failed'
-  | 'superseded';
+  | 'superseded'
+  | 'deprecated';
 
 interface MetaData {
   lastBuildStart: Timestamp | null;
@@ -138,8 +139,17 @@ export class CiJobs {
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ): CiJob => {
+    let status: JobStatus = 'deprecated';
+    if (
+      editorVersionInfo === null ||
+      editorVersionInfo.major >= 2019 ||
+      (editorVersionInfo.major === 2018 && editorVersionInfo.minor >= 2)
+    ) {
+      status = 'created';
+    }
+
     const job: CiJob = {
-      status: 'created',
+      status,
       imageType,
       repoVersionInfo,
       editorVersionInfo,
