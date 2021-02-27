@@ -11,12 +11,12 @@ const getUserByEmailAddress = async (emailAddress: string): Promise<admin.auth.U
 const makeUserAnAdmin = async (user: admin.auth.UserRecord): Promise<void> => {
   const { customClaims = {}, displayName } = user;
   if (customClaims.admin === true) {
-    return console.log(`${displayName} is already an admin.`);
+    return;
   }
 
   const updatedClaims = Object.assign({}, customClaims, { admin: true });
   await auth.setCustomUserClaims(user.uid, updatedClaims);
-  console.log(`${displayName} is now an admin`);
+  console.log(`${displayName} is now an admin. Claims:`, updatedClaims);
 };
 
 const makeAdminByEmailAddress = async (emailAddress: string): Promise<void> => {
