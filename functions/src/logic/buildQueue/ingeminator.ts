@@ -67,8 +67,9 @@ export class Ingeminator {
       if (failureCount >= maxFailuresPerBuild) {
         // Log warning
         const retries: number = maxFailuresPerBuild - 1;
-        const maxRetriesReachedMessage = `
-          [Ingeminator] Reached the maximum amount of retries (${retries}) for ${buildId}. Manual action is now required.`;
+        const maxRetriesReachedMessage =
+          `[Ingeminator] Reached the maximum amount of retries (${retries}) for ${buildId}.` +
+          `Manual action is now required. Visit https://console.firebase.google.com/u/0/project/unity-ci-versions/firestore/data~2FciBuilds~2F${buildId}`;
         firebase.logger.warn(maxRetriesReachedMessage);
 
         // Only send alert to discord once

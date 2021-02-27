@@ -19,6 +19,28 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "repoVersionInfo.version",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "editorVersionInfo.major",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "editorVersionInfo.minor",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "editorVersionInfo.patch",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "ciJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "status",
           "order": "ASCENDING"
         },
