@@ -1,4 +1,5 @@
 export const settings = {
+  defaultAdmins: ['webber.nl@gmail.com', 'lebreton.gabriel@gmail.com', 'davidmfinol@gmail.com'],
   minutesBetweenScans: 15,
   maxConcurrentJobs: 9,
   maxExtraJobsForRescheduling: 1,
