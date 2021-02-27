@@ -1,8 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    //
+    // Global settings
+    //
+
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if false;
+      allow write: if false;
+    }
+
+    //
+    // Per collection rules
+    //
+
+    match /ciBuilds/{ciBuild} {
+      allow read: if true;
+    }
+
+    match /ciJobs/{ciJob} {
+      allow read: if true;
+    }
+
+    match /editorVersions/{editorVersion} {
+      allow read: if false;
+    }
+
+    match /repoVersions/{repoVersion} {
+      allow read: if true;
     }
   }
 }
