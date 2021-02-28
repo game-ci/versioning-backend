@@ -4,3 +4,4 @@ export { reportNewBuild } from './reportNewBuild';
 export { reportPublication } from './reportPublication';
 export { unityVersions } from './unityVersions';
 export { manualWorkflowTrigger } from './manualWorkflowTrigger';
+export { retryBuild } from './retryBuild';
