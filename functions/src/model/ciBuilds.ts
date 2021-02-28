@@ -66,6 +66,16 @@ export class CiBuilds {
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
+  static get = async (buildId: string): Promise<CiBuild | null> => {
+    const snapshot = await db.doc(`${CI_BUILDS_COLLECTION}/${buildId}`).get();
+
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return snapshot.data() as CiBuild;
+  };
+
   static getFailedBuildsQueue = async (jobId: string): Promise<CiBuildQueue> => {
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)

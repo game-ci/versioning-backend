@@ -103,12 +103,7 @@ export class Ingeminator {
     firebase.logger.debug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
   }
 
-  private async rescheduleBuild(
-    jobId: string,
-    jobData: CiJob,
-    buildId: string,
-    buildData: CiBuild,
-  ) {
+  public async rescheduleBuild(jobId: string, jobData: CiJob, buildId: string, buildData: CiBuild) {
     // Info from job
     const { editorVersionInfo } = jobData;
     const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
