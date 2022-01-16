@@ -4,9 +4,6 @@ on:
   pull_request: { }
   push: { branches: [ main ] }
 
-env:
-  FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
 jobs:
   test:
     name: 🧪 Test
@@ -84,6 +81,8 @@ jobs:
       - name: install dependencies
         run: npm install && npm --prefix ./functions install ./functions
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v1.5.0
+        uses: w9jds/firebase-action@v2.0.0
         with:
           args: deploy
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
