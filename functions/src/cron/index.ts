@@ -18,14 +18,15 @@ export const trigger = functions
   .onRun(async (context: EventContext) => {
     try {
       await routineTasks();
-    } catch (err) {
-      const message = `
-        Something went wrong while wrong while running routine tasks.
-        ${err.message} (${err.status})\n${err.stackTrace}
-      `;
+    } catch (error) {
+      const errorStatus = error.status ? ` (${error.status})` : '';
+      const errorStack = error.stackTrace ? `\n${error.stackTrace}` : '';
+      const fullError = `${error.message}${errorStatus}${errorStack}`;
 
-      firebase.logger.error(message);
-      await Discord.sendAlert(message);
+      const routineTasksFailedMessage = `Something went wrong while wrong while running routine tasks.\n${fullError}`;
+
+      firebase.logger.error(routineTasksFailedMessage);
+      await Discord.sendAlert(routineTasksFailedMessage);
     }
   });
 
