@@ -1,7 +1,7 @@
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
-import { firebase, functions } from '../config/firebase';
-import { GitHub } from '../config/github';
+import { firebase, functions } from '../service/firebase';
+import { GitHub } from '../service/github';
 
 export const manualWorkflowTrigger = functions.https.onRequest(
   async (request: Request, response: Response) => {

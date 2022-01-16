@@ -1,12 +1,12 @@
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { GitHub } from '../../config/github';
+import { GitHub } from '../../service/github';
 import { Octokit } from '@octokit/rest';
 import { CiJobs } from '../../model/ciJobs';
-import { firebase } from '../../config/firebase';
+import { firebase } from '../../service/firebase';
 import { settings } from '../../config/settings';
 import { take } from 'lodash';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
-import { Discord } from '../../config/discord';
+import { Discord } from '../../service/discord';
 import { Ingeminator } from './ingeminator';
 
 export class Scheduler {

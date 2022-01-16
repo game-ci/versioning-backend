@@ -1,4 +1,4 @@
-import { db, admin, firebase } from '../config/firebase';
+import { db, admin, firebase } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
 
 export const REPO_VERSIONS_COLLECTION = 'repoVersions';

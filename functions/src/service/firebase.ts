@@ -1,6 +1,6 @@
 import * as firebase from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { getCredential } from './credential';
+import { getCredential } from '../config/credential';
 
 const app = admin.initializeApp({
   credential: getCredential(),

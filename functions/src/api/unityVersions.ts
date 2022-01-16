@@ -1,6 +1,6 @@
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
-import { firebase, functions } from '../config/firebase';
+import { firebase, functions } from '../service/firebase';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 
 export const unityVersions = functions.https.onRequest(

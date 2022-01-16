@@ -1,5 +1,5 @@
 import admin from 'firebase-admin';
-import { auth } from '../../config/firebase';
+import { auth } from '../../service/firebase';
 
 const getUserByEmailAddress = async (emailAddress: string): Promise<admin.auth.UserRecord> => {
   const user = await auth.getUserByEmail(emailAddress);

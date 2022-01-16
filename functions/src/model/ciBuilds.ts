@@ -1,4 +1,4 @@
-import { db, admin, firebase } from '../config/firebase';
+import { db, admin, firebase } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import FieldValue = admin.firestore.FieldValue;
 import { settings } from '../config/settings';
@@ -60,13 +60,13 @@ export type CiBuildQueue = CiBuildQueueItem[];
  * Statuses (failures and publications) are also reported back on this level.
  */
 export class CiBuilds {
-  static getAll = async (): Promise<CiBuild[]> => {
+  public static getAll = async (): Promise<CiBuild[]> => {
     const snapshot = await db.collection(CI_BUILDS_COLLECTION).get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
-  static get = async (buildId: string): Promise<CiBuild | null> => {
+  public static get = async (buildId: string): Promise<CiBuild | null> => {
     const snapshot = await db.doc(`${CI_BUILDS_COLLECTION}/${buildId}`).get();
 
     if (!snapshot.exists) {
@@ -76,7 +76,16 @@ export class CiBuilds {
     return snapshot.data() as CiBuild;
   };
 
-  static getFailedBuildsQueue = async (jobId: string): Promise<CiBuildQueue> => {
+  public static getStartedBuilds = async (): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CI_BUILDS_COLLECTION)
+      .where('status', '==', 'started')
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data() as CiBuild);
+  };
+
+  public static getFailedBuildsQueue = async (jobId: string): Promise<CiBuildQueue> => {
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)
       .where('relatedJobId', '==', jobId)
@@ -87,7 +96,7 @@ export class CiBuilds {
     return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiBuild }));
   };
 
-  static registerNewBuild = async (
+  public static registerNewBuild = async (
     buildId: string,
     relatedJobId: string,
     imageType: ImageType,
@@ -132,7 +141,7 @@ export class CiBuilds {
     firebase.logger.debug('Build created', result);
   };
 
-  static async removeDryRunBuild(buildId: string) {
+  public static async removeDryRunBuild(buildId: string) {
     if (!buildId.startsWith('dryRun')) {
       throw new Error('Unexpected behaviour, expected only dryRun builds to be deleted');
     }
@@ -144,7 +153,7 @@ export class CiBuilds {
     await ref.delete();
   }
 
-  static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
+  public static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
     const build = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
 
     await build.update({
@@ -156,7 +165,7 @@ export class CiBuilds {
     });
   };
 
-  static markBuildAsPublished = async (buildId: string, dockerInfo: DockerInfo) => {
+  public static markBuildAsPublished = async (buildId: string, dockerInfo: DockerInfo) => {
     const build = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
 
     await build.update({
@@ -167,7 +176,7 @@ export class CiBuilds {
     });
   };
 
-  static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
+  public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)
       .where('relatedJobId', '==', jobId)

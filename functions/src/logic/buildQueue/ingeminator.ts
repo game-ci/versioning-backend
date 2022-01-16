@@ -1,8 +1,8 @@
 import { CiJob, CiJobQueue, CiJobs, CiJobQueueItem } from '../../model/ciJobs';
 import { CiBuild, CiBuilds } from '../../model/ciBuilds';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
-import { firebase } from '../../config/firebase';
-import { Discord } from '../../config/discord';
+import { firebase } from '../../service/firebase';
+import { Discord } from '../../service/discord';
 import { Octokit } from '@octokit/rest';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';

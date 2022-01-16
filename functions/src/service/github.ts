@@ -1,6 +1,6 @@
 import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
-import { settings } from './settings';
+import { settings } from '../config/settings';
 import { firebase } from './firebase';
 
 const { 'private-key': privateKey, 'client-secret': clientSecret } = firebase.config().github;

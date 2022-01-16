@@ -1,12 +1,12 @@
 import { EventContext } from 'firebase-functions';
 import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
-import { db, firebase, functions } from '../config/firebase';
+import { db, firebase, functions } from '../service/firebase';
 
 import { REPO_VERSIONS_COLLECTION, RepoVersionInfo } from '../model/repoVersionInfo';
 import { CI_JOBS_COLLECTION, CiJobs } from '../model/ciJobs';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import semver from 'semver/preload';
-import { Discord } from '../config/discord';
+import { Discord } from '../service/discord';
 import { chunk } from 'lodash';
 
 export const onCreate = functions.firestore

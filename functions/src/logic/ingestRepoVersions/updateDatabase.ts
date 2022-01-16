@@ -1,7 +1,7 @@
 import { isMatch } from 'lodash';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { firebase } from '../../config/firebase';
-import { Discord } from '../../config/discord';
+import { firebase } from '../../service/firebase';
+import { Discord } from '../../service/discord';
 
 const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';

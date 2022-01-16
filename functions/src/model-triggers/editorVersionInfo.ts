@@ -1,11 +1,11 @@
 import { EventContext } from 'firebase-functions';
 import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
-import { firebase, functions } from '../config/firebase';
+import { firebase, functions } from '../service/firebase';
 
 import { EDITOR_VERSIONS_COLLECTION, EditorVersionInfo } from '../model/editorVersionInfo';
 import { CiJobs } from '../model/ciJobs';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
-import { Discord } from '../config/discord';
+import { Discord } from '../service/discord';
 
 const imageType = 'editor';
 

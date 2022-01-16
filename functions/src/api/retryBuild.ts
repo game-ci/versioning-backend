@@ -1,10 +1,10 @@
-import { functions, admin } from '../config/firebase';
+import { functions, admin } from '../service/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Ingeminator } from '../logic/buildQueue/ingeminator';
-import { GitHub } from '../config/github';
+import { GitHub } from '../service/github';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 
 export const retryBuild = functions.https.onRequest(

@@ -1,4 +1,4 @@
-import { db, admin, firebase } from '../config/firebase';
+import { db, admin, firebase } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import { EditorVersionInfo } from './editorVersionInfo';
 import { RepoVersionInfo } from './repoVersionInfo';

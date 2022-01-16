@@ -1,6 +1,6 @@
 import { isMatch } from 'lodash';
-import { firebase } from '../../config/firebase';
-import { Discord } from '../../config/discord';
+import { firebase } from '../../service/firebase';
+import { Discord } from '../../service/discord';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
 const plural = (amount: number) => {

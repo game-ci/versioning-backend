@@ -1,10 +1,10 @@
-import { firebase, functions } from '../config/firebase';
+import { firebase, functions } from '../service/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
 import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
-import { Discord } from '../config/discord';
+import { Discord } from '../service/discord';
 
 export const reportPublication = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
