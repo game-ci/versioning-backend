@@ -12,7 +12,7 @@ export class Cleaner {
     const startedBuilds = await CiBuilds.getStartedBuilds(6);
 
     for (const startedBuild of startedBuilds) {
-      const { buildId, meta, imageType, buildInfo } = startedBuild;
+      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
       const { baseOs, repoVersion } = buildInfo;
 
@@ -59,7 +59,7 @@ export class Cleaner {
         // Image exists
         const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published.`;
         await Discord.sendDebug(markAsSuccessfulMessage);
-        await CiBuilds.markBuildAsPublished(buildId, {
+        await CiBuilds.markBuildAsPublished(buildId, jobId, {
           digest: '', // missing
           specificTag: `${baseOs}-${repoVersion}`,
           friendlyTag: repoVersion.replace(/\.\d+$/, ''),
