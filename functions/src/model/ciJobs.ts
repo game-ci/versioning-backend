@@ -1,4 +1,4 @@
-import { db, admin, firebase } from '../config/firebase';
+import { db, admin, firebase } from '../service/firebase';
 import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;

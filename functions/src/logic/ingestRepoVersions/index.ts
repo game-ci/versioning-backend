@@ -1,5 +1,5 @@
-import { firebase } from '../../config/firebase';
-import { Discord } from '../../config/discord';
+import { firebase } from '../../service/firebase';
+import { Discord } from '../../service/discord';
 import { scrapeVersions } from './scrapeVersions';
 import { updateDatabase } from './updateDatabase';
 

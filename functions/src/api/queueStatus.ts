@@ -1,4 +1,4 @@
-import { functions } from '../config/firebase';
+import { functions } from '../service/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { CiJobs } from '../model/ciJobs';

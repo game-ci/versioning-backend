@@ -1,9 +1,9 @@
 import { EventContext } from 'firebase-functions';
-import { firebase, functions } from '../config/firebase';
-import { Discord } from '../config/discord';
+import { firebase, functions } from '../service/firebase';
+import { Discord } from '../service/discord';
 import { ingestUnityVersions } from '../logic/ingestUnityVersions';
 import { ingestRepoVersions } from '../logic/ingestRepoVersions';
-import { scheduleBuildsFromTheQueue } from '../logic/buildQueue';
+import { cleanUpBuilds, scheduleBuildsFromTheQueue } from '../logic/buildQueue';
 import { settings } from '../config/settings';
 
 const MINUTES: number = settings.minutesBetweenScans;
@@ -33,7 +33,10 @@ export const trigger = functions
   });
 
 const routineTasks = async () => {
+  await Discord.sendDebugLine('begin');
   await ingestRepoVersions();
   await ingestUnityVersions();
+  await cleanUpBuilds();
   await scheduleBuildsFromTheQueue();
+  await Discord.sendDebugLine('end');
 };

@@ -22,4 +22,10 @@ export const settings = {
       clientSecret: '(do not place the real secret here)',
     },
   },
+  dockerhub: {
+    host: 'https://index.docker.io/v1',
+    baseRepository: 'unityci/base',
+    hubRepository: 'unityci/hub',
+    editorRepository: 'unityci/editor',
+  },
 };

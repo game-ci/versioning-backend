@@ -1,4 +1,4 @@
-import { firebase } from './firebase';
+import { firebase } from '../service/firebase';
 
 const { token } = firebase.config().internal;
 

@@ -1,10 +1,10 @@
-import { firebase, functions } from '../config/firebase';
+import { firebase, functions } from '../service/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
 import { BuildInfo, CiBuilds, ImageType } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
-import { Discord } from '../config/discord';
+import { Discord } from '../service/discord';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 

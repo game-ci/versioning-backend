@@ -1,6 +1,6 @@
 import semver from 'semver';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { GitHub } from '../../config/github';
+import { GitHub } from '../../service/github';
 
 export const scrapeVersions = async (): Promise<RepoVersionInfo[]> => {
   const gitHub = await GitHub.init();

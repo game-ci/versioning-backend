@@ -1,6 +1,6 @@
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';
-import { Discord } from '../../config/discord';
+import { Discord } from '../../service/discord';
 
 /**
  * When a new Unity version gets ingested:

@@ -1,13 +1,19 @@
 import * as Eris from 'eris';
 import { firebase } from './firebase';
-import { settings } from './settings';
+import { settings } from '../config/settings';
 
 const { token } = firebase.config().discord;
 
 let instance: Eris.Client | null = null;
 
 export class Discord {
-  static async sendDebug(
+  public static async sendDebugLine(message: 'begin' | 'end') {
+    const discord = await this.getInstance();
+
+    await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
+  }
+
+  public static async sendDebug(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
   ): Promise<boolean> {
@@ -17,28 +23,28 @@ export class Discord {
     return this.sendMessage(null, message, files, 'info');
   }
 
-  static async sendNews(
+  public static async sendNews(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.news, message, files, 'info');
   }
 
-  static async sendAlert(
+  public static async sendAlert(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.alerts, message, files, 'error');
   }
 
-  static async sendMessageToMaintainers(
+  public static async sendMessageToMaintainers(
     message: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.maintainers, message, files, 'info');
   }
 
-  static async sendMessage(
+  private static async sendMessage(
     channelId: string | null,
     messageContent: Eris.MessageContent,
     files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,

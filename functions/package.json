@@ -24,7 +24,7 @@
     "httpie": "^1.1.2",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.20",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "semver": "^7.3.2"
   },
   "devDependencies": {
