@@ -1,6 +1,6 @@
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { firebase } from '../../config/firebase';
 import { Scheduler } from './scheduler';
+import { Discord } from '../../config/discord';
 
 /**
  * When a new Unity version gets ingested:
@@ -20,29 +20,29 @@ export const scheduleBuildsFromTheQueue = async () => {
 
   const testVersion = '0.1.0';
   if (repoVersionInfo.version === testVersion) {
-    firebase.logger.info('[Build queue] No longer building test versions.');
+    await Discord.sendDebug('[Build queue] No longer building test versions.');
     return;
   }
 
   if (!(await scheduler.ensureThatBaseImageHasBeenBuilt())) {
-    firebase.logger.info('[Build queue] Waiting for base image to be ready.');
+    await Discord.sendDebug('[Build queue] Waiting for base image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThatHubImageHasBeenBuilt())) {
-    firebase.logger.info('[Build queue] Waiting for hub image to be ready.');
+    await Discord.sendDebug('[Build queue] Waiting for hub image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThereAreNoFailedJobs())) {
-    firebase.logger.info('[Build queue] Retrying failed jobs before scheduling new jobs.');
+    await Discord.sendDebug('[Build queue] Retrying failed jobs before scheduling new jobs.');
     return;
   }
 
   if (!(await scheduler.buildLatestEditorImages())) {
-    firebase.logger.info('[Build queue] Editor images are building.');
+    await Discord.sendDebug('[Build queue] Editor images are building.');
     return;
   }
 
-  firebase.logger.info('[Build queue] Idle 🎈');
+  await Discord.sendDebug('[Build queue] Idle 🎈');
 };

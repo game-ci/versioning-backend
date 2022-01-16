@@ -174,7 +174,6 @@ export class CiJobs {
     }
 
     const currentBuild = snapshot.data() as CiJob;
-    firebase.logger.warn(currentBuild);
 
     // Do not override failure or completed
     // In CiJobs, "failure" is used to not race past failed jobs in the buildQueue, whereas

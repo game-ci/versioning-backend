@@ -110,7 +110,7 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('[Scheduler] Scheduled new base image build', response);
+      await Discord.sendDebug(`[Scheduler] Scheduled new base image build (${jobId}).`);
       return false;
     }
 
@@ -151,7 +151,7 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('[Scheduler] Scheduled new hub image build', response);
+      await Discord.sendDebug(`[Scheduler] Scheduled new hub image build (${jobId})`);
       return false;
     }
 
@@ -174,7 +174,7 @@ export class Scheduler {
       const numberToReschedule = openSpots + maxExtraJobsForRescheduling;
 
       if (numberToReschedule <= 0) {
-        firebase.logger.info('[Scheduler] Not retrying any new jobs, as the queue is full');
+        await Discord.sendDebug('[Scheduler] Not retrying any new jobs, as the queue is full');
         return false;
       }
 
@@ -188,7 +188,7 @@ export class Scheduler {
   async buildLatestEditorImages(): Promise<boolean> {
     const openSpots = await this.determineOpenSpots();
     if (openSpots <= 0) {
-      firebase.logger.info('[Scheduler] Not scheduling any new jobs, as the queue is full');
+      await Discord.sendDebug('[Scheduler] Not scheduling any new jobs, as the queue is full');
       return false;
     }
 
@@ -203,7 +203,8 @@ export class Scheduler {
 
     // Schedule each build, one by one
     const toBeScheduledJobs = take(queue, openSpots);
-    firebase.logger.info('[Scheduler] took this from the queue', toBeScheduledJobs);
+    const jobsAsString = toBeScheduledJobs?.map((job) => job.id).join(',\n');
+    await Discord.sendDebug(`[Scheduler] top of the queue: \n ${jobsAsString}`);
     for (const toBeScheduledJob of toBeScheduledJobs) {
       const { id: jobId, data } = toBeScheduledJob;
 
@@ -235,7 +236,7 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      firebase.logger.debug('[Scheduler] Scheduled new editor image build', response);
+      await Discord.sendDebug(`[Scheduler] Scheduled new editor image build (${jobId}).`);
     }
 
     // The queue was not empty, so we're not happy yet
