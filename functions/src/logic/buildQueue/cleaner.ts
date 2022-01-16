@@ -1,6 +1,4 @@
 import { CiBuilds } from '../../model/ciBuilds';
-import admin from 'firebase-admin';
-import Timestamp = admin.firestore.Timestamp;
 import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
 
@@ -10,20 +8,21 @@ export class Cleaner {
   }
 
   public static async cleanUpBuildsThatDidntReportBack() {
-    const startedBuilds = await CiBuilds.getStartedBuilds();
+    const startedBuilds = await CiBuilds.getStartedBuilds(12);
 
     for (const startedBuild of startedBuilds) {
-      const { buildId, meta, imageType } = startedBuild;
+      const { buildId, meta, imageType, buildInfo } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
+      const { baseOs, repoVersion } = buildInfo;
+
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
 
       if (publishedDate) {
-        await Discord.sendDebug(
-          `[Cleaner] Build "${buildId}" has a publication date, but it's status is "started".
-          Was a rebuild requested for this build?`,
-        );
+        const buildWasPublishedAlreadyMessage = `[Cleaner] Build "${tag}" has a publication date, but it's status is "started". Was a rebuild requested for this build?`;
+        await Discord.sendDebug(buildWasPublishedAlreadyMessage);
 
         // Maybe set status to published. However, that will increase complexity.
-        // Deleting a tag from dockerhub and rebuilding will this error currently.
+        // Deleting a tag from dockerhub and rebuilding will yield this error currently.
         // If we set it to published, we also need to look up the build digest from dockerhub.
 
         continue;
@@ -32,7 +31,7 @@ export class Cleaner {
       if (!lastBuildStart) {
         // In theory this should never happen.
         await Discord.sendAlert(
-          `[Cleaner] Build "${buildId}" with status "started" does not have a "lastBuildStart" date.`,
+          `[Cleaner] Build "${tag}" with status "started" does not have a "lastBuildStart" date.`,
         );
         continue;
       }
@@ -42,34 +41,30 @@ export class Cleaner {
       // @see https://docs.github.com/en/actions/learn-github-actions/usage-limits-billing-and-administration
       const ONE_HOUR = 1000 * 60 * 60;
       const sixHoursAgo = new Date().getTime() - 6 * ONE_HOUR;
-
-      const { seconds, nanoseconds } = lastBuildStart;
-      const buildStart = new Timestamp(seconds, nanoseconds).toDate().getTime();
+      const buildStart = new Date(lastBuildStart.seconds * 1000).getTime();
 
       if (buildStart < sixHoursAgo) {
-        const image = Dockerhub.fetchImageData(imageType, buildId);
-        if (!image) {
-          await Discord.sendDebug(
-            `[Debug] image for "started" build "${buildId}" not found, would set it to failed`,
-          );
+        const response = await Dockerhub.fetchImageData(imageType, tag);
 
-          // await Discord.sendAlert(
-          //   `[Cleaner] Build "${buildId}" with status "started" never reported back in. Marking as as failed.`,
-          // );
-          // await CiBuilds.markBuildAsFailed(buildId, { reason: 'Runner timed out or failed to report back.' });
+        // Image does not exist
+        if (!response) {
+          const markAsFailedMessage = `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking as as failed.`;
+          await Discord.sendAlert(markAsFailedMessage);
+          await CiBuilds.markBuildAsFailed(buildId, { reason: markAsFailedMessage });
+
           continue;
         }
 
-        await Discord.sendDebug(`[Debug] image "started" build  "${buildId}" found, would set it to published
-          using the following data: ${JSON.stringify(image, null, 2)}.`);
-
-        // await CiBuilds.markBuildAsPublished(buildId, {
-        //   // imageRepo: string;
-        //   // imageName: string;
-        //   // friendlyTag: string;
-        //   // specificTag: string;
-        //   // digest: string;
-        // })
+        // Image exists
+        const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking as published`;
+        await Discord.sendDebug(markAsSuccessfulMessage);
+        await CiBuilds.markBuildAsPublished(buildId, {
+          digest: '', // missing
+          specificTag: `${baseOs}-${repoVersion}`,
+          friendlyTag: repoVersion.replace(/\.\d+$/, ''),
+          imageName: Dockerhub.getImageName(imageType),
+          imageRepo: Dockerhub.getRepositoryBaseName(),
+        });
 
         continue;
       }

@@ -33,10 +33,16 @@ export const trigger = functions
   });
 
 const routineTasks = async () => {
-  await Discord.sendDebugLine('begin');
-  await ingestRepoVersions();
-  await ingestUnityVersions();
-  await cleanUpBuilds();
-  await scheduleBuildsFromTheQueue();
-  await Discord.sendDebugLine('end');
+  try {
+    await Discord.sendDebugLine('begin');
+    await ingestRepoVersions();
+    await ingestUnityVersions();
+    await cleanUpBuilds();
+    await scheduleBuildsFromTheQueue();
+  } catch (error) {
+    firebase.logger.error(error);
+    await Discord.sendAlert(error);
+  } finally {
+    await Discord.sendDebugLine('end');
+  }
 };

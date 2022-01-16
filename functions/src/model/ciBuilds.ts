@@ -76,10 +76,11 @@ export class CiBuilds {
     return snapshot.data() as CiBuild;
   };
 
-  public static getStartedBuilds = async (): Promise<CiBuild[]> => {
+  public static getStartedBuilds = async (limit = 30): Promise<CiBuild[]> => {
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)
       .where('status', '==', 'started')
+      .limit(limit)
       .get();
 
     return snapshot.docs.map((doc) => doc.data() as CiBuild);
