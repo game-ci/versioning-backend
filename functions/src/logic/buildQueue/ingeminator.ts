@@ -43,7 +43,7 @@ export class Ingeminator {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      firebase.logger.info(
+      await Discord.sendDebug(
         `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
       );
       return;
@@ -54,7 +54,7 @@ export class Ingeminator {
 
       // Space for more?
       if (this.numberToSchedule <= 0) {
-        firebase.logger.debug(
+        await Discord.sendDebug(
           `[Ingeminator] waiting for more spots to become available for builds of ${jobId}.`,
         );
         return;
@@ -70,13 +70,15 @@ export class Ingeminator {
         const maxRetriesReachedMessage =
           `[Ingeminator] Reached the maximum amount of retries (${retries}) for ${buildId}.` +
           `Manual action is now required. Visit https://console.firebase.google.com/u/0/project/unity-ci-versions/firestore/data~2FciBuilds~2F${buildId}`;
-        firebase.logger.warn(maxRetriesReachedMessage);
 
         // Only send alert to discord once
         const alertingPeriodMinutes = settings.minutesBetweenScans;
         const alertingPeriodMilliseconds = alertingPeriodMinutes * 60 * 1000;
         if (lastFailure.toMillis() + alertingPeriodMilliseconds >= Timestamp.now().toMillis()) {
+          firebase.logger.error(maxRetriesReachedMessage);
           await Discord.sendAlert(maxRetriesReachedMessage);
+        } else {
+          await Discord.sendDebug(maxRetriesReachedMessage);
         }
 
         return;
@@ -86,7 +88,7 @@ export class Ingeminator {
       const backoffMinutes = failureCount * 15;
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
-        firebase.logger.debug(
+        await Discord.sendDebug(
           `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
         );
         continue;
@@ -100,7 +102,7 @@ export class Ingeminator {
     }
 
     await CiJobs.markJobAsScheduled(jobId);
-    firebase.logger.debug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
+    await Discord.sendDebug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
   }
 
   public async rescheduleBuild(jobId: string, jobData: CiJob, buildId: string, buildData: CiBuild) {

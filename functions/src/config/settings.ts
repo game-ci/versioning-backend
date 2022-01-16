@@ -7,9 +7,10 @@ export const settings = {
   maxFailuresPerBuild: 15,
   discord: {
     channels: {
-      news: '731947345478156391',
-      maintainers: '764289922663841792',
-      alerts: '763544776649605151',
+      news: '731947345478156391', // #news (public)
+      maintainers: '764289922663841792', // # build-notifications (internal)
+      alerts: '763544776649605151', // #alerts (internal)
+      debug: '815382556143910953', // #backend (internal)
     },
   },
   github: {
