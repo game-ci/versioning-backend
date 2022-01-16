@@ -48,7 +48,7 @@ export class Cleaner {
 
         // Image does not exist
         if (!response) {
-          const markAsFailedMessage = `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking as as failed.`;
+          const markAsFailedMessage = `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking it as failed.`;
           await Discord.sendAlert(markAsFailedMessage);
           await CiBuilds.markBuildAsFailed(buildId, { reason: markAsFailedMessage });
 
@@ -56,7 +56,7 @@ export class Cleaner {
         }
 
         // Image exists
-        const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking as published`;
+        const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published`;
         await Discord.sendDebug(markAsSuccessfulMessage);
         await CiBuilds.markBuildAsPublished(buildId, {
           digest: '', // missing
