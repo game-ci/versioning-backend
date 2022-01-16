@@ -11,10 +11,7 @@ if (MINUTES < 10) {
   throw new Error('Is the result really worth the machine time? Remove me.');
 }
 
-/**
- * CPU-time for pubSub is not part of the free quota, so we'll keep it light weight.
- * This will call the cloud function `cron/worker`, using an authentication token.
- */
+// Timeout of 60 seconds will keep our routine process tight.
 export const trigger = functions
   .runWith({ timeoutSeconds: 60, memory: '512MB' })
   .pubsub.schedule(`every ${MINUTES} minutes`)

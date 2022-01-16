@@ -8,7 +8,8 @@ export class Cleaner {
   }
 
   public static async cleanUpBuildsThatDidntReportBack() {
-    const startedBuilds = await CiBuilds.getStartedBuilds(12);
+    // Note that the cronjob has a limited runtime, so we can only process so many requests to dockerhub.
+    const startedBuilds = await CiBuilds.getStartedBuilds(6);
 
     for (const startedBuild of startedBuilds) {
       const { buildId, meta, imageType, buildInfo } = startedBuild;
