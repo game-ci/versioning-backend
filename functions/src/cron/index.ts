@@ -23,7 +23,7 @@ export const trigger = functions
       const errorStack = error.stackTrace ? `\n${error.stackTrace}` : '';
       const fullError = `${error.message}${errorStatus}${errorStack}`;
 
-      const routineTasksFailedMessage = `Something went wrong while wrong while running routine tasks.\n${fullError}`;
+      const routineTasksFailedMessage = `Something went wrong while running routine tasks.\n${fullError}`;
 
       firebase.logger.error(routineTasksFailedMessage);
       await Discord.sendAlert(routineTasksFailedMessage);
