@@ -2,6 +2,7 @@ import { db, admin, firebase } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import FieldValue = admin.firestore.FieldValue;
 import { settings } from '../config/settings';
+import { CiJobs } from './ciJobs';
 
 const CI_BUILDS_COLLECTION = 'ciBuilds';
 
@@ -77,9 +78,12 @@ export class CiBuilds {
   };
 
   public static getStartedBuilds = async (): Promise<CiBuild[]> => {
+    const realisticMaximumConcurrentBuilds = settings.maxConcurrentJobs * 10;
+
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)
       .where('status', '==', 'started')
+      .limit(realisticMaximumConcurrentBuilds)
       .get();
 
     return snapshot.docs.map((doc) => doc.data() as CiBuild);
@@ -165,7 +169,11 @@ export class CiBuilds {
     });
   };
 
-  public static markBuildAsPublished = async (buildId: string, dockerInfo: DockerInfo) => {
+  public static markBuildAsPublished = async (
+    buildId: string,
+    jobId: string,
+    dockerInfo: DockerInfo,
+  ): Promise<boolean> => {
     const build = await db.collection(CI_BUILDS_COLLECTION).doc(buildId);
 
     await build.update({
@@ -174,6 +182,13 @@ export class CiBuilds {
       modifiedDate: Timestamp.now(),
       'meta.publishedDate': Timestamp.now(),
     });
+
+    const parentJobIsNowCompleted = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
+    if (parentJobIsNowCompleted) {
+      await CiJobs.markJobAsCompleted(jobId);
+    }
+
+    return parentJobIsNowCompleted;
   };
 
   public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {

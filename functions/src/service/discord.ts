@@ -10,7 +10,11 @@ export class Discord {
   public static async sendDebugLine(message: 'begin' | 'end') {
     const discord = await this.getInstance();
 
-    await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
+    try {
+      await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
+    } finally {
+      await this.disconnect();
+    }
   }
 
   public static async sendDebug(

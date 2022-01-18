@@ -11,32 +11,36 @@ if (MINUTES < 10) {
   throw new Error('Is the result really worth the machine time? Remove me.');
 }
 
-/**
- * CPU-time for pubSub is not part of the free quota, so we'll keep it light weight.
- * This will call the cloud function `cron/worker`, using an authentication token.
- */
+// Timeout of 60 seconds will keep our routine process tight.
 export const trigger = functions
   .runWith({ timeoutSeconds: 60, memory: '512MB' })
   .pubsub.schedule(`every ${MINUTES} minutes`)
   .onRun(async (context: EventContext) => {
     try {
       await routineTasks();
-    } catch (err) {
-      const message = `
-        Something went wrong while wrong while running routine tasks.
-        ${err.message} (${err.status})\n${err.stackTrace}
-      `;
+    } catch (error) {
+      const errorStatus = error.status ? ` (${error.status})` : '';
+      const errorStack = error.stackTrace ? `\n${error.stackTrace}` : '';
+      const fullError = `${error.message}${errorStatus}${errorStack}`;
 
-      firebase.logger.error(message);
-      await Discord.sendAlert(message);
+      const routineTasksFailedMessage = `Something went wrong while running routine tasks.\n${fullError}`;
+
+      firebase.logger.error(routineTasksFailedMessage);
+      await Discord.sendAlert(routineTasksFailedMessage);
     }
   });
 
 const routineTasks = async () => {
-  await Discord.sendDebugLine('begin');
-  await ingestRepoVersions();
-  await ingestUnityVersions();
-  await cleanUpBuilds();
-  await scheduleBuildsFromTheQueue();
-  await Discord.sendDebugLine('end');
+  try {
+    await Discord.sendDebugLine('begin');
+    await ingestRepoVersions();
+    await ingestUnityVersions();
+    await cleanUpBuilds();
+    await scheduleBuildsFromTheQueue();
+  } catch (error) {
+    firebase.logger.error(error);
+    await Discord.sendAlert(error);
+  } finally {
+    await Discord.sendDebugLine('end');
+  }
 };

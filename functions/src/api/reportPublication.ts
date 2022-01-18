@@ -19,12 +19,8 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     const isDryRun = req.body.jobId?.toString().startsWith('dryRun');
 
     const { jobId, buildId, dockerInfo } = body;
-    await CiBuilds.markBuildAsPublished(buildId, dockerInfo);
-    const jobHasCompleted = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
-
-    if (jobHasCompleted) {
-      await CiJobs.markJobAsCompleted(jobId);
-
+    const parentJobIsNowCompleted = await CiBuilds.markBuildAsPublished(buildId, jobId, dockerInfo);
+    if (parentJobIsNowCompleted) {
       // Report new publications as news
       let message = '';
       if (dockerInfo.imageName === 'editor') {
