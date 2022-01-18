@@ -3,15 +3,22 @@ import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
 
 export class Cleaner {
+  // Cronjob intentionally has a limited runtime
+  static readonly maxBuildsProcessedPerRun: number = 5;
+
+  static buildsProcessed: number;
+
   public static async cleanUp() {
+    this.buildsProcessed = 0;
     await this.cleanUpBuildsThatDidntReportBack();
   }
 
-  public static async cleanUpBuildsThatDidntReportBack() {
-    // Note that the cronjob has a limited runtime, so we can only process so many requests to dockerhub.
-    const startedBuilds = await CiBuilds.getStartedBuilds(6);
+  private static async cleanUpBuildsThatDidntReportBack() {
+    const startedBuilds = await CiBuilds.getStartedBuilds();
 
     for (const startedBuild of startedBuilds) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
       const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
       const { baseOs, repoVersion } = buildInfo;
@@ -45,6 +52,8 @@ export class Cleaner {
       const buildStart = new Date(lastBuildStart.seconds * 1000).getTime();
 
       if (buildStart < sixHoursAgo) {
+        this.buildsProcessed += 1;
+
         const response = await Dockerhub.fetchImageData(imageType, tag);
 
         // Image does not exist
@@ -60,7 +69,7 @@ export class Cleaner {
         const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published.`;
         await Discord.sendDebug(markAsSuccessfulMessage);
         await CiBuilds.markBuildAsPublished(buildId, jobId, {
-          digest: '', // missing
+          digest: '', // missing from dockerhub v1 api payload
           specificTag: `${baseOs}-${repoVersion}`,
           friendlyTag: repoVersion.replace(/\.\d+$/, ''),
           imageName: Dockerhub.getImageName(imageType),

@@ -77,11 +77,13 @@ export class CiBuilds {
     return snapshot.data() as CiBuild;
   };
 
-  public static getStartedBuilds = async (limit = 30): Promise<CiBuild[]> => {
+  public static getStartedBuilds = async (): Promise<CiBuild[]> => {
+    const realisticMaximumConcurrentBuilds = settings.maxConcurrentJobs * 10;
+
     const snapshot = await db
       .collection(CI_BUILDS_COLLECTION)
       .where('status', '==', 'started')
-      .limit(limit)
+      .limit(realisticMaximumConcurrentBuilds)
       .get();
 
     return snapshot.docs.map((doc) => doc.data() as CiBuild);
