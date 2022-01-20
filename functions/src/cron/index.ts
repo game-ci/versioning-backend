@@ -1,4 +1,3 @@
-import { EventContext } from 'firebase-functions';
 import { firebase, functions } from '../service/firebase';
 import { Discord } from '../service/discord';
 import { ingestUnityVersions } from '../logic/ingestUnityVersions';
@@ -15,7 +14,7 @@ if (MINUTES < 10) {
 export const trigger = functions
   .runWith({ timeoutSeconds: 60, memory: '512MB' })
   .pubsub.schedule(`every ${MINUTES} minutes`)
-  .onRun(async (context: EventContext) => {
+  .onRun(async () => {
     try {
       await routineTasks();
     } catch (error) {
@@ -42,5 +41,6 @@ const routineTasks = async () => {
     await Discord.sendAlert(error);
   } finally {
     await Discord.sendDebugLine('end');
+    await Discord.disconnect();
   }
 };
