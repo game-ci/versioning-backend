@@ -91,7 +91,7 @@ export class Scheduler {
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: 'new_base_image_requested',
+        event_type: 'new_ubuntu_base_image_requested',
         client_payload: {
           jobId,
           repoVersionFull,
@@ -132,7 +132,7 @@ export class Scheduler {
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: 'new_hub_image_requested',
+        event_type: 'new_ubuntu_hub_image_requested',
         client_payload: {
           jobId,
           repoVersionFull,
@@ -247,9 +247,9 @@ export class Scheduler {
     const { major, minor } = editorVersionInfo;
 
     if (major >= 2020 || (major === 2019 && minor >= 3)) {
-      return 'new_2019_3_plus_editor_image_requested';
+      return 'new_ubuntu_post_2019_2_editor_image_requested';
     } else {
-      return 'new_legacy_editor_image_requested';
+      return 'new_ubuntu_legacy_editor_image_requested';
     }
   }
 

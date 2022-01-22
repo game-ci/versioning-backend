@@ -122,7 +122,7 @@ export class Ingeminator {
     const response = await this.gitHubClient.repos.createDispatchEvent({
       owner: 'unity-ci',
       repo: 'docker',
-      event_type: 'retry_editor_image_requested',
+      event_type: 'retry_ubuntu_editor_image_requested',
       client_payload: {
         jobId,
         buildId,
