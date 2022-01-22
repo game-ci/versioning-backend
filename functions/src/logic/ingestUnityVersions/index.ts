@@ -6,6 +6,8 @@ import { scrapeVersions } from './scrapeVersions';
 export const ingestUnityVersions = async () => {
   try {
     const scrapedInfoList = await scrapeVersions();
+
+    // Note: this triggers editorVersionInfo.onCreate modelTrigger
     await updateDatabase(scrapedInfoList);
   } catch (err) {
     const message = `

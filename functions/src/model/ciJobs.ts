@@ -8,8 +8,6 @@ import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
 import { settings } from '../config/settings';
 
-export const CI_JOBS_COLLECTION = 'ciJobs';
-
 export type JobStatus =
   | 'created'
   | 'scheduled'
@@ -41,8 +39,12 @@ export type CiJobQueue = CiJobQueueItem[];
  * A CI job is a high level job, that schedules builds on a [repoVersion-unityVersion] level
  */
 export class CiJobs {
+  public static get collection() {
+    return 'ciJobs';
+  }
+
   static get = async (jobId: string): Promise<CiJob | null> => {
-    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const ref = await db.collection(CiJobs.collection).doc(jobId);
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
@@ -57,13 +59,13 @@ export class CiJobs {
   };
 
   static getAll = async (): Promise<CiJob[]> => {
-    const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
+    const snapshot = await db.collection(CiJobs.collection).get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiJob[];
   };
 
   static getAllIds = async (): Promise<string[]> => {
-    const snapshot = await db.collection(CI_JOBS_COLLECTION).get();
+    const snapshot = await db.collection(CiJobs.collection).get();
 
     return snapshot.docs.map(({ id }) => id);
   };
@@ -71,7 +73,7 @@ export class CiJobs {
   static getPrioritisedQueue = async (): Promise<CiJobQueue> => {
     // Note: we can't simply do select distinct major, max(minor), max(patch) in nosql
     const snapshot = await db
-      .collection(CI_JOBS_COLLECTION)
+      .collection(CiJobs.collection)
       .orderBy('editorVersionInfo.major', 'desc')
       .orderBy('editorVersionInfo.minor', 'desc')
       .orderBy('editorVersionInfo.patch', 'desc')
@@ -93,7 +95,7 @@ export class CiJobs {
 
   static getFailingJobsQueue = async (): Promise<CiJobQueue> => {
     const snapshot = await db
-      .collection(CI_JOBS_COLLECTION)
+      .collection(CiJobs.collection)
       .orderBy('editorVersionInfo.major', 'desc')
       .orderBy('editorVersionInfo.minor', 'desc')
       .orderBy('editorVersionInfo.patch', 'desc')
@@ -115,7 +117,7 @@ export class CiJobs {
 
   static getNumberOfScheduledJobs = async (): Promise<number> => {
     const snapshot = await db
-      .collection(CI_JOBS_COLLECTION)
+      .collection(CiJobs.collection)
       .where('status', 'in', ['scheduled', 'inProgress'])
       .limit(settings.maxConcurrentJobs)
       .get();
@@ -130,7 +132,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
     const job = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-    const result = await db.collection(CI_JOBS_COLLECTION).doc(jobId).create(job);
+    const result = await db.collection(CiJobs.collection).doc(jobId).create(job);
     firebase.logger.debug('Job created', result);
   };
 
@@ -166,7 +168,7 @@ export class CiJobs {
   };
 
   static markJobAsScheduled = async (jobId: string) => {
-    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const ref = await db.collection(CiJobs.collection).doc(jobId);
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
@@ -190,7 +192,7 @@ export class CiJobs {
   };
 
   static markJobAsInProgress = async (jobId: string) => {
-    const ref = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const ref = await db.collection(CiJobs.collection).doc(jobId);
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
@@ -214,7 +216,7 @@ export class CiJobs {
   };
 
   static markFailureForJob = async (jobId: string) => {
-    const job = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const job = await db.collection(CiJobs.collection).doc(jobId);
 
     await job.update({
       status: 'failed',
@@ -225,7 +227,7 @@ export class CiJobs {
   };
 
   static markJobAsCompleted = async (jobId: string) => {
-    const job = await db.collection(CI_JOBS_COLLECTION).doc(jobId);
+    const job = await db.collection(CiJobs.collection).doc(jobId);
 
     await job.update({
       status: 'completed',
@@ -238,7 +240,7 @@ export class CiJobs {
       throw new Error('Expect only dryRun jobs to be deleted.');
     }
 
-    await db.collection(CI_JOBS_COLLECTION).doc(jobId).delete();
+    await db.collection(CiJobs.collection).doc(jobId).delete();
   }
 
   static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
@@ -248,7 +250,7 @@ export class CiJobs {
     for (const state of ['created', 'failed']) {
       // Note: Cannot have inequality filters on multiple properties (hence the forOf)
       const snapshot = await db
-        .collection(CI_JOBS_COLLECTION)
+        .collection(CiJobs.collection)
         .where('repoVersionInfo.version', '<', repoVersion)
         .where('status', '==', state)
         .get();

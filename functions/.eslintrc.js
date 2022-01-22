@@ -24,7 +24,7 @@ module.exports = {
     'comma-dangle': ['warn', 'always-multiline'],
     'constructor-super': 'error',
     eqeqeq: ['warn', 'always'],
-    'import/no-unresolved': 0, // TODO - sync with tsconfig somehow
+    'import/no-unresolved': 0,
     'import/no-deprecated': 'warn',
     'import/no-extraneous-dependencies': 'error',
     'import/no-unassigned-import': 'warn',
@@ -32,7 +32,7 @@ module.exports = {
     'no-duplicate-case': 'error',
     'no-duplicate-imports': 'error',
     'no-empty': [
-      'error',
+      'warn',
       {
         allowEmptyCatch: true,
       },
