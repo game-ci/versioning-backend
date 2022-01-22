@@ -10,11 +10,7 @@ export class Discord {
   public static async sendDebugLine(message: 'begin' | 'end') {
     const discord = await this.getInstance();
 
-    try {
-      await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
-    } finally {
-      await this.disconnect();
-    }
+    await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
   }
 
   public static async sendDebug(
@@ -80,8 +76,6 @@ export class Discord {
       isSent = true;
     } catch (err) {
       firebase.logger.error('An error occurred while trying to send a message to discord.', err);
-    } finally {
-      await this.disconnect();
     }
 
     return isSent;
@@ -119,7 +113,7 @@ export class Discord {
     }
   }
 
-  static async disconnect(): Promise<void> {
+  public static async disconnect(): Promise<void> {
     if (!instance) return;
 
     instance.disconnect({ reconnect: false });
