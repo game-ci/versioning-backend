@@ -6,6 +6,8 @@ import { updateDatabase } from './updateDatabase';
 export const ingestRepoVersions = async () => {
   try {
     const scrapedInfoList = await scrapeVersions();
+
+    // Note: this triggers repoVersionInfo.onCreate modelTrigger
     await updateDatabase(scrapedInfoList);
   } catch (err) {
     const message = `
