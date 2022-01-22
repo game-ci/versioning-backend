@@ -3,8 +3,6 @@ import Timestamp = admin.firestore.Timestamp;
 import { EditorVersionInfo } from './editorVersionInfo';
 import { RepoVersionInfo } from './repoVersionInfo';
 
-const COLLECTION = 'builtVersions';
-
 export interface CiVersionInfo {
   editorVersion: EditorVersionInfo;
   repoVersion: RepoVersionInfo;
@@ -13,9 +11,13 @@ export interface CiVersionInfo {
 }
 
 export class CiVersionInfo {
+  public static get collection() {
+    return 'builtVersions';
+  }
+
   static getAll = async (): Promise<CiVersionInfo[]> => {
     const snapshot = await db
-      .collection(COLLECTION)
+      .collection(CiVersionInfo.collection)
       .orderBy('editorVersion.major', 'desc')
       .orderBy('editorVersion.minor', 'desc')
       .orderBy('editorVersion.patch', 'desc')
@@ -29,7 +31,7 @@ export class CiVersionInfo {
 
   static create = async (editorVersion: EditorVersionInfo, repoVersion: RepoVersionInfo) => {
     try {
-      await db.collection(COLLECTION).doc('some elaborate id').set({
+      await db.collection(CiVersionInfo.collection).doc('some elaborate id').set({
         editorVersion,
         repoVersion,
         addedDate: Timestamp.now(),

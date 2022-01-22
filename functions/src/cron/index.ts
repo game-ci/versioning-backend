@@ -4,6 +4,7 @@ import { ingestUnityVersions } from '../logic/ingestUnityVersions';
 import { ingestRepoVersions } from '../logic/ingestRepoVersions';
 import { cleanUpBuilds, scheduleBuildsFromTheQueue } from '../logic/buildQueue';
 import { settings } from '../config/settings';
+import { dataMigrations } from '../logic/dataTransformation';
 
 const MINUTES: number = settings.minutesBetweenScans;
 if (MINUTES < 10) {
@@ -32,6 +33,7 @@ export const trigger = functions
 const routineTasks = async () => {
   try {
     await Discord.sendDebugLine('begin');
+    await dataMigrations();
     await ingestRepoVersions();
     await ingestUnityVersions();
     await cleanUpBuilds();

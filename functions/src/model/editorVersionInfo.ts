@@ -14,15 +14,19 @@ export interface EditorVersionInfo {
 }
 
 export class EditorVersionInfo {
+  public static get collection() {
+    return 'editorVersions';
+  }
+
   static get = async (version: string): Promise<EditorVersionInfo> => {
-    const snapshot = await db.collection(EDITOR_VERSIONS_COLLECTION).doc(version).get();
+    const snapshot = await db.collection(EditorVersionInfo.collection).doc(version).get();
 
     return snapshot.data() as EditorVersionInfo;
   };
 
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db
-      .collection(EDITOR_VERSIONS_COLLECTION)
+      .collection(EditorVersionInfo.collection)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -33,7 +37,7 @@ export class EditorVersionInfo {
 
   static getAll = async (): Promise<EditorVersionInfo[]> => {
     const snapshot = await db
-      .collection(EDITOR_VERSIONS_COLLECTION)
+      .collection(EditorVersionInfo.collection)
       .orderBy('major', 'desc')
       .orderBy('minor', 'desc')
       .orderBy('patch', 'desc')
@@ -49,7 +53,7 @@ export class EditorVersionInfo {
       editorVersionList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(EDITOR_VERSIONS_COLLECTION).doc(version);
+        const ref = db.collection(EditorVersionInfo.collection).doc(version);
         const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: false });
       });
@@ -67,7 +71,7 @@ export class EditorVersionInfo {
       versionInfoList.forEach((versionInfo) => {
         const { version } = versionInfo;
 
-        const ref = db.collection(EDITOR_VERSIONS_COLLECTION).doc(version);
+        const ref = db.collection(EditorVersionInfo.collection).doc(version);
         const data = { ...versionInfo, modifiedDate: Timestamp.now() };
         batch.set(ref, data, { merge: true });
       });

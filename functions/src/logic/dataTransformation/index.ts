@@ -1,0 +1,1 @@
+export { dataMigrations } from './dataMigrations';
