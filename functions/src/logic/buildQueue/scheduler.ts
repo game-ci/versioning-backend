@@ -9,6 +9,7 @@ import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { Discord } from '../../service/discord';
 import { Ingeminator } from './ingeminator';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
+import { Image } from '../../model/image';
 
 export class Scheduler {
   private repoVersion: string;
@@ -80,13 +81,12 @@ export class Scheduler {
 
   async ensureThatBaseImageHasBeenBuilt(): Promise<boolean> {
     // Get base image information
-    const jobId = CiJobs.parseJobId('base', this.repoVersion);
+    const jobId = CiJobs.parseJobId(Image.types.base, this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
       throw new Error('[Scheduler] Expected base job to be present');
     }
 
-    // Todo - handle logic for multiple baseOses
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
@@ -122,7 +122,7 @@ export class Scheduler {
 
   async ensureThatHubImageHasBeenBuilt(): Promise<boolean> {
     // Get hub image information
-    const jobId = CiJobs.parseJobId('hub', this.repoVersion);
+    const jobId = CiJobs.parseJobId(Image.types.hub, this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
       throw new Error('[Scheduler] Expected hub job to be present');
