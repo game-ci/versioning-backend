@@ -3,10 +3,10 @@ import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersionInfo';
-import { ImageType } from './ciBuilds';
 import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
 import { settings } from '../config/settings';
+import { ImageType } from './image';
 
 export type JobStatus =
   | 'created'

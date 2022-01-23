@@ -8,6 +8,7 @@ import { take } from 'lodash';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { Discord } from '../../service/discord';
 import { Ingeminator } from './ingeminator';
+import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 
 export class Scheduler {
   private repoVersion: string;
@@ -85,13 +86,14 @@ export class Scheduler {
       throw new Error('[Scheduler] Expected base job to be present');
     }
 
+    // Todo - handle logic for multiple baseOses
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: 'new_ubuntu_base_image_requested',
+        event_type: GitHubWorkflow.eventTypes.newBaseImages,
         client_payload: {
           jobId,
           repoVersionFull,
@@ -126,13 +128,14 @@ export class Scheduler {
       throw new Error('[Scheduler] Expected hub job to be present');
     }
 
+    // Todo - handle logic for multiple baseOses
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: 'new_ubuntu_hub_image_requested',
+        event_type: GitHubWorkflow.eventTypes.newHubImages,
         client_payload: {
           jobId,
           repoVersionFull,
@@ -201,7 +204,7 @@ export class Scheduler {
     // If the queue has nothing to build, we're happy
     if (queue.length <= 0) return true;
 
-    // Schedule each build, one by one
+    // Schedule CiJobs as workflows, which will report back CiBuilds.
     const toBeScheduledJobs = take(queue, openSpots);
     const jobsAsString = toBeScheduledJobs?.map((job) => job.id).join(',\n');
     await Discord.sendDebug(`[Scheduler] top of the queue: \n ${jobsAsString}`);
@@ -210,7 +213,7 @@ export class Scheduler {
 
       const editorVersionInfo = data.editorVersionInfo as EditorVersionInfo;
       const { version: editorVersion, changeSet } = editorVersionInfo;
-      const eventType = Scheduler.getEventTypeForEditorJob(editorVersionInfo);
+      const eventType = GitHubWorkflow.getEventTypeForEditorCiJob(editorVersionInfo);
 
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
@@ -241,16 +244,6 @@ export class Scheduler {
 
     // The queue was not empty, so we're not happy yet
     return false;
-  }
-
-  private static getEventTypeForEditorJob(editorVersionInfo: EditorVersionInfo) {
-    const { major, minor } = editorVersionInfo;
-
-    if (major >= 2020 || (major === 2019 && minor >= 3)) {
-      return 'new_ubuntu_post_2019_2_editor_image_requested';
-    } else {
-      return 'new_ubuntu_legacy_editor_image_requested';
-    }
   }
 
   private async determineOpenSpots(): Promise<number> {
