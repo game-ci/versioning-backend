@@ -3,10 +3,10 @@ import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
 import { RepoVersionInfo } from './repoVersionInfo';
-import { ImageType } from './ciBuilds';
 import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
 import { settings } from '../config/settings';
+import { Image, ImageType } from './image';
 
 export type JobStatus =
   | 'created'
@@ -282,7 +282,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ) {
     const { version: repoVersion } = repoVersionInfo;
-    if (imageType !== 'editor') {
+    if (imageType !== Image.types.editor) {
       return CiJobs.parseJobId(imageType, repoVersion);
     }
 
@@ -299,7 +299,7 @@ export class CiJobs {
     repoVersion: string,
     editorVersion: string | null = null,
   ) {
-    if (imageType !== 'editor') {
+    if (imageType !== Image.types.editor) {
       return `${imageType}-${repoVersion}`;
     }
 

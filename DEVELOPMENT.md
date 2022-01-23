@@ -1,9 +1,42 @@
 # Development
 
-Some keys are set as environment variables;
+## Setup
 
+Install firebase globally
 
-## Local Setup (optional)
+```bash
+npm i -g firebase-tools
+```
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Run everything locally
+
+```bash
+firebase serve
+```
+
+## Deployment
+
+___Note:__ for this you will need access to the project._
+
+Login to your account
+
+```bash
+firebase login
+```
+
+Deploy everything
+
+```bash
+firebase deploy
+```
+
+## Additional local setup (optional)
 
 #### Credentials
 
@@ -74,9 +107,9 @@ If everything works, finally deploy the changes
 firebase deploy
 ```
 
-## New project setup 
+## Updating env/config variables 
 
-_(only when migrating to new firebase project / environment)_
+_Typically this is only needed when migrating to new firebase project or environment, or when security token needs to rotate._
 
 ```
 firebase functions:config:set discord.token="my_discord_token"

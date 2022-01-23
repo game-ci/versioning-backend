@@ -1,15 +1,15 @@
-import { db, admin, firebase } from '../service/firebase';
-import Timestamp = admin.firestore.Timestamp;
-import FieldValue = admin.firestore.FieldValue;
+import { admin, db, firebase } from '../service/firebase';
 import { settings } from '../config/settings';
 import { CiJobs } from './ciJobs';
+import { BaseOs, ImageType } from './image';
+import Timestamp = admin.firestore.Timestamp;
+import FieldValue = admin.firestore.FieldValue;
 
 export type BuildStatus = 'started' | 'failed' | 'published';
-export type ImageType = 'base' | 'hub' | 'editor';
 
 // Used in Start API
 export interface BuildInfo {
-  baseOs: string;
+  baseOs: BaseOs;
   repoVersion: string;
   editorVersion: string;
   targetPlatform: string;

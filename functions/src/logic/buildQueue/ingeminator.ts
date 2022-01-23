@@ -9,6 +9,8 @@ import { Scheduler } from './scheduler';
 import admin from 'firebase-admin';
 import Timestamp = admin.firestore.Timestamp;
 import { settings } from '../../config/settings';
+import { GitHubWorkflow } from '../../model/gitHubWorkflow';
+import { Image } from '../../model/image';
 
 export class Ingeminator {
   numberToSchedule: number;
@@ -29,7 +31,7 @@ export class Ingeminator {
     }
 
     for (const job of jobs) {
-      if (job.data.imageType !== 'editor') {
+      if (job.data.imageType !== Image.types.editor) {
         throw new Error(
           '[Ingeminator] Did not expect to be handling non-editor image type rescheduling.',
         );
@@ -122,7 +124,7 @@ export class Ingeminator {
     const response = await this.gitHubClient.repos.createDispatchEvent({
       owner: 'unity-ci',
       repo: 'docker',
-      event_type: 'retry_ubuntu_editor_image_requested',
+      event_type: GitHubWorkflow.getEventTypeForRetryingEditorCiBuild(baseOs),
       client_payload: {
         jobId,
         buildId,

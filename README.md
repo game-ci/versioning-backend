@@ -1,39 +1,36 @@
-# Unity CI Versioning Backend
+# GameCI Versioning Backend
 
+## Unity version ingest
 
-## Development
+TODO - Describe how it works
 
-Install firebase globally
+## game-ci/docker version ingest
 
-```bash
-npm i -g firebase-tools
+TODO - Describe how it works
+
+## Scheduler
+
+Each CiJob starts its own workflow.
+
+Each Workflow generates multiple CiBuilds: one per baseOs-targetPlatform combination.
+The CiJob workflow will report back a CiBuild for each combination.
+
+For example:
+
+```text
+...
+  ubuntu-<version>-linuxIl2cpp
+  ubuntu-<version>-webgl
+  windows-<version>-webgl
+...
 ```
 
-Install dependencies
+An endpoint from this backend will listen to the reports and update the database.
+Each CiBuild starts with the status "started" after it is being reported.
 
-```bash
-npm install
-```
+When the last CiBuild is set to "published", the CiJob for that version is also set to "completed".
+Completed CiJobs are reported to Discord.
 
-Run everything locally
+## Ingeminator
 
-```bash
-firebase serve
-```
-
-## Deployment
-
-___Note:__ for this you will need access to the project._
-
-Login to your account
-
-```bash
-firebase login
-```
-
-Deploy everything 
-
-```bash
-firebase deploy
-```
-
+TODO - Describe how it works

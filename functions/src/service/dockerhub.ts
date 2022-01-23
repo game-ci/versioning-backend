@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
 import { settings } from '../config/settings';
-
-type ImageType = 'base' | 'hub' | 'editor';
+import { Image, ImageType } from '../model/image';
 
 export class Dockerhub {
   private static get host() {
@@ -15,11 +14,11 @@ export class Dockerhub {
   public static getImageName(imageType: ImageType) {
     const { baseImageName, hubImageName, editorImageName } = settings.dockerhub;
     switch (imageType) {
-      case 'base':
+      case Image.types.base:
         return `${baseImageName}`;
-      case 'hub':
+      case Image.types.hub:
         return `${hubImageName}`;
-      case 'editor':
+      case Image.types.editor:
         return `${editorImageName}`;
       default:
         throw new Error(`[Dockerhub] There is no repository configured of type ${imageType}.`);

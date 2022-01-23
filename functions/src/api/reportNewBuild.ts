@@ -2,11 +2,12 @@ import { firebase, functions } from '../service/firebase';
 import { Request } from 'firebase-functions/lib/providers/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
-import { BuildInfo, CiBuilds, ImageType } from '../model/ciBuilds';
+import { BuildInfo, CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../service/discord';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
+import { Image, ImageType } from '../model/image';
 
 export const reportNewBuild = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
@@ -57,7 +58,7 @@ const createDryRunJob = async (jobId: string, imageType: ImageType, editorVersio
   firebase.logger.debug('running dryrun for image', imageType, editorVersion);
   const repoVersionInfo = await RepoVersionInfo.getLatest();
 
-  if (imageType === 'editor') {
+  if (imageType === Image.types.editor) {
     const editorVersionInfo = await EditorVersionInfo.get(editorVersion);
     await CiJobs.create(jobId, imageType, repoVersionInfo, editorVersionInfo);
   } else {
