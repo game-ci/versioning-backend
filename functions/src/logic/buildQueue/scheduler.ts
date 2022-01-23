@@ -128,7 +128,6 @@ export class Scheduler {
       throw new Error('[Scheduler] Expected hub job to be present');
     }
 
-    // Todo - handle logic for multiple baseOses
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;

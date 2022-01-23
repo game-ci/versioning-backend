@@ -1,8 +1,6 @@
 import fetch from 'node-fetch';
 import { settings } from '../config/settings';
-import { Image } from '../model/image';
-
-type ImageType = 'base' | 'hub' | 'editor';
+import { Image, ImageType } from '../model/image';
 
 export class Dockerhub {
   private static get host() {

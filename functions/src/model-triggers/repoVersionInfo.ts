@@ -1,4 +1,3 @@
-import { EventContext } from 'firebase-functions';
 import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
 import { db, firebase, functions } from '../service/firebase';
 
@@ -8,10 +7,11 @@ import { EditorVersionInfo } from '../model/editorVersionInfo';
 import semver from 'semver/preload';
 import { Discord } from '../service/discord';
 import { chunk } from 'lodash';
+import { Image } from '../model/image';
 
 export const onCreate = functions.firestore
   .document(`${RepoVersionInfo.collection}/{itemId}`)
-  .onCreate(async (snapshot: QueryDocumentSnapshot, context: EventContext) => {
+  .onCreate(async (snapshot: QueryDocumentSnapshot) => {
     const repoVersionInfo = snapshot.data() as RepoVersionInfo;
     const currentRepoVersion = repoVersionInfo.version;
     const latestRepoVersionInfo = await RepoVersionInfo.getLatest();
@@ -63,7 +63,7 @@ export const onCreate = functions.firestore
     // But now `create` seems to also be supported in batch calls
     const editorVersionInfoChunks: EditorVersionInfo[][] = chunk(editorVersionInfos, 20);
     for (const editorVersionInfoChunk of editorVersionInfoChunks) {
-      const imageType = 'editor';
+      const imageType = Image.types.editor;
       const batch = db.batch();
       for (const editorVersionInfo of editorVersionInfoChunk) {
         const editorJobId = CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);

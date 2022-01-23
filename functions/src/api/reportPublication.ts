@@ -5,6 +5,7 @@ import { Token } from '../config/token';
 import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../service/discord';
+import { Image } from '../model/image';
 
 export const reportPublication = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
@@ -22,8 +23,8 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     const parentJobIsNowCompleted = await CiBuilds.markBuildAsPublished(buildId, jobId, dockerInfo);
     if (parentJobIsNowCompleted) {
       // Report new publications as news
-      let message = '';
-      if (dockerInfo.imageName === 'editor') {
+      let message;
+      if (dockerInfo.imageName === Image.types.editor) {
         // i.e. [editor-2017.1.0f3-0.5.0]
         const [imageType, publicationName, version] = jobId.split('-');
         // i.e. [v0.5.0] images for [editor] [2020.2.22f2]
