@@ -138,7 +138,7 @@ export class CiBuilds {
           mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
         });
       } else {
-        throw new Error('A build with this identifier already exists');
+        throw new Error(`A build with "${buildId}" as identifier already exists`);
       }
     } else {
       result = await ref.create(data);
