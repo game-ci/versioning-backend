@@ -4,16 +4,14 @@ import { EditorVersionInfo } from './editorVersionInfo';
 export type GitHubEventType =
   | 'new_base_images_requested'
   | 'new_hub_images_requested'
-  | 'new_legacy_editor_image_requested'
-  | 'new_post_2019_2_editor_image_requested'
+  | 'new_editor_image_requested'
   | 'retry_ubuntu_editor_image_requested'
   | 'retry_windows_editor_image_requested';
 
 export type FriendlyEventTypes =
   | 'newBaseImages'
   | 'newHubImages'
-  | 'newLegacyImage'
-  | 'newPost2019dot2Image'
+  | 'newEditorImages'
   | 'retryUbuntuImage'
   | 'retryWindowsImage';
 
@@ -22,24 +20,10 @@ export class GitHubWorkflow {
     return {
       newBaseImages: 'new_base_images_requested',
       newHubImages: 'new_hub_images_requested',
-      newLegacyImage: 'new_legacy_editor_image_requested',
-      newPost2019dot2Image: 'new_post_2019_2_editor_image_requested',
+      newEditorImages: 'new_editor_image_requested',
       retryUbuntuImage: 'retry_ubuntu_editor_image_requested',
       retryWindowsImage: 'retry_windows_editor_image_requested',
     };
-  }
-
-  /**
-   * Note: CiJob includes all builds for all base OSes
-   */
-  public static getEventTypeForEditorCiJob(editorVersionInfo: EditorVersionInfo): GitHubEventType {
-    const { major, minor } = editorVersionInfo;
-
-    if (major >= 2020 || (major === 2019 && minor >= 3)) {
-      return GitHubWorkflow.eventTypes.newPost2019dot2Image;
-    } else {
-      return GitHubWorkflow.eventTypes.newLegacyImage;
-    }
   }
 
   /**

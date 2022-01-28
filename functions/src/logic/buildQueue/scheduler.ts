@@ -10,6 +10,7 @@ import { Discord } from '../../service/discord';
 import { Ingeminator } from './ingeminator';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 import { Image } from '../../model/image';
+import { getSupportedModules } from '../ingestUnityVersions/scrapeVersions';
 
 export class Scheduler {
   private repoVersion: string;
@@ -212,12 +213,12 @@ export class Scheduler {
 
       const editorVersionInfo = data.editorVersionInfo as EditorVersionInfo;
       const { version: editorVersion, changeSet } = editorVersionInfo;
-      const eventType = GitHubWorkflow.getEventTypeForEditorCiJob(editorVersionInfo);
+      const supportedModules = await getSupportedModules(editorVersion, changeSet);
 
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: eventType,
+        event_type: GitHubWorkflow.eventTypes.newEditorImages,
         client_payload: {
           jobId,
           editorVersion,
@@ -225,6 +226,7 @@ export class Scheduler {
           repoVersionFull,
           repoVersionMinor,
           repoVersionMajor,
+          supportedModules,
         },
       });
 
