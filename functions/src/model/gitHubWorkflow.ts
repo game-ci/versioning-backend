@@ -1,17 +1,18 @@
 import { BaseOs } from './image';
-import { EditorVersionInfo } from './editorVersionInfo';
 
 export type GitHubEventType =
   | 'new_base_images_requested'
   | 'new_hub_images_requested'
-  | 'new_editor_image_requested'
+  | 'new_ubuntu_editor_image_requested'
+  | 'new_windows_editor_image_requested'
   | 'retry_ubuntu_editor_image_requested'
   | 'retry_windows_editor_image_requested';
 
 export type FriendlyEventTypes =
   | 'newBaseImages'
   | 'newHubImages'
-  | 'newEditorImages'
+  | 'newUbuntuEditorImages'
+  | 'newWindowsEditorImages'
   | 'retryUbuntuImage'
   | 'retryWindowsImage';
 
@@ -20,7 +21,8 @@ export class GitHubWorkflow {
     return {
       newBaseImages: 'new_base_images_requested',
       newHubImages: 'new_hub_images_requested',
-      newEditorImages: 'new_editor_image_requested',
+      newUbuntuEditorImages: 'new_ubuntu_editor_image_requested',
+      newWindowsEditorImages: 'new_windows_editor_image_requested',
       retryUbuntuImage: 'retry_ubuntu_editor_image_requested',
       retryWindowsImage: 'retry_windows_editor_image_requested',
     };

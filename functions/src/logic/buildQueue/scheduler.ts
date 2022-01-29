@@ -10,7 +10,7 @@ import { Discord } from '../../service/discord';
 import { Ingeminator } from './ingeminator';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 import { Image } from '../../model/image';
-import { getSupportedModules } from '../ingestUnityVersions/scrapeVersions';
+import { getSupportedModulesWindows, getSupportedModulesLinux } from '../ingestUnityVersions/scrapeVersions';
 
 export class Scheduler {
   private repoVersion: string;
@@ -213,12 +213,12 @@ export class Scheduler {
 
       const editorVersionInfo = data.editorVersionInfo as EditorVersionInfo;
       const { version: editorVersion, changeSet } = editorVersionInfo;
-      const supportedModules = await getSupportedModules(editorVersion, changeSet);
+      const supportedUbuntuModules = await getSupportedModulesLinux(editorVersion, changeSet);
 
-      const response = await this.gitHub.repos.createDispatchEvent({
+      const ubuntuResponse = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
         repo: 'docker',
-        event_type: GitHubWorkflow.eventTypes.newEditorImages,
+        event_type: GitHubWorkflow.eventTypes.newUbuntuEditorImages,
         client_payload: {
           jobId,
           editorVersion,
@@ -226,14 +226,40 @@ export class Scheduler {
           repoVersionFull,
           repoVersionMinor,
           repoVersionMajor,
-          supportedModules,
+          supportedUbuntuModules,
         },
       });
 
-      if (response.status <= 199 || response.status >= 300) {
+      if (ubuntuResponse.status <= 199 || ubuntuResponse.status >= 300) {
         const failureMessage = `
-          [Scheduler] failed to schedule job ${jobId},
-          status: ${response.status}, response: ${response.data}`;
+          [Scheduler] failed to schedule ubuntu job ${jobId},
+          status: ${ubuntuResponse.status}, response: ${ubuntuResponse.data}`;
+        firebase.logger.error(failureMessage);
+        await Discord.sendAlert(failureMessage);
+        return false;
+      }
+
+      const supportedWindowsModules = await getSupportedModulesWindows(editorVersion, changeSet);
+
+      const windowsResponse = await this.gitHub.repos.createDispatchEvent({
+        owner: 'unity-ci',
+        repo: 'docker',
+        event_type: GitHubWorkflow.eventTypes.newWindowsEditorImages,
+        client_payload: {
+          jobId,
+          editorVersion,
+          changeSet,
+          repoVersionFull,
+          repoVersionMinor,
+          repoVersionMajor,
+          supportedWindowsModules,
+        },
+      });
+
+      if (windowsResponse.status <= 199 || windowsResponse.status >= 300) {
+        const failureMessage = `
+          [Scheduler] failed to schedule windows job ${jobId},
+          status: ${windowsResponse.status}, response: ${windowsResponse.data}`;
         firebase.logger.error(failureMessage);
         await Discord.sendAlert(failureMessage);
         return false;
