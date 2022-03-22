@@ -71,7 +71,7 @@ export class Ingeminator {
         const retries: number = maxFailuresPerBuild - 1;
         const maxRetriesReachedMessage =
           `[Ingeminator] Reached the maximum amount of retries (${retries}) for ${buildId}.` +
-          `Manual action is now required. Visit https://console.firebase.google.com/u/0/project/unity-ci-versions/firestore/data~2FciBuilds~2F${buildId}`;
+          `Manual action is now required. Visit https://console.firebase.google.com/u/0/project/unity-ci-versions/firestore/data/~2FciBuilds~2F${buildId}`;
 
         // Only send alert to discord once
         const alertingPeriodMinutes = settings.minutesBetweenScans;
