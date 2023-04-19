@@ -1,7 +1,7 @@
-import fetch, { RequestInfo } from 'node-fetch';
+import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 
-export const getDocumentFromUrl = async (archiveUrl: RequestInfo) => {
+export const getDocumentFromUrl = async (archiveUrl: string) => {
   const response = await fetch(archiveUrl);
   const html = await response.text();
 
