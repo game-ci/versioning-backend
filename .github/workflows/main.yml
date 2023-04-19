@@ -9,15 +9,15 @@ jobs:
     name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '10'
+          node-version: 16
       - name: Get npm cache directory
         id: npm-cache
         run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v2
+          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -39,15 +39,15 @@ jobs:
     name: 🛠 Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '10'
+          node-version: 16
       - name: Get npm cache directory
         id: npm-cache
         run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v2
+          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -64,15 +64,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2-beta
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '10'
+          node-version: 16
       - name: Get npm cache directory
         id: npm-cache
         run: |
-          echo "::set-output name=dir::$(npm config get cache)"
-      - uses: actions/cache@v2
+          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -81,7 +81,7 @@ jobs:
       - name: install dependencies
         run: npm install && npm --prefix ./functions install ./functions
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v2.0.0
+        uses: w9jds/firebase-action@v11.24.1
         with:
           args: deploy
         env:
