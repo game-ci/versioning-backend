@@ -1,5 +1,5 @@
 import { firebase, functions } from '../service/firebase';
-import { Request } from 'firebase-functions';
+import { Request } from 'firebase-functions/v2/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
 import { BuildInfo, CiBuilds } from '../model/ciBuilds';

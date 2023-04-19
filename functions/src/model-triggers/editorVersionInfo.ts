@@ -1,6 +1,5 @@
-import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
 import { firebase, functions } from '../service/firebase';
-
+import { QueryDocumentSnapshot } from 'firebase-functions/v2/firestore';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { CiJobs } from '../model/ciJobs';
 import { RepoVersionInfo } from '../model/repoVersionInfo';

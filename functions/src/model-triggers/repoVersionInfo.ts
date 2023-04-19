@@ -1,4 +1,4 @@
-import { QueryDocumentSnapshot } from 'firebase-functions/lib/providers/firestore';
+import { QueryDocumentSnapshot } from 'firebase-functions/v2/firestore';
 import { db, firebase, functions } from '../service/firebase';
 
 import { RepoVersionInfo } from '../model/repoVersionInfo';
