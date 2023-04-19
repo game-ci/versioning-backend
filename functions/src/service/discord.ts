@@ -1,4 +1,4 @@
-import { Client as ErisClient, MessageContent, Message, FileContent} from 'eris';
+import { Client as ErisClient, MessageContent, Message, FileContent } from 'eris';
 import { firebase } from './firebase';
 import { settings } from '../config/settings';
 
