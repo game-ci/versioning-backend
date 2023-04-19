@@ -1,4 +1,4 @@
-import { Request } from 'firebase-functions/lib/providers/https';
+import { Request } from 'firebase-functions';
 import { Response } from 'express-serve-static-core';
 import { firebase, functions } from '../service/firebase';
 import { RepoVersionInfo } from '../model/repoVersionInfo';

@@ -40,7 +40,7 @@ export const scrapeVersions = async (): Promise<RepoVersionInfo[]> => {
       author,
       commitIsh,
       url,
-    };
+    } as RepoVersionInfo;
   });
 
   return versions;

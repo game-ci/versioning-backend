@@ -24,7 +24,7 @@ const makeAdminByEmailAddress = async (emailAddress: string): Promise<void> => {
     const user = await getUserByEmailAddress(emailAddress);
 
     await makeUserAnAdmin(user);
-  } catch (error) {
+  } catch (error: any) {
     console.log(`${emailAddress}: ${error.message}.`);
   }
 };

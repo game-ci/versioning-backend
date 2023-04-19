@@ -1,10 +1,10 @@
-import * as Eris from 'eris';
+import { Client as ErisClient, MessageContent, Message, FileContent} from 'eris';
 import { firebase } from './firebase';
 import { settings } from '../config/settings';
 
 const { token } = firebase.config().discord;
 
-let instance: Eris.Client | null = null;
+let instance: ErisClient | null = null;
 
 export class Discord {
   public static async sendDebugLine(message: 'begin' | 'end') {
@@ -14,8 +14,8 @@ export class Discord {
   }
 
   public static async sendDebug(
-    message: Eris.MessageContent,
-    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     firebase.logger.info(message);
 
@@ -24,30 +24,30 @@ export class Discord {
   }
 
   public static async sendNews(
-    message: Eris.MessageContent,
-    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.news, message, files, 'info');
   }
 
   public static async sendAlert(
-    message: Eris.MessageContent,
-    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.alerts, message, files, 'error');
   }
 
   public static async sendMessageToMaintainers(
-    message: Eris.MessageContent,
-    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.maintainers, message, files, 'info');
   }
 
   private static async sendMessage(
     channelId: string | null,
-    messageContent: Eris.MessageContent,
-    files: Eris.MessageFile | Eris.MessageFile[] | undefined = undefined,
+    messageContent: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
     level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
   ): Promise<boolean> {
     let isSent = false;
@@ -81,14 +81,14 @@ export class Discord {
     return isSent;
   }
 
-  static async getInstance(): Promise<Eris.Client> {
+  static async getInstance(): Promise<ErisClient> {
     if (instance) {
       return instance;
     }
 
-    instance = new Eris.Client(token);
+    instance = new ErisClient(token);
 
-    instance.on('messageCreate', async (message) => {
+    instance.on('messageCreate', async (message: Message) => {
       if (message.content === '!ping') {
         firebase.logger.info('[discord] pong!');
         await message.channel.createMessage('Pong!');

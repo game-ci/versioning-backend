@@ -29,12 +29,8 @@ export class Scheduler {
     this.repoVersionInfo = repoVersionInfo;
     this.maxConcurrentJobs = settings.maxConcurrentJobs;
 
-    const {
-      repoVersion,
-      repoVersionFull,
-      repoVersionMinor,
-      repoVersionMajor,
-    } = Scheduler.parseRepoVersions(repoVersionInfo);
+    const { repoVersion, repoVersionFull, repoVersionMinor, repoVersionMajor } =
+      Scheduler.parseRepoVersions(repoVersionInfo);
     this.repoVersion = repoVersion;
     this.repoVersionFull = repoVersionFull;
     this.repoVersionMinor = repoVersionMinor;
