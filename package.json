@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "lint": "prettier --check \"functions/src/**/*.{js,jsx,ts,tsx}\"",
+    "format": "prettier --write \"functions/src/**/*.{js,jsx,ts,tsx}\"",
     "test": "echo \"No tests yet, feel free to add\" && exit 0"
   },
   "repository": {
