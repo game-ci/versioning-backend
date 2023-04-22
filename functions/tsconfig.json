@@ -6,8 +6,7 @@
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "ES2017",
-    "moduleResolution": "node"
+    "target": "ES2017"
   },
   "compileOnSave": true,
   "include": ["src"]
