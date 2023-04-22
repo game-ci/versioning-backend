@@ -1,5 +1,6 @@
 {
   "name": "functions",
+  "type": "module",
   "scripts": {
     "lint": "eslint \"src/**/*\"",
     "build": "tsc",
@@ -43,5 +44,9 @@
     "jest": "^29.5.0",
     "typescript": "^5.0.4"
   },
-  "private": true
+  "private": true,
+  "volta": {
+    "node": "16.20.0",
+    "yarn": "3.5.0"
+  }
 }
