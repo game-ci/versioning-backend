@@ -16,8 +16,7 @@ export const settings = {
       maintainers: '764289922663841792', // # build-notifications (internal)
       alerts: '763544776649605151', // #alerts (internal)
       debug: '815382556143910953', // #backend (internal)
-    },
-    token: {},
+    }
   },
   github: {
     auth: {
