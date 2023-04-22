@@ -52,10 +52,16 @@ jobs:
           cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
-      - name: Deploy to Firebase
+      - name: Deploy test to Firebase
         uses: w9jds/firebase-action@v11.24.1
         with:
           args: deploy --only functions:testFunction
+        env:
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
+      - name: Cleanup Firebase Test
+        uses: w9jds/firebase-action@v11.24.1
+        with:
+          args: functions:delete testFunction
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
@@ -76,5 +82,11 @@ jobs:
         uses: w9jds/firebase-action@v11.24.1
         with:
           args: deploy
+        env:
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
+      - name: Cleanup Firebase Test
+        uses: w9jds/firebase-action@v11.24.1
+        with:
+          args: functions:delete testFunction
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
