@@ -61,7 +61,7 @@ jobs:
       - name: Cleanup Firebase Test
         uses: w9jds/firebase-action@v11.24.1
         with:
-          args: functions:delete testFunction
+          args: functions:delete testFunction --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
@@ -87,6 +87,6 @@ jobs:
       - name: Cleanup Firebase Test
         uses: w9jds/firebase-action@v11.24.1
         with:
-          args: functions:delete testFunction
+          args: functions:delete testFunction --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
