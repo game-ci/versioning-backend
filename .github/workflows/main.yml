@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-          yarn: 'yarn'
+          cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
       - name: Deploy to Firebase
