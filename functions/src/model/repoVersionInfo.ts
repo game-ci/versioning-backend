@@ -45,7 +45,7 @@ export class RepoVersionInfo {
       .orderBy('patch', 'desc')
       .get();
 
-    return snapshot.docs.map((doc) => doc.id);
+    return snapshot.docs.map((doc: any) => doc.id);
   };
 
   static getAll = async (): Promise<RepoVersionInfo[]> => {
@@ -56,7 +56,7 @@ export class RepoVersionInfo {
       .orderBy('patch', 'desc')
       .get();
 
-    return snapshot.docs.map((doc) => doc.data()) as RepoVersionInfo[];
+    return snapshot.docs.map((doc: any) => doc.data()) as RepoVersionInfo[];
   };
 
   static create = async (repoVersion: RepoVersionInfo) => {

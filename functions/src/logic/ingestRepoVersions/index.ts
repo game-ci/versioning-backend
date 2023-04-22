@@ -9,7 +9,7 @@ export const ingestRepoVersions = async () => {
 
     // Note: this triggers repoVersionInfo.onCreate modelTrigger
     await updateDatabase(scrapedInfoList);
-  } catch (err) {
+  } catch (err: any) {
     const message = `
         Something went wrong while importing repository versions for unity-ci/docker:
         ${err.message} (${err.status})\n${err.stackTrace}

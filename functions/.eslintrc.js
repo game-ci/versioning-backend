@@ -21,6 +21,12 @@ module.exports = {
     '@typescript-eslint/prefer-for-of': 'warn',
     '@typescript-eslint/triple-slash-reference': 'error',
     '@typescript-eslint/unified-signatures': 'warn',
+    "@typescript-eslint/no-redeclare": [
+      "error",
+      {
+        "ignoreDeclarationMerge": true,
+      }
+    ],
     'comma-dangle': ['warn', 'always-multiline'],
     'constructor-super': 'error',
     eqeqeq: ['warn', 'always'],
@@ -40,7 +46,6 @@ module.exports = {
     'no-invalid-this': 'error',
     'no-new-wrappers': 'error',
     'no-param-reassign': 'error',
-    'no-redeclare': 'error',
     'no-sequences': 'error',
     'no-shadow': [
       'error',

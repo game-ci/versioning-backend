@@ -18,7 +18,7 @@ export const trigger = functions
   .onRun(async () => {
     try {
       await routineTasks();
-    } catch (error) {
+    } catch (error: any) {
       const errorStatus = error.status ? ` (${error.status})` : '';
       const errorStack = error.stackTrace ? `\n${error.stackTrace}` : '';
       const fullError = `${error.message}${errorStatus}${errorStack}`;
@@ -38,7 +38,7 @@ const routineTasks = async () => {
     await ingestUnityVersions();
     await cleanUpBuilds();
     await scheduleBuildsFromTheQueue();
-  } catch (error) {
+  } catch (error: any) {
     firebase.logger.error(error);
     await Discord.sendAlert(error);
   } finally {

@@ -9,7 +9,7 @@ export const ingestUnityVersions = async () => {
 
     // Note: this triggers editorVersionInfo.onCreate modelTrigger
     await updateDatabase(scrapedInfoList);
-  } catch (err) {
+  } catch (err: any) {
     const message = `
         Something went wrong while importing new versions from unity:
         ${err.message} (${err.status})\n${err.stackTrace}

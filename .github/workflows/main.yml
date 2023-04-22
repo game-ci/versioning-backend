@@ -13,22 +13,13 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Get npm cache directory
-        id: npm-cache
-        run: |
-          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'yarn'
       - name: install dependencies
-        run: npm install && npm --prefix ./functions install ./functions
+        run: yarn && yarn --cwd ./functions
       - name: run linter
-        run: npm run lint && npm --prefix ./functions run lint
+        run: yarn lint && yarn --cwd ./functions lint
       - name: run tests
-        run: npm run test && npm --prefix ./functions run test
+        run: yarn test && yarn --cwd ./functions test
 #      - name: Upload test results
 #        uses: actions/upload-artifact@v1
 #        with:
@@ -43,20 +34,11 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Get npm cache directory
-        id: npm-cache
-        run: |
-          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: 'yarn'
       - name: install dependencies
-        run: npm install && npm --prefix ./functions install ./functions
+        run: yarn && yarn --cwd ./functions
       - name: build
-        run: npm --prefix functions run build
+        run: yarn --cwd ./functions build
 
   deploy:
     name: ✨ Deploy
@@ -68,18 +50,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Get npm cache directory
-        id: npm-cache
-        run: |
-          echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v3
-        with:
-          path: ${{ steps.npm-cache.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          yarn: 'yarn'
       - name: install dependencies
-        run: npm install && npm --prefix ./functions install ./functions
+        run: yarn && yarn --cwd ./functions
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@v11.24.1
         with:

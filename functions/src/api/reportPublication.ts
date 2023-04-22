@@ -1,5 +1,5 @@
 import { firebase, functions } from '../service/firebase';
-import { Request } from 'firebase-functions/lib/providers/https';
+import { Request } from 'firebase-functions/v2/https';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
 import { CiBuilds } from '../model/ciBuilds';
@@ -48,7 +48,7 @@ export const reportPublication = functions.https.onRequest(async (req: Request, 
     }
 
     res.status(200).send('OK');
-  } catch (err) {
+  } catch (err: any) {
     const message = `
       Something went wrong while wrong while reporting a new publication
       ${err.message}

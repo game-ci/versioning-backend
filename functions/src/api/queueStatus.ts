@@ -1,5 +1,5 @@
 import { functions } from '../service/firebase';
-import { Request } from 'firebase-functions/lib/providers/https';
+import { Request } from 'firebase-functions/v2/https';
 import { Response } from 'express-serve-static-core';
 import { CiJobs } from '../model/ciJobs';
 import { CiBuilds } from '../model/ciBuilds';
