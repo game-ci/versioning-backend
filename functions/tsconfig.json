@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "esModuleInterop": true,
-    "module": "es2020",
+    "module": "CommonJS",
     "noImplicitReturns": true,
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2021",
+    "target": "ES2017",
     "moduleResolution": "node"
   },
   "compileOnSave": true,
