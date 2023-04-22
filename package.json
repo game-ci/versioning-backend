@@ -10,19 +10,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Game-CI/versioning-backend.git"
+    "url": "git+https://github.com/game-ci/versioning-backend.git"
   },
   "keywords": [
     "unity",
     "ci",
-    "versioning"
+    "versioning",
+    "game-ci",
+    "GameCI"
   ],
-  "author": "Game CI",
+  "author": "GameCI",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Game-CI/versioning-backend/issues"
+    "url": "https://github.com/game-ci/versioning-backend/issues"
   },
-  "homepage": "https://github.com/Game-CI/versioning-backend#readme",
+  "homepage": "https://github.com/game-ci/versioning-backend#readme",
   "dependencies": {
     "prettier": "^2.8.7"
   }
