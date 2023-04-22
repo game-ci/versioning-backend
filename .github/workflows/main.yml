@@ -40,9 +40,28 @@ jobs:
       - name: build
         run: yarn --cwd ./functions build
 
+  testDeploy:
+    name: Test Deploy
+    needs: [ test, build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'yarn'
+      - name: install dependencies
+        run: yarn && yarn --cwd ./functions
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@v11.24.1
+        with:
+          args: deploy --only functions:testFunction
+        env:
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
+
   deploy:
     name: ✨ Deploy
-    needs: [ test, build ]
+    needs: [ test, build, testDeploy ]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -58,4 +77,4 @@ jobs:
         with:
           args: deploy
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
