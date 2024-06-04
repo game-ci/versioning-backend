@@ -1,28 +1,45 @@
-import { QueryDocumentSnapshot } from 'firebase-functions/v2/firestore';
-import { db, firebase, functions } from '../service/firebase';
+import {
+  FirestoreEvent,
+  onDocumentCreated,
+  QueryDocumentSnapshot,
+} from "firebase-functions/v2/firestore";
+import { db } from "../service/firebase";
+import { logger } from "firebase-functions/v2";
 
-import { RepoVersionInfo } from '../model/repoVersionInfo';
-import { CiJobs } from '../model/ciJobs';
-import { EditorVersionInfo } from '../model/editorVersionInfo';
-import semver from 'semver/preload';
-import { Discord } from '../service/discord';
-import { chunk } from 'lodash';
-import { Image } from '../model/image';
+import { RepoVersionInfo } from "../model/repoVersionInfo";
+import { CiJobs } from "../model/ciJobs";
+import { EditorVersionInfo } from "../model/editorVersionInfo";
+import semver from "semver/preload";
+import { Discord } from "../service/discord";
+import { chunk } from "lodash";
+import { Image } from "../model/image";
+import { defineSecret } from "firebase-functions/params";
 
-export const onCreate = functions.firestore
-  .document(`${RepoVersionInfo.collection}/{itemId}`)
-  .onCreate(async (snapshot: QueryDocumentSnapshot) => {
-    const repoVersionInfo = snapshot.data() as RepoVersionInfo;
+const discordToken = defineSecret("DISCORD_TOKEN");
+
+export const onCreate = onDocumentCreated(
+  {
+    document: `${RepoVersionInfo.collection}/{itemId}`,
+    secrets: [discordToken],
+  },
+  async (snapshot: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
+    const discordClient = new Discord();
+    await discordClient.init(discordToken.value());
+
+    const repoVersionInfo = snapshot.data?.data() as RepoVersionInfo;
     const currentRepoVersion = repoVersionInfo.version;
     const latestRepoVersionInfo = await RepoVersionInfo.getLatest();
 
     // Only create new builds for tags that are newer semantic versions.
-    if (semver.compare(currentRepoVersion, latestRepoVersionInfo.version) !== 0) {
+    if (
+      semver.compare(currentRepoVersion, latestRepoVersionInfo.version) !== 0
+    ) {
       const semverMessage = `
         Skipped scheduling all editorVersions for new repoVersion,
         as it does not seem to be the newest version.`;
-      firebase.logger.warn(semverMessage);
-      await Discord.sendAlert(semverMessage);
+      logger.warn(semverMessage);
+      await discordClient.sendAlert(semverMessage);
+      await discordClient.disconnect();
       return;
     }
 
@@ -35,21 +52,21 @@ export const onCreate = functions.firestore
     const baseAndHubBatch = db.batch();
 
     // Job for base image
-    const baseJobId = CiJobs.generateJobId('base', repoVersionInfo);
+    const baseJobId = CiJobs.generateJobId("base", repoVersionInfo);
     if (existingJobIds.includes(baseJobId)) {
       skippedVersions.push(baseJobId);
     } else {
-      const baseJobData = CiJobs.construct('base', repoVersionInfo);
+      const baseJobData = CiJobs.construct("base", repoVersionInfo);
       const baseJobRef = db.collection(CiJobs.collection).doc(baseJobId);
       baseAndHubBatch.create(baseJobRef, baseJobData);
     }
 
     // Job for hub image
-    const hubJobId = CiJobs.generateJobId('hub', repoVersionInfo);
+    const hubJobId = CiJobs.generateJobId("hub", repoVersionInfo);
     if (existingJobIds.includes(hubJobId)) {
       skippedVersions.push(hubJobId);
     } else {
-      const hubJobData = CiJobs.construct('hub', repoVersionInfo);
+      const hubJobData = CiJobs.construct("hub", repoVersionInfo);
       const hubJobRef = db.collection(CiJobs.collection).doc(hubJobId);
       baseAndHubBatch.create(hubJobRef, hubJobData);
     }
@@ -61,18 +78,31 @@ export const onCreate = functions.firestore
     // See: https://firebase.google.com/docs/firestore/manage-data/transactions
     // Note that batch.set uses 2 document access calls.
     // But now `create` seems to also be supported in batch calls
-    const editorVersionInfoChunks: EditorVersionInfo[][] = chunk(editorVersionInfos, 20);
+    const editorVersionInfoChunks: EditorVersionInfo[][] = chunk(
+      editorVersionInfos,
+      20,
+    );
     for (const editorVersionInfoChunk of editorVersionInfoChunks) {
       const imageType = Image.types.editor;
       const batch = db.batch();
       for (const editorVersionInfo of editorVersionInfoChunk) {
-        const editorJobId = CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
+        const editorJobId = CiJobs.generateJobId(
+          imageType,
+          repoVersionInfo,
+          editorVersionInfo,
+        );
 
         if (existingJobIds.includes(editorJobId)) {
           skippedVersions.push(editorJobId);
         } else {
-          const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-          const editorJobRef = db.collection(CiJobs.collection).doc(editorJobId);
+          const editorJobData = CiJobs.construct(
+            imageType,
+            repoVersionInfo,
+            editorVersionInfo,
+          );
+          const editorJobRef = db.collection(CiJobs.collection).doc(
+            editorJobId,
+          );
           batch.create(editorJobRef, editorJobData);
         }
       }
@@ -83,28 +113,39 @@ export const onCreate = functions.firestore
     // Report skipped versions
     if (skippedVersions.length >= 1) {
       const skippedVersionsMessage = `
-        Skipped creating CiJobs for the following jobs \`${skippedVersions.join('`, `')}\`.`;
-      firebase.logger.warn(skippedVersionsMessage);
-      await Discord.sendAlert(skippedVersionsMessage);
+        Skipped creating CiJobs for the following jobs \`${
+        skippedVersions.join("`, `")
+      }\`.`;
+      logger.warn(skippedVersionsMessage);
+      await discordClient.sendAlert(skippedVersionsMessage);
     }
 
     // Report that probably many new jobs have now been scheduled
     const baseCount = 1;
     const hubCount = 1;
-    const totalNewJobs = editorVersionInfos.length + baseCount + hubCount - skippedVersions.length;
+    const totalNewJobs = editorVersionInfos.length + baseCount + hubCount -
+      skippedVersions.length;
     const newJobs = CiJobs.pluralise(totalNewJobs);
-    const newJobsMessage = `Created ${newJobs} for version \`${currentRepoVersion}\` of unity-ci/docker.`;
-    firebase.logger.info(newJobsMessage);
-    await Discord.sendNews(newJobsMessage);
+    const newJobsMessage =
+      `Created ${newJobs} for version \`${currentRepoVersion}\` of unity-ci/docker.`;
+    logger.info(newJobsMessage);
+    await discordClient.sendNews(newJobsMessage);
 
     // Supersede any non-complete jobs before the current version
-    const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(currentRepoVersion);
+    const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(
+      currentRepoVersion,
+    );
     if (numSuperseded >= 1) {
       const replacementMessage = `
-      ${CiJobs.pluralise(numSuperseded)} that were for older versions are now superseded.`;
-      firebase.logger.warn(replacementMessage);
-      await Discord.sendMessageToMaintainers(replacementMessage);
+      ${
+        CiJobs.pluralise(numSuperseded)
+      } that were for older versions are now superseded.`;
+      logger.warn(replacementMessage);
+      await discordClient.sendMessageToMaintainers(replacementMessage);
     } else {
-      firebase.logger.debug('no versions were superseded, as expected.');
+      logger.debug("no versions were superseded, as expected.");
     }
-  });
+
+    await discordClient.disconnect();
+  },
+);

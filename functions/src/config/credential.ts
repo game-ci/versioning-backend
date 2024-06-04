@@ -1,10 +1,10 @@
-import * as admin from 'firebase-admin';
+import { credential } from "firebase-admin";
 
-export const getCredential = (): admin.credential.Credential => {
+export const getCredential = (): credential.Credential => {
   try {
-    const serviceAccount = require('../../service-account.json');
-    return admin.credential.cert(serviceAccount);
+    const serviceAccount = require("../../service-account.json");
+    return credential.cert(serviceAccount);
   } catch (e) {
-    return admin.credential.applicationDefault();
+    return credential.applicationDefault();
   }
 };

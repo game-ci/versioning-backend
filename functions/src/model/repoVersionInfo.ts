@@ -1,5 +1,6 @@
-import { db, admin, firebase } from '../service/firebase';
+import { admin, db } from "../service/firebase";
 import Timestamp = admin.firestore.Timestamp;
+import { logger } from "firebase-functions/v2";
 
 export interface RepoVersionInfo {
   id: number;
@@ -18,20 +19,20 @@ export interface RepoVersionInfo {
 
 export class RepoVersionInfo {
   public static get collection() {
-    return 'repoVersions';
+    return "repoVersions";
   }
 
   static getLatest = async (): Promise<RepoVersionInfo> => {
     const snapshot = await db
       .collection(RepoVersionInfo.collection)
-      .orderBy('major', 'desc')
-      .orderBy('minor', 'desc')
-      .orderBy('patch', 'desc')
+      .orderBy("major", "desc")
+      .orderBy("minor", "desc")
+      .orderBy("patch", "desc")
       .limit(1)
       .get();
 
     if (snapshot.docs.length <= 0) {
-      throw new Error('No repository versions have been ingested yet');
+      throw new Error("No repository versions have been ingested yet");
     }
 
     return snapshot.docs[0].data() as RepoVersionInfo;
@@ -40,9 +41,9 @@ export class RepoVersionInfo {
   static getAllIds = async (): Promise<string[]> => {
     const snapshot = await db
       .collection(RepoVersionInfo.collection)
-      .orderBy('major', 'desc')
-      .orderBy('minor', 'desc')
-      .orderBy('patch', 'desc')
+      .orderBy("major", "desc")
+      .orderBy("minor", "desc")
+      .orderBy("patch", "desc")
       .get();
 
     return snapshot.docs.map((doc: any) => doc.id);
@@ -51,9 +52,9 @@ export class RepoVersionInfo {
   static getAll = async (): Promise<RepoVersionInfo[]> => {
     const snapshot = await db
       .collection(RepoVersionInfo.collection)
-      .orderBy('major', 'desc')
-      .orderBy('minor', 'desc')
-      .orderBy('patch', 'desc')
+      .orderBy("major", "desc")
+      .orderBy("minor", "desc")
+      .orderBy("patch", "desc")
       .get();
 
     return snapshot.docs.map((doc: any) => doc.data()) as RepoVersionInfo[];
@@ -96,13 +97,20 @@ export class RepoVersionInfo {
         const { version } = versionInfo;
 
         const ref = db.collection(RepoVersionInfo.collection).doc(version);
-        const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
+        const data = {
+          ...versionInfo,
+          addedDate: Timestamp.now(),
+          modifiedDate: Timestamp.now(),
+        };
         batch.set(ref, data, { merge: false });
       });
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new repo versions', err);
+      logger.error(
+        "Error occurred during batch commit of new repo versions",
+        err,
+      );
     }
   };
 
@@ -120,7 +128,10 @@ export class RepoVersionInfo {
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new repo versions', err);
+      logger.error(
+        "Error occurred during batch commit of new repo versions",
+        err,
+      );
     }
   };
 }

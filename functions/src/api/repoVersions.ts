@@ -1,12 +1,12 @@
 import { onRequest, Request } from "firebase-functions/v2/https";
-import { Response } from "express-serve-static-core";
-import { EditorVersionInfo } from "../model/editorVersionInfo";
 import { logger } from "firebase-functions/v2";
+import { Response } from "express-serve-static-core";
+import { RepoVersionInfo } from "../model/repoVersionInfo";
 
-export const unityVersions = onRequest(
+export const repoVersions = onRequest(
   async (request: Request, response: Response) => {
     try {
-      const versions = await EditorVersionInfo.getAllIds();
+      const versions = await RepoVersionInfo.getAllIds();
 
       response.send(versions);
     } catch (err) {

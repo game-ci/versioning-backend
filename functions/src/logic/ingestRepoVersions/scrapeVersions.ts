@@ -1,13 +1,16 @@
-import semver from 'semver';
-import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { GitHub } from '../../service/github';
+import semver from "semver";
+import { RepoVersionInfo } from "../../model/repoVersionInfo";
+import { GitHub } from "../../service/github";
 
-export const scrapeVersions = async (): Promise<RepoVersionInfo[]> => {
-  const gitHub = await GitHub.init();
+export const scrapeVersions = async (
+  githubPrivateKey: string,
+  githubClientSecret: string,
+): Promise<RepoVersionInfo[]> => {
+  const gitHub = await GitHub.init(githubPrivateKey, githubClientSecret);
 
   const releases = await gitHub.repos.listReleases({
-    owner: 'unity-ci',
-    repo: 'docker',
+    owner: "unity-ci",
+    repo: "docker",
   });
 
   const versions = releases.data.map((release) => {
@@ -23,7 +26,9 @@ export const scrapeVersions = async (): Promise<RepoVersionInfo[]> => {
 
     const version = semver.valid(semver.coerce(tagName));
     if (!version) {
-      throw new Error("Assumed versions to always be parsable, but they're not.");
+      throw new Error(
+        "Assumed versions to always be parsable, but they're not.",
+      );
     }
     const major = semver.major(version);
     const minor = semver.minor(version);

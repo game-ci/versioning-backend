@@ -1,10 +1,9 @@
-import { functions } from '../service/firebase';
-import { Request } from 'firebase-functions/v2/https';
-import { Response } from 'express-serve-static-core';
-import { CiJobs } from '../model/ciJobs';
-import { CiBuilds } from '../model/ciBuilds';
+import { onRequest, Request } from "firebase-functions/v2/https";
+import { Response } from "express-serve-static-core";
+import { CiJobs } from "../model/ciJobs";
+import { CiBuilds } from "../model/ciBuilds";
 
-export const queueStatus = functions.https.onRequest(async (req: Request, res: Response) => {
+export const queueStatus = onRequest(async (req: Request, res: Response) => {
   const jobs = await CiJobs.getAll();
   const builds = await CiBuilds.getAll();
 

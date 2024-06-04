@@ -1,18 +1,18 @@
 name: 🚀
 
 on:
-  pull_request: { }
-  push: { branches: [ main ] }
+  pull_request: {}
+  push: { branches: [main] }
 
 jobs:
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
           cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
@@ -20,20 +20,20 @@ jobs:
         run: yarn lint && yarn --cwd ./functions lint
       - name: run tests
         run: yarn test && yarn --cwd ./functions test
-#      - name: Upload test results
-#        uses: actions/upload-artifact@v1
-#        with:
-#          name: Test results
-#          path: "**/artifacs"
+  #      - name: Upload test results
+  #        uses: actions/upload-artifact@v1
+  #        with:
+  #          name: Test results
+  #          path: "**/artifacs"
 
   build:
     name: 🛠 Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
           cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
@@ -42,24 +42,24 @@ jobs:
 
   testDeploy:
     name: Test Deploy
-    needs: [ test, build ]
+    needs: [test, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
           cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
       - name: Deploy test to Firebase
-        uses: w9jds/firebase-action@v11.24.1
+        uses: w9jds/firebase-action@v13.10.2
         with:
           args: deploy --only functions:testFunction
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v11.24.1
+        uses: w9jds/firebase-action@v13.10.2
         with:
           args: functions:delete testFunction --force
         env:
@@ -67,25 +67,25 @@ jobs:
 
   deploy:
     name: ✨ Deploy
-    needs: [ test, build, testDeploy ]
+    needs: [test, build, testDeploy]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
           cache: 'yarn'
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v11.24.1
+        uses: w9jds/firebase-action@v13.10.2
         with:
           args: deploy
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v11.24.1
+        uses: w9jds/firebase-action@v13.10.2
         with:
           args: functions:delete testFunction --force
         env:
