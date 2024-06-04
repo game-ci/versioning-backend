@@ -2,8 +2,7 @@ import { credential } from 'firebase-admin';
 
 export const getCredential = (): credential.Credential => {
   try {
-    const serviceAccount = require('../../service-account.json');
-    return credential.cert(serviceAccount);
+    return credential.cert('../../service-account.json');
   } catch (e) {
     return credential.applicationDefault();
   }
