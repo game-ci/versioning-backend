@@ -1,15 +1,15 @@
-import { RepoVersionInfo } from "../../model/repoVersionInfo";
-import { GitHub } from "../../service/github";
-import { Octokit } from "@octokit/rest";
-import { CiJobs } from "../../model/ciJobs";
-import { logger } from "firebase-functions/v2";
-import { settings } from "../../config/settings";
-import { take } from "lodash";
-import { EditorVersionInfo } from "../../model/editorVersionInfo";
-import { Discord } from "../../service/discord";
-import { Ingeminator } from "./ingeminator";
-import { GitHubWorkflow } from "../../model/gitHubWorkflow";
-import { Image } from "../../model/image";
+import { RepoVersionInfo } from '../../model/repoVersionInfo';
+import { GitHub } from '../../service/github';
+import { Octokit } from '@octokit/rest';
+import { CiJobs } from '../../model/ciJobs';
+import { logger } from 'firebase-functions/v2';
+import { settings } from '../../config/settings';
+import { take } from 'lodash';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
+import { Discord } from '../../service/discord';
+import { Ingeminator } from './ingeminator';
+import { GitHubWorkflow } from '../../model/gitHubWorkflow';
+import { Image } from '../../model/image';
 
 export class Scheduler {
   private repoVersion: string;
@@ -69,31 +69,26 @@ export class Scheduler {
     };
   };
 
-  async init(
-    githubPrivateKey: string,
-    githubClientSecret: string,
-  ): Promise<this> {
+  async init(githubPrivateKey: string, githubClientSecret: string): Promise<this> {
     this._gitHub = await GitHub.init(githubPrivateKey, githubClientSecret);
 
     return this;
   }
 
-  async ensureThatBaseImageHasBeenBuilt(
-    discordClient: Discord,
-  ): Promise<boolean> {
+  async ensureThatBaseImageHasBeenBuilt(discordClient: Discord): Promise<boolean> {
     // Get base image information
     const jobId = CiJobs.parseJobId(Image.types.base, this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
-      throw new Error("[Scheduler] Expected base job to be present");
+      throw new Error('[Scheduler] Expected base job to be present');
     }
 
     // Schedule it
-    if (["created", "failed"].includes(job.status)) {
+    if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: "unity-ci",
-        repo: "docker",
+        owner: 'unity-ci',
+        repo: 'docker',
         event_type: GitHubWorkflow.eventTypes.newBaseImages,
         client_payload: {
           jobId,
@@ -113,32 +108,28 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      await discordClient.sendDebug(
-        `[Scheduler] Scheduled new base image build (${jobId}).`,
-      );
+      await discordClient.sendDebug(`[Scheduler] Scheduled new base image build (${jobId}).`);
       return false;
     }
 
     // Don't do anything before base image is completed
-    return job.status === "completed";
+    return job.status === 'completed';
   }
 
-  async ensureThatHubImageHasBeenBuilt(
-    discordClient: Discord,
-  ): Promise<boolean> {
+  async ensureThatHubImageHasBeenBuilt(discordClient: Discord): Promise<boolean> {
     // Get hub image information
     const jobId = CiJobs.parseJobId(Image.types.hub, this.repoVersion);
     const job = await CiJobs.get(jobId);
     if (job === null) {
-      throw new Error("[Scheduler] Expected hub job to be present");
+      throw new Error('[Scheduler] Expected hub job to be present');
     }
 
     // Schedule it
-    if (["created", "failed"].includes(job.status)) {
+    if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: "unity-ci",
-        repo: "docker",
+        owner: 'unity-ci',
+        repo: 'docker',
         event_type: GitHubWorkflow.eventTypes.newHubImages,
         client_payload: {
           jobId,
@@ -158,14 +149,12 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      await discordClient.sendDebug(
-        `[Scheduler] Scheduled new hub image build (${jobId})`,
-      );
+      await discordClient.sendDebug(`[Scheduler] Scheduled new hub image build (${jobId})`);
       return false;
     }
 
     // Don't do anything before hub image is completed
-    return job.status === "completed";
+    return job.status === 'completed';
   }
 
   /**
@@ -184,16 +173,12 @@ export class Scheduler {
 
       if (numberToReschedule <= 0) {
         await discordClient.sendDebug(
-          "[Scheduler] Not retrying any new jobs, as the queue is full",
+          '[Scheduler] Not retrying any new jobs, as the queue is full',
         );
         return false;
       }
 
-      const ingeminator = new Ingeminator(
-        numberToReschedule,
-        this.gitHub,
-        this.repoVersionInfo,
-      );
+      const ingeminator = new Ingeminator(numberToReschedule, this.gitHub, this.repoVersionInfo);
       await ingeminator.rescheduleFailedJobs(failingJobs, discordClient);
     }
 
@@ -204,7 +189,7 @@ export class Scheduler {
     const openSpots = await this.determineOpenSpots();
     if (openSpots <= 0) {
       await discordClient.sendDebug(
-        "[Scheduler] Not scheduling any new jobs, as the queue is full",
+        '[Scheduler] Not scheduling any new jobs, as the queue is full',
       );
       return false;
     }
@@ -220,22 +205,18 @@ export class Scheduler {
 
     // Schedule CiJobs as workflows, which will report back CiBuilds.
     const toBeScheduledJobs = take(queue, openSpots);
-    const jobsAsString = toBeScheduledJobs?.map((job) => job.id).join(",\n");
-    await discordClient.sendDebug(
-      `[Scheduler] top of the queue: \n ${jobsAsString}`,
-    );
+    const jobsAsString = toBeScheduledJobs?.map((job) => job.id).join(',\n');
+    await discordClient.sendDebug(`[Scheduler] top of the queue: \n ${jobsAsString}`);
     for (const toBeScheduledJob of toBeScheduledJobs) {
       const { id: jobId, data } = toBeScheduledJob;
 
       const editorVersionInfo = data.editorVersionInfo as EditorVersionInfo;
       const { version: editorVersion, changeSet } = editorVersionInfo;
-      const eventType = GitHubWorkflow.getEventTypeForEditorCiJob(
-        editorVersionInfo,
-      );
+      const eventType = GitHubWorkflow.getEventTypeForEditorCiJob(editorVersionInfo);
 
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: "unity-ci",
-        repo: "docker",
+        owner: 'unity-ci',
+        repo: 'docker',
         event_type: eventType,
         client_payload: {
           jobId,
@@ -257,9 +238,7 @@ export class Scheduler {
       }
 
       await CiJobs.markJobAsScheduled(jobId);
-      await discordClient.sendDebug(
-        `[Scheduler] Scheduled new editor image build (${jobId}).`,
-      );
+      await discordClient.sendDebug(`[Scheduler] Scheduled new editor image build (${jobId}).`);
     }
 
     // The queue was not empty, so we're not happy yet

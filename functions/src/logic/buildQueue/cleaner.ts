@@ -1,6 +1,6 @@
-import { CiBuilds } from "../../model/ciBuilds";
-import { Discord } from "../../service/discord";
-import { Dockerhub } from "../../service/dockerhub";
+import { CiBuilds } from '../../model/ciBuilds';
+import { Discord } from '../../service/discord';
+import { Dockerhub } from '../../service/dockerhub';
 
 export class Cleaner {
   // Cronjob intentionally has a limited runtime
@@ -13,24 +13,20 @@ export class Cleaner {
     await this.cleanUpBuildsThatDidntReportBack(discordClient);
   }
 
-  private static async cleanUpBuildsThatDidntReportBack(
-    discordClient: Discord,
-  ) {
+  private static async cleanUpBuildsThatDidntReportBack(discordClient: Discord) {
     const startedBuilds = await CiBuilds.getStartedBuilds();
 
     for (const startedBuild of startedBuilds) {
       if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
 
-      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } =
-        startedBuild;
+      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
       const { baseOs, repoVersion } = buildInfo;
 
-      const tag = buildId.replace(new RegExp(`^${imageType}-`), "");
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
 
       if (publishedDate) {
-        const buildWasPublishedAlreadyMessage =
-          `[Cleaner] Build "${tag}" has a publication date, but it's status is "started". Was a rebuild requested for this build?`;
+        const buildWasPublishedAlreadyMessage = `[Cleaner] Build "${tag}" has a publication date, but it's status is "started". Was a rebuild requested for this build?`;
         await discordClient.sendDebug(buildWasPublishedAlreadyMessage);
 
         // Maybe set status to published. However, that will increase complexity.
@@ -62,8 +58,7 @@ export class Cleaner {
 
         // Image does not exist
         if (!response) {
-          const markAsFailedMessage =
-            `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking it as failed. It will retry automatically.`;
+          const markAsFailedMessage = `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking it as failed. It will retry automatically.`;
           await discordClient.sendAlert(markAsFailedMessage);
           await CiBuilds.markBuildAsFailed(buildId, {
             reason: markAsFailedMessage,
@@ -73,13 +68,12 @@ export class Cleaner {
         }
 
         // Image exists
-        const markAsSuccessfulMessage =
-          `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published.`;
+        const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published.`;
         await discordClient.sendDebug(markAsSuccessfulMessage);
         await CiBuilds.markBuildAsPublished(buildId, jobId, {
-          digest: "", // missing from dockerhub v1 api payload
+          digest: '', // missing from dockerhub v1 api payload
           specificTag: `${baseOs}-${repoVersion}`,
-          friendlyTag: repoVersion.replace(/\.\d+$/, ""),
+          friendlyTag: repoVersion.replace(/\.\d+$/, ''),
           imageName: Dockerhub.getImageName(imageType),
           imageRepo: Dockerhub.getRepositoryBaseName(),
         });

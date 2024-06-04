@@ -1,7 +1,7 @@
-import { updateDatabase } from "./updateDatabase";
-import { logger } from "firebase-functions/v2";
-import { Discord } from "../../service/discord";
-import { scrapeVersions } from "./scrapeVersions";
+import { updateDatabase } from './updateDatabase';
+import { logger } from 'firebase-functions/v2';
+import { Discord } from '../../service/discord';
+import { scrapeVersions } from './scrapeVersions';
 
 export const ingestUnityVersions = async (discordClient: Discord) => {
   try {

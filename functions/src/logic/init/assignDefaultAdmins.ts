@@ -1,9 +1,7 @@
-import admin from "firebase-admin";
-import { auth } from "../../service/firebase";
+import admin from 'firebase-admin';
+import { auth } from '../../service/firebase';
 
-const getUserByEmailAddress = async (
-  emailAddress: string,
-): Promise<admin.auth.UserRecord> => {
+const getUserByEmailAddress = async (emailAddress: string): Promise<admin.auth.UserRecord> => {
   const user = await auth.getUserByEmail(emailAddress);
   if (!user) throw new Error(`No user for ${emailAddress}, skipping.`);
 
@@ -31,9 +29,7 @@ const makeAdminByEmailAddress = async (emailAddress: string): Promise<void> => {
   }
 };
 
-export const assignDefaultAdmins = async (
-  adminEmailAddresses: string[],
-): Promise<void> => {
+export const assignDefaultAdmins = async (adminEmailAddresses: string[]): Promise<void> => {
   if (!adminEmailAddresses) {
     return;
   }

@@ -1,7 +1,7 @@
-import { logger } from "firebase-functions/v2";
-import { Discord } from "../../service/discord";
-import { scrapeVersions } from "./scrapeVersions";
-import { updateDatabase } from "./updateDatabase";
+import { logger } from 'firebase-functions/v2';
+import { Discord } from '../../service/discord';
+import { scrapeVersions } from './scrapeVersions';
+import { updateDatabase } from './updateDatabase';
 
 export const ingestRepoVersions = async (
   discordClient: Discord,
@@ -9,10 +9,7 @@ export const ingestRepoVersions = async (
   githubClientSecret: string,
 ) => {
   try {
-    const scrapedInfoList = await scrapeVersions(
-      githubPrivateKey,
-      githubClientSecret,
-    );
+    const scrapedInfoList = await scrapeVersions(githubPrivateKey, githubClientSecret);
 
     // Note: this triggers repoVersionInfo.onCreate modelTrigger
     await updateDatabase(scrapedInfoList, discordClient);

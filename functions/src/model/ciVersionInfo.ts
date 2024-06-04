@@ -1,8 +1,8 @@
-import { admin, db } from "../service/firebase";
+import { admin, db } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
-import { EditorVersionInfo } from "./editorVersionInfo";
-import { RepoVersionInfo } from "./repoVersionInfo";
-import { logger } from "firebase-functions/v2";
+import { EditorVersionInfo } from './editorVersionInfo';
+import { RepoVersionInfo } from './repoVersionInfo';
+import { logger } from 'firebase-functions/v2';
 
 export interface CiVersionInfo {
   editorVersion: EditorVersionInfo;
@@ -13,39 +13,32 @@ export interface CiVersionInfo {
 
 export class CiVersionInfo {
   public static get collection() {
-    return "builtVersions";
+    return 'builtVersions';
   }
 
   static getAll = async (): Promise<CiVersionInfo[]> => {
     const snapshot = await db
       .collection(CiVersionInfo.collection)
-      .orderBy("editorVersion.major", "desc")
-      .orderBy("editorVersion.minor", "desc")
-      .orderBy("editorVersion.patch", "desc")
-      .orderBy("repoVersion.major", "desc")
-      .orderBy("repoVersion.minor", "desc")
-      .orderBy("repoVersion.patch", "desc")
+      .orderBy('editorVersion.major', 'desc')
+      .orderBy('editorVersion.minor', 'desc')
+      .orderBy('editorVersion.patch', 'desc')
+      .orderBy('repoVersion.major', 'desc')
+      .orderBy('repoVersion.minor', 'desc')
+      .orderBy('repoVersion.patch', 'desc')
       .get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiVersionInfo[];
   };
 
-  static create = async (
-    editorVersion: EditorVersionInfo,
-    repoVersion: RepoVersionInfo,
-  ) => {
+  static create = async (editorVersion: EditorVersionInfo, repoVersion: RepoVersionInfo) => {
     try {
-      await db.collection(CiVersionInfo.collection).doc("some elaborate id")
-        .set({
-          editorVersion,
-          repoVersion,
-          addedDate: Timestamp.now(),
-        });
+      await db.collection(CiVersionInfo.collection).doc('some elaborate id').set({
+        editorVersion,
+        repoVersion,
+        addedDate: Timestamp.now(),
+      });
     } catch (err) {
-      logger.error(
-        "Error occurred during batch commit of new version",
-        err,
-      );
+      logger.error('Error occurred during batch commit of new version', err);
     }
   };
 }

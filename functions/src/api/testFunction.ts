@@ -1,11 +1,11 @@
-import { onRequest, Request } from "firebase-functions/v2/https";
-import { Response } from "express-serve-static-core";
-import { defineSecret } from "firebase-functions/params";
+import { onRequest, Request } from 'firebase-functions/v2/https';
+import { Response } from 'express-serve-static-core';
+import { defineSecret } from 'firebase-functions/params';
 
-const discordToken = defineSecret("DISCORD_TOKEN");
-const githubPrivateKeyConfigSecret = defineSecret("GITHUB_PRIVATE_KEY");
-const githubClientSecretConfigSecret = defineSecret("GITHUB_CLIENT_SECRET");
-const internalToken = defineSecret("INTERNAL_TOKEN");
+const discordToken = defineSecret('DISCORD_TOKEN');
+const githubPrivateKeyConfigSecret = defineSecret('GITHUB_PRIVATE_KEY');
+const githubClientSecretConfigSecret = defineSecret('GITHUB_CLIENT_SECRET');
+const internalToken = defineSecret('INTERNAL_TOKEN');
 
 export const testFunction = onRequest(
   {

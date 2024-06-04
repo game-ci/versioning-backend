@@ -1,22 +1,22 @@
-import { admin, db } from "../service/firebase";
-import { EditorVersionInfo } from "./editorVersionInfo";
+import { admin, db } from '../service/firebase';
+import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
-import { RepoVersionInfo } from "./repoVersionInfo";
+import { RepoVersionInfo } from './repoVersionInfo';
 import DocumentSnapshot = admin.firestore.DocumentSnapshot;
-import { chunk } from "lodash";
-import { settings } from "../config/settings";
-import { Image, ImageType } from "./image";
-import { logger } from "firebase-functions/v2";
+import { chunk } from 'lodash';
+import { settings } from '../config/settings';
+import { Image, ImageType } from './image';
+import { logger } from 'firebase-functions/v2';
 
 export type JobStatus =
-  | "created"
-  | "scheduled"
-  | "inProgress"
-  | "completed"
-  | "failed"
-  | "superseded"
-  | "deprecated";
+  | 'created'
+  | 'scheduled'
+  | 'inProgress'
+  | 'completed'
+  | 'failed'
+  | 'superseded'
+  | 'deprecated';
 
 interface MetaData {
   lastBuildStart: Timestamp | null;
@@ -41,7 +41,7 @@ export type CiJobQueue = CiJobQueueItem[];
  */
 export class CiJobs {
   public static get collection() {
-    return "ciJobs";
+    return 'ciJobs';
   }
 
   static get = async (jobId: string): Promise<CiJob | null> => {
@@ -75,10 +75,10 @@ export class CiJobs {
     // Note: we can't simply do select distinct major, max(minor), max(patch) in nosql
     const snapshot = await db
       .collection(CiJobs.collection)
-      .orderBy("editorVersionInfo.major", "desc")
-      .orderBy("editorVersionInfo.minor", "desc")
-      .orderBy("editorVersionInfo.patch", "desc")
-      .where("status", "==", "created")
+      .orderBy('editorVersionInfo.major', 'desc')
+      .orderBy('editorVersionInfo.minor', 'desc')
+      .orderBy('editorVersionInfo.patch', 'desc')
+      .where('status', '==', 'created')
       .limit(settings.maxConcurrentJobs)
       .get();
 
@@ -97,10 +97,10 @@ export class CiJobs {
   static getFailingJobsQueue = async (): Promise<CiJobQueue> => {
     const snapshot = await db
       .collection(CiJobs.collection)
-      .orderBy("editorVersionInfo.major", "desc")
-      .orderBy("editorVersionInfo.minor", "desc")
-      .orderBy("editorVersionInfo.patch", "desc")
-      .where("status", "==", "failed")
+      .orderBy('editorVersionInfo.major', 'desc')
+      .orderBy('editorVersionInfo.minor', 'desc')
+      .orderBy('editorVersionInfo.patch', 'desc')
+      .where('status', '==', 'failed')
       .limit(settings.maxConcurrentJobs)
       .get();
 
@@ -119,7 +119,7 @@ export class CiJobs {
   static getNumberOfScheduledJobs = async (): Promise<number> => {
     const snapshot = await db
       .collection(CiJobs.collection)
-      .where("status", "in", ["scheduled", "inProgress"])
+      .where('status', 'in', ['scheduled', 'inProgress'])
       .limit(settings.maxConcurrentJobs)
       .get();
 
@@ -133,10 +133,8 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ) => {
     const job = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
-    const result = await db.collection(CiJobs.collection).doc(jobId).create(
-      job,
-    );
-    logger.debug("Job created", result);
+    const result = await db.collection(CiJobs.collection).doc(jobId).create(job);
+    logger.debug('Job created', result);
   };
 
   static construct = (
@@ -144,13 +142,13 @@ export class CiJobs {
     repoVersionInfo: RepoVersionInfo,
     editorVersionInfo: EditorVersionInfo | null = null,
   ): CiJob => {
-    let status: JobStatus = "deprecated";
+    let status: JobStatus = 'deprecated';
     if (
       editorVersionInfo === null ||
       editorVersionInfo.major >= 2019 ||
       (editorVersionInfo.major === 2018 && editorVersionInfo.minor >= 2)
     ) {
-      status = "created";
+      status = 'created';
     }
 
     const job: CiJob = {
@@ -175,9 +173,7 @@ export class CiJobs {
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
-      throw new Error(
-        `Trying to mark job '${jobId}' as scheduled. But it does not exist.`,
-      );
+      throw new Error(`Trying to mark job '${jobId}' as scheduled. But it does not exist.`);
     }
 
     const currentBuild = snapshot.data() as CiJob;
@@ -186,8 +182,8 @@ export class CiJobs {
     // In CiJobs, "failure" is used to not race past failed jobs in the buildQueue, whereas
     // in CiBuilds the status may be marked as "inProgress" when retrying.
     let { status } = currentBuild;
-    if (["created"].includes(status)) {
-      status = "scheduled";
+    if (['created'].includes(status)) {
+      status = 'scheduled';
     }
 
     await ref.update({
@@ -201,9 +197,7 @@ export class CiJobs {
     const snapshot = await ref.get();
 
     if (!snapshot.exists) {
-      throw new Error(
-        `Trying to mark job '${jobId}' as in progress. But it does not exist.`,
-      );
+      throw new Error(`Trying to mark job '${jobId}' as in progress. But it does not exist.`);
     }
 
     const currentBuild = snapshot.data() as CiJob;
@@ -211,13 +205,13 @@ export class CiJobs {
 
     // Do not override failure or completed
     let { status } = currentBuild;
-    if (["scheduled"].includes(status)) {
-      status = "inProgress";
+    if (['scheduled'].includes(status)) {
+      status = 'inProgress';
     }
 
     await ref.update({
       status,
-      "meta.lastBuildStart": Timestamp.now(),
+      'meta.lastBuildStart': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
   };
@@ -226,9 +220,9 @@ export class CiJobs {
     const job = await db.collection(CiJobs.collection).doc(jobId);
 
     await job.update({
-      status: "failed",
-      "meta.failureCount": FieldValue.increment(1),
-      "meta.lastBuildFailure": Timestamp.now(),
+      status: 'failed',
+      'meta.failureCount': FieldValue.increment(1),
+      'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
   };
@@ -237,42 +231,38 @@ export class CiJobs {
     const job = await db.collection(CiJobs.collection).doc(jobId);
 
     await job.update({
-      status: "completed",
+      status: 'completed',
       modifiedDate: Timestamp.now(),
     });
   };
 
   static async removeDryRunJob(jobId: string) {
-    if (!jobId.startsWith("dryRun")) {
-      throw new Error("Expect only dryRun jobs to be deleted.");
+    if (!jobId.startsWith('dryRun')) {
+      throw new Error('Expect only dryRun jobs to be deleted.');
     }
 
     await db.collection(CiJobs.collection).doc(jobId).delete();
   }
 
-  static markJobsBeforeRepoVersionAsSuperseded = async (
-    repoVersion: string,
-  ): Promise<number> => {
-    logger.info("superseding jobs before repo version", repoVersion);
+  static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
+    logger.info('superseding jobs before repo version', repoVersion);
 
     let numSuperseded = 0;
-    for (const state of ["created", "failed"]) {
+    for (const state of ['created', 'failed']) {
       // Note: Cannot have inequality filters on multiple properties (hence the forOf)
       const snapshot = await db
         .collection(CiJobs.collection)
-        .where("repoVersionInfo.version", "<", repoVersion)
-        .where("status", "==", state)
+        .where('repoVersionInfo.version', '<', repoVersion)
+        .where('status', '==', state)
         .get();
 
       numSuperseded += snapshot.docs.length;
-      logger.debug(
-        `superseding ${CiJobs.pluralise(numSuperseded)} with ${state} status`,
-      );
+      logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)} with ${state} status`);
 
       // Batches can only have 20 document access calls per transaction
       // See: https://firebase.google.com/docs/firestore/manage-data/transactions
       // Note: Set counts as 2 access calls
-      const status: JobStatus = "superseded";
+      const status: JobStatus = 'superseded';
       const docsChunks: DocumentSnapshot[][] = chunk(snapshot.docs, 10);
       for (const docsChunk of docsChunks) {
         const batch = db.batch();
@@ -280,7 +270,7 @@ export class CiJobs {
           batch.set(doc.ref, { status }, { merge: true });
         }
         await batch.commit();
-        logger.debug("committed batch of superseded jobs");
+        logger.debug('committed batch of superseded jobs');
       }
     }
 
@@ -298,9 +288,7 @@ export class CiJobs {
     }
 
     if (editorVersionInfo === null) {
-      throw new Error(
-        "editorVersionInfo must be provided for editor build jobs.",
-      );
+      throw new Error('editorVersionInfo must be provided for editor build jobs.');
     }
     const { version: editorVersion } = editorVersionInfo;
 
@@ -317,14 +305,14 @@ export class CiJobs {
     }
 
     if (editorVersion === null) {
-      throw new Error("editorVersion must be provided for editor build jobs.");
+      throw new Error('editorVersion must be provided for editor build jobs.');
     }
 
     return `${imageType}-${editorVersion}-${repoVersion}`;
   }
 
   static pluralise(number: number) {
-    const word = number === 1 ? "CI Job" : "CI Jobs";
+    const word = number === 1 ? 'CI Job' : 'CI Jobs';
     return `${number} ${word}`;
   }
 }

@@ -1,6 +1,6 @@
-import { RepoVersionInfo } from "../../model/repoVersionInfo";
-import { Scheduler } from "./scheduler";
-import { Discord } from "../../service/discord";
+import { RepoVersionInfo } from '../../model/repoVersionInfo';
+import { Scheduler } from './scheduler';
+import { Discord } from '../../service/discord';
 
 /**
  * When a new Unity version gets ingested:
@@ -20,44 +20,33 @@ export const scheduleBuildsFromTheQueue = async (
   githubClientSecret: string,
 ) => {
   const repoVersionInfo = await RepoVersionInfo.getLatest();
-  const scheduler = await new Scheduler(repoVersionInfo).init(
-    githubPrivateKey,
-    githubClientSecret,
-  );
+  const scheduler = await new Scheduler(repoVersionInfo).init(githubPrivateKey, githubClientSecret);
 
-  const testVersion = "0.1.0";
+  const testVersion = '0.1.0';
   if (repoVersionInfo.version === testVersion) {
-    await discordClient.sendDebug(
-      "[Build queue] No longer building test versions.",
-    );
+    await discordClient.sendDebug('[Build queue] No longer building test versions.');
     return;
   }
 
   if (!(await scheduler.ensureThatBaseImageHasBeenBuilt(discordClient))) {
-    await discordClient.sendDebug(
-      "[Build queue] Waiting for base image to be ready.",
-    );
+    await discordClient.sendDebug('[Build queue] Waiting for base image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThatHubImageHasBeenBuilt(discordClient))) {
-    await discordClient.sendDebug(
-      "[Build queue] Waiting for hub image to be ready.",
-    );
+    await discordClient.sendDebug('[Build queue] Waiting for hub image to be ready.');
     return;
   }
 
   if (!(await scheduler.ensureThereAreNoFailedJobs(discordClient))) {
-    await discordClient.sendDebug(
-      "[Build queue] Retrying failed jobs before scheduling new jobs.",
-    );
+    await discordClient.sendDebug('[Build queue] Retrying failed jobs before scheduling new jobs.');
     return;
   }
 
   if (!(await scheduler.buildLatestEditorImages(discordClient))) {
-    await discordClient.sendDebug("[Build queue] Editor images are building.");
+    await discordClient.sendDebug('[Build queue] Editor images are building.');
     return;
   }
 
-  await discordClient.sendDebug("[Build queue] Idle 🎈");
+  await discordClient.sendDebug('[Build queue] Idle 🎈');
 };

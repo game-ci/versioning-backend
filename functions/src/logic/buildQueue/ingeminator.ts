@@ -1,27 +1,23 @@
-import { CiJob, CiJobQueue, CiJobQueueItem, CiJobs } from "../../model/ciJobs";
-import { CiBuild, CiBuilds } from "../../model/ciBuilds";
-import { EditorVersionInfo } from "../../model/editorVersionInfo";
-import { Discord } from "../../service/discord";
-import { Octokit } from "@octokit/rest";
-import { RepoVersionInfo } from "../../model/repoVersionInfo";
-import { Scheduler } from "./scheduler";
-import admin from "firebase-admin";
+import { CiJob, CiJobQueue, CiJobQueueItem, CiJobs } from '../../model/ciJobs';
+import { CiBuild, CiBuilds } from '../../model/ciBuilds';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
+import { Discord } from '../../service/discord';
+import { Octokit } from '@octokit/rest';
+import { RepoVersionInfo } from '../../model/repoVersionInfo';
+import { Scheduler } from './scheduler';
+import admin from 'firebase-admin';
 import Timestamp = admin.firestore.Timestamp;
-import { settings } from "../../config/settings";
-import { GitHubWorkflow } from "../../model/gitHubWorkflow";
-import { Image } from "../../model/image";
-import { logger } from "firebase-functions/v2";
+import { settings } from '../../config/settings';
+import { GitHubWorkflow } from '../../model/gitHubWorkflow';
+import { Image } from '../../model/image';
+import { logger } from 'firebase-functions/v2';
 
 export class Ingeminator {
   numberToSchedule: number;
   gitHubClient: Octokit;
   repoVersionInfo: RepoVersionInfo;
 
-  constructor(
-    numberToSchedule: number,
-    gitHubClient: Octokit,
-    repoVersionInfo: RepoVersionInfo,
-  ) {
+  constructor(numberToSchedule: number, gitHubClient: Octokit, repoVersionInfo: RepoVersionInfo) {
     this.numberToSchedule = numberToSchedule;
     this.gitHubClient = gitHubClient;
     this.repoVersionInfo = repoVersionInfo;
@@ -30,14 +26,14 @@ export class Ingeminator {
   async rescheduleFailedJobs(jobs: CiJobQueue, discordClient: Discord) {
     if (jobs.length <= 0) {
       throw new Error(
-        "[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.",
+        '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
       );
     }
 
     for (const job of jobs) {
       if (job.data.imageType !== Image.types.editor) {
         throw new Error(
-          "[Ingeminator] Did not expect to be handling non-editor image type rescheduling.",
+          '[Ingeminator] Did not expect to be handling non-editor image type rescheduling.',
         );
       }
 
@@ -45,10 +41,7 @@ export class Ingeminator {
     }
   }
 
-  private async rescheduleFailedBuildsForJob(
-    job: CiJobQueueItem,
-    discordClient: Discord,
-  ) {
+  private async rescheduleFailedBuildsForJob(job: CiJobQueueItem, discordClient: Discord) {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
@@ -83,10 +76,7 @@ export class Ingeminator {
         // Only send alert to discord once
         const alertingPeriodMinutes = settings.minutesBetweenScans;
         const alertingPeriodMilliseconds = alertingPeriodMinutes * 60 * 1000;
-        if (
-          lastFailure.toMillis() + alertingPeriodMilliseconds >=
-            Timestamp.now().toMillis()
-        ) {
+        if (lastFailure.toMillis() + alertingPeriodMilliseconds >= Timestamp.now().toMillis()) {
           logger.error(maxRetriesReachedMessage);
           await discordClient.sendAlert(maxRetriesReachedMessage);
         } else {
@@ -99,10 +89,7 @@ export class Ingeminator {
       // Incremental backoff
       const backoffMinutes = failureCount * 15;
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
-      if (
-        lastFailure.toMillis() + backoffMilliseconds >=
-          Timestamp.now().toMillis()
-      ) {
+      if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
         await discordClient.sendDebug(
           `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
         );
@@ -111,15 +98,7 @@ export class Ingeminator {
 
       // Schedule a build
       this.numberToSchedule -= 1;
-      if (
-        !(await this.rescheduleBuild(
-          jobId,
-          jobData,
-          buildId,
-          BuildData,
-          discordClient,
-        ))
-      ) {
+      if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData, discordClient))) {
         return;
       }
     }
@@ -139,8 +118,7 @@ export class Ingeminator {
   ) {
     // Info from job
     const { editorVersionInfo } = jobData;
-    const { version: editorVersion, changeSet } =
-      editorVersionInfo as EditorVersionInfo;
+    const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
 
     // Info from build
     const { buildInfo } = buildData;
@@ -148,13 +126,12 @@ export class Ingeminator {
 
     // Info from repo
     const repoVersions = Scheduler.parseRepoVersions(this.repoVersionInfo);
-    const { repoVersionFull, repoVersionMinor, repoVersionMajor } =
-      repoVersions;
+    const { repoVersionFull, repoVersionMinor, repoVersionMajor } = repoVersions;
 
     // Send the retry request
     const response = await this.gitHubClient.repos.createDispatchEvent({
-      owner: "unity-ci",
-      repo: "docker",
+      owner: 'unity-ci',
+      repo: 'docker',
       event_type: GitHubWorkflow.getEventTypeForRetryingEditorCiBuild(baseOs),
       client_payload: {
         jobId,
