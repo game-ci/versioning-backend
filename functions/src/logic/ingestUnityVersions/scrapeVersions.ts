@@ -15,7 +15,7 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
       if (matches.length > 0) {
         return matches
           .filter((match) => {
-            return match[4].includes('f');
+            return match[3].includes('f');
           })
           .map((match) => {
             const [_, major, minor, patch, changeSet] = match;
