@@ -4,7 +4,7 @@ import { settings } from '../config/settings';
 import { logger } from 'firebase-functions/v2';
 
 export class GitHub {
-  // https://octokit.github.io/rest.js/v18
+  // https://octokit.github.io/rest.js/v20
   static async init(privateKey: string, clientSecret: string): Promise<Octokit> {
     const appOctokit = new Octokit({
       authStrategy: createAppAuth,
