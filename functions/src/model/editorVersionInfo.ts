@@ -1,5 +1,6 @@
-import { db, admin, firebase } from '../service/firebase';
+import { admin, db } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
+import { logger } from 'firebase-functions/v2';
 
 export const EDITOR_VERSIONS_COLLECTION = 'editorVersions';
 
@@ -54,13 +55,17 @@ export class EditorVersionInfo {
         const { version } = versionInfo;
 
         const ref = db.collection(EditorVersionInfo.collection).doc(version);
-        const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
+        const data = {
+          ...versionInfo,
+          addedDate: Timestamp.now(),
+          modifiedDate: Timestamp.now(),
+        };
         batch.set(ref, data, { merge: false });
       });
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new editor versions', err);
+      logger.error('Error occurred during batch commit of new editor versions', err);
     }
   };
 
@@ -78,7 +83,7 @@ export class EditorVersionInfo {
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new editor versions', err);
+      logger.error('Error occurred during batch commit of new editor versions', err);
     }
   };
 }

@@ -34,3 +34,14 @@ Completed CiJobs are reported to Discord.
 ## Ingeminator
 
 TODO - Describe how it works
+
+## Database Backup
+
+The firestore database can be backed up with the following command:
+`yarn run backfire export ./export/versioningBackendBackup --project unity-ci-versions --keyFile <PATH_TO_GOOGLE_CLOUD_SERVICE_ACCOUNT_KEYFILE.json>`
+
+Similarly, it can be used to restore a backup with:
+`yarn run backfire import ./export/versioningBackendBackup --project unity-ci-versions --keyFile <PATH_TO_GOOGLE_CLOUD_SERVICE_ACCOUNT_KEYFILE.json>`
+
+You likely would want to empty the database before restoring but you can also use flags like overwrite, merge, etc to control the restoration
+rules.

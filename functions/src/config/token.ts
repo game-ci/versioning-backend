@@ -1,15 +1,7 @@
-import { firebase } from '../service/firebase';
-
-const { token } = firebase.config().internal;
-
 export class Token {
-  static get internal() {
-    return token;
-  }
-
-  static isValid(providedToken: string | null | undefined) {
+  static isValid(providedToken: string | null | undefined, internalToken: string) {
     if (!providedToken) return false;
 
-    return providedToken === this.internal || providedToken === `Bearer ${this.internal}`;
+    return providedToken === internalToken || providedToken === `Bearer ${internalToken}`;
   }
 }

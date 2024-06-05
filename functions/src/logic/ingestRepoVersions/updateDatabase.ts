@@ -1,13 +1,16 @@
 import { isMatch } from 'lodash';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { firebase } from '../../service/firebase';
+import { logger } from 'firebase-functions/v2';
 import { Discord } from '../../service/discord';
 
 const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promise<void> => {
+export const updateDatabase = async (
+  ingestedInfoList: RepoVersionInfo[],
+  discordClient: Discord,
+): Promise<void> => {
   const existingInfoList = await RepoVersionInfo.getAll();
 
   const newVersions: RepoVersionInfo[] = [];
@@ -49,9 +52,9 @@ export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promi
 
   message = message.trimEnd();
   if (message.length >= 1) {
-    firebase.logger.info(message);
-    await Discord.sendNews(message);
+    logger.info(message);
+    await discordClient.sendNews(message);
   } else {
-    firebase.logger.info('Database is up-to-date. (no updated repo versions found)');
+    logger.info('Database is up-to-date. (no updated repo versions found)');
   }
 };

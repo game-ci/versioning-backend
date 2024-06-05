@@ -1,5 +1,6 @@
-import { db, admin, firebase } from '../service/firebase';
+import { admin, db } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
+import { logger } from 'firebase-functions/v2';
 
 export interface RepoVersionInfo {
   id: number;
@@ -96,13 +97,17 @@ export class RepoVersionInfo {
         const { version } = versionInfo;
 
         const ref = db.collection(RepoVersionInfo.collection).doc(version);
-        const data = { ...versionInfo, addedDate: Timestamp.now(), modifiedDate: Timestamp.now() };
+        const data = {
+          ...versionInfo,
+          addedDate: Timestamp.now(),
+          modifiedDate: Timestamp.now(),
+        };
         batch.set(ref, data, { merge: false });
       });
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new repo versions', err);
+      logger.error('Error occurred during batch commit of new repo versions', err);
     }
   };
 
@@ -120,7 +125,7 @@ export class RepoVersionInfo {
 
       await batch.commit();
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new repo versions', err);
+      logger.error('Error occurred during batch commit of new repo versions', err);
     }
   };
 }

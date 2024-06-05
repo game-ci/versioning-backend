@@ -14,7 +14,7 @@ const makeUserAnAdmin = async (user: admin.auth.UserRecord): Promise<void> => {
     return;
   }
 
-  const updatedClaims = Object.assign({}, customClaims, { admin: true });
+  const updatedClaims = { ...customClaims, admin: true };
   await auth.setCustomUserClaims(user.uid, updatedClaims);
   console.log(`${displayName} is now an admin. Claims:`, updatedClaims);
 };
@@ -34,5 +34,7 @@ export const assignDefaultAdmins = async (adminEmailAddresses: string[]): Promis
     return;
   }
 
-  await adminEmailAddresses.forEach((emailAddress) => makeAdminByEmailAddress(emailAddress));
+  for (const emailAddress of adminEmailAddresses) {
+    await makeAdminByEmailAddress(emailAddress);
+  }
 };

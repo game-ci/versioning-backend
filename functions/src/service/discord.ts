@@ -1,109 +1,23 @@
-import { Client as ErisClient, MessageContent, Message, FileContent } from 'eris';
-import { firebase } from './firebase';
+import { Client as ErisClient, FileContent, Message, MessageContent } from 'eris';
+import { logger } from 'firebase-functions/v2';
 import { settings } from '../config/settings';
 
-const { token } = firebase.config().discord;
-
-let instance: ErisClient | null = null;
-
 export class Discord {
-  public static async sendDebugLine(message: 'begin' | 'end') {
-    const discord = await this.getInstance();
+  instance: ErisClient | null = null;
 
-    await discord.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
-  }
-
-  public static async sendDebug(
-    message: MessageContent,
-    files: FileContent | FileContent[] | undefined = undefined,
-  ): Promise<boolean> {
-    firebase.logger.info(message);
-
-    // Set to null as we don't differ between debug/info yet. Null is debug.
-    return this.sendMessage(null, message, files, 'info');
-  }
-
-  public static async sendNews(
-    message: MessageContent,
-    files: FileContent | FileContent[] | undefined = undefined,
-  ): Promise<boolean> {
-    return this.sendMessage(settings.discord.channels.news, message, files, 'info');
-  }
-
-  public static async sendAlert(
-    message: MessageContent,
-    files: FileContent | FileContent[] | undefined = undefined,
-  ): Promise<boolean> {
-    return this.sendMessage(settings.discord.channels.alerts, message, files, 'error');
-  }
-
-  public static async sendMessageToMaintainers(
-    message: MessageContent,
-    files: FileContent | FileContent[] | undefined = undefined,
-  ): Promise<boolean> {
-    return this.sendMessage(settings.discord.channels.maintainers, message, files, 'info');
-  }
-
-  private static async sendMessage(
-    channelId: string | null,
-    messageContent: MessageContent,
-    files: FileContent | FileContent[] | undefined = undefined,
-    level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
-  ): Promise<boolean> {
-    let isSent = false;
-    try {
-      const discord = await this.getInstance();
-
-      if (typeof messageContent === 'string') {
-        for (const message of Discord.splitMessage(messageContent)) {
-          if (channelId) await discord.createMessage(channelId, message, files);
-
-          // Also send to debug channel
-          await discord.createMessage(
-            settings.discord.channels.debug,
-            `[${level}] ${message}`,
-            files,
-          );
-        }
-      } else {
-        if (channelId) await discord.createMessage(channelId, messageContent, files);
-
-        // Also send to debug channel
-        messageContent.content = `[${level}] ${messageContent.content}`;
-        await discord.createMessage(settings.discord.channels.debug, messageContent, files);
-      }
-
-      isSent = true;
-    } catch (err) {
-      firebase.logger.error('An error occurred while trying to send a message to discord.', err);
-    }
-
-    return isSent;
-  }
-
-  static async getInstance(): Promise<ErisClient> {
-    if (instance) {
-      return instance;
-    }
-
-    instance = new ErisClient(token);
-
-    instance.on('messageCreate', async (message: Message) => {
+  public async init(token: string) {
+    this.instance = new ErisClient(token);
+    this.instance.on('messageCreate', async (message: Message) => {
       if (message.content === '!ping') {
-        firebase.logger.info('[discord] pong!');
+        logger.info('[discord] pong!');
         await message.channel.createMessage('Pong!');
       }
     });
 
-    await instance.connect();
-    await this.becomeReady();
+    await this.instance.connect();
 
-    return instance;
-  }
-
-  static async becomeReady(): Promise<void> {
     let secondsWaited = 0;
-    while (!instance?.startTime) {
+    while (!this.instance?.startTime) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       secondsWaited += 1;
 
@@ -113,11 +27,85 @@ export class Discord {
     }
   }
 
-  public static async disconnect(): Promise<void> {
-    if (!instance) return;
+  public async sendDebugLine(message: 'begin' | 'end') {
+    await this.instance?.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
+  }
 
-    instance.disconnect({ reconnect: false });
-    instance = null;
+  public async sendDebug(
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
+  ): Promise<boolean> {
+    logger.info(message);
+
+    // Set to null as we don't differ between debug/info yet. Null is debug.
+    return this.sendMessage(null, message, 'info', files);
+  }
+
+  public async sendNews(
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.news, message, 'info', files);
+  }
+
+  public async sendAlert(
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.alerts, message, 'error', files);
+  }
+
+  public async sendMessageToMaintainers(
+    message: MessageContent,
+    files: FileContent | FileContent[] | undefined = undefined,
+  ): Promise<boolean> {
+    return this.sendMessage(settings.discord.channels.maintainers, message, 'info', files);
+  }
+
+  private async sendMessage(
+    channelId: string | null,
+    messageContent: MessageContent,
+    level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
+    files: FileContent | FileContent[] | undefined = undefined,
+  ): Promise<boolean> {
+    let isSent = false;
+    try {
+      if (typeof messageContent === 'string') {
+        for (const message of Discord.splitMessage(messageContent)) {
+          if (channelId) {
+            await this.instance?.createMessage(channelId, message, files);
+          }
+
+          // Also send to debug channel
+          await this.instance?.createMessage(
+            settings.discord.channels.debug,
+            `[${level}] ${message}`,
+            files,
+          );
+        }
+      } else {
+        if (channelId) {
+          await this.instance?.createMessage(channelId, messageContent, files);
+        }
+
+        // Also send to debug channel
+        messageContent.content = `[${level}] ${messageContent.content}`;
+        await this.instance?.createMessage(settings.discord.channels.debug, messageContent, files);
+      }
+
+      isSent = true;
+    } catch (err) {
+      logger.error('An error occurred while trying to send a message to discord.', err);
+    }
+
+    return isSent;
+  }
+
+  public async disconnect(): Promise<void> {
+    if (!this.instance) return;
+
+    this.instance.disconnect({ reconnect: false });
+    this.instance = null;
   }
 
   // Max message size must account for ellipsis and level parts that are added to the message.
@@ -141,10 +129,10 @@ export class Discord {
       }
 
       // Break at spaces
-      let maxMessage = message.substr(pointer, messageSize);
+      let maxMessage = message.slice(pointer, pointer + messageSize);
       const lastSpacePos = maxMessage.lastIndexOf(' ');
       if (lastSpacePos >= maxMessageSize - 250) {
-        maxMessage = maxMessage.substr(pointer, lastSpacePos);
+        maxMessage = maxMessage.slice(pointer, pointer + lastSpacePos);
         messageSize = lastSpacePos;
       }
 

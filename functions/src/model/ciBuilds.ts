@@ -1,4 +1,5 @@
-import { admin, db, firebase } from '../service/firebase';
+import { admin, db } from '../service/firebase';
+import { logger } from 'firebase-functions/v2';
 import { settings } from '../config/settings';
 import { CiJobs } from './ciJobs';
 import { BaseOs, ImageType } from './image';
@@ -99,7 +100,10 @@ export class CiBuilds {
       .limit(settings.maxConcurrentJobs)
       .get();
 
-    return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiBuild }));
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data() as CiBuild,
+    }));
   };
 
   public static registerNewBuild = async (
@@ -144,7 +148,7 @@ export class CiBuilds {
       result = await ref.create(data);
     }
 
-    firebase.logger.debug('Build created', result);
+    logger.debug('Build created', result);
   };
 
   public static async removeDryRunBuild(buildId: string) {
@@ -154,7 +158,7 @@ export class CiBuilds {
 
     const ref = await db.collection(CiBuilds.collection).doc(buildId);
     const doc = await ref.get();
-    firebase.logger.info('dryRun produced this build endResult', doc.data());
+    logger.info('dryRun produced this build endResult', doc.data());
 
     await ref.delete();
   }

@@ -1,5 +1,5 @@
-import { firebase, functions } from '../service/firebase';
-import { Request } from 'firebase-functions/v2/https';
+import { onRequest, Request } from 'firebase-functions/v2/https';
+import { logger } from 'firebase-functions/v2';
 import { Response } from 'express-serve-static-core';
 import { Token } from '../config/token';
 import { BuildInfo, CiBuilds } from '../model/ciBuilds';
@@ -8,54 +8,65 @@ import { Discord } from '../service/discord';
 import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 import { Image, ImageType } from '../model/image';
+import { defineSecret } from 'firebase-functions/params';
 
-export const reportNewBuild = functions.https.onRequest(async (req: Request, res: Response) => {
-  try {
-    if (!Token.isValid(req.header('authorization'))) {
-      firebase.logger.warn('unauthorised request', req.headers);
-      res.status(403).send('Unauthorized');
-      return;
-    }
+const discordToken = defineSecret('DISCORD_TOKEN');
+const internalToken = defineSecret('INTERNAL_TOKEN');
 
-    const { body } = req;
-    firebase.logger.debug('new incoming build report', body);
+export const reportNewBuild = onRequest(
+  { secrets: [discordToken, internalToken] },
+  async (req: Request, res: Response) => {
+    const discordClient = new Discord();
+    await discordClient.init(discordToken.value());
 
-    const { buildId, jobId, imageType, baseOs, repoVersion, editorVersion, targetPlatform } = body;
-    const buildInfo: BuildInfo = {
-      baseOs,
-      repoVersion,
-      editorVersion,
-      targetPlatform,
-    };
+    try {
+      if (!Token.isValid(req.header('authorization'), internalToken.value())) {
+        logger.warn('unauthorised request', req.headers);
+        res.status(403).send('Unauthorized');
+        return;
+      }
 
-    if (jobId.toString().startsWith('dryRun')) {
-      await createDryRunJob(jobId, imageType, editorVersion);
-    }
+      const { body } = req;
+      logger.debug('new incoming build report', body);
 
-    await CiJobs.markJobAsInProgress(jobId);
-    await CiBuilds.registerNewBuild(buildId, jobId, imageType, buildInfo);
+      const { buildId, jobId, imageType, baseOs, repoVersion, editorVersion, targetPlatform } =
+        body;
+      const buildInfo: BuildInfo = {
+        baseOs,
+        repoVersion,
+        editorVersion,
+        targetPlatform,
+      };
 
-    firebase.logger.info('new build reported', body);
-    res.status(200).send('OK');
-  } catch (err: any) {
-    const message = `
+      if (jobId.toString().startsWith('dryRun')) {
+        await createDryRunJob(jobId, imageType, editorVersion);
+      }
+
+      await CiJobs.markJobAsInProgress(jobId);
+      await CiBuilds.registerNewBuild(buildId, jobId, imageType, buildInfo);
+
+      logger.info('new build reported', body);
+      res.status(200).send('OK');
+    } catch (err: any) {
+      const message = `
       Something went wrong while wrong while reporting a new build.
       ${err.message}
     `;
-    firebase.logger.error(message, err);
-    await Discord.sendAlert(message);
+      logger.error(message, err);
+      await discordClient.sendAlert(message);
 
-    if (req.body?.jobId?.toString().startsWith('dryRun')) {
-      await CiBuilds.removeDryRunBuild(req.body.buildId);
-      await CiJobs.removeDryRunJob(req.body.jobId);
+      if (req.body?.jobId?.toString().startsWith('dryRun')) {
+        await CiBuilds.removeDryRunBuild(req.body.buildId);
+        await CiJobs.removeDryRunJob(req.body.jobId);
+      }
+
+      res.status(500).send('Something went wrong');
     }
-
-    res.status(500).send('Something went wrong');
-  }
-});
+  },
+);
 
 const createDryRunJob = async (jobId: string, imageType: ImageType, editorVersion: string) => {
-  firebase.logger.debug('running dryrun for image', imageType, editorVersion);
+  logger.debug('running dryrun for image', imageType, editorVersion);
   const repoVersionInfo = await RepoVersionInfo.getLatest();
 
   if (imageType === Image.types.editor) {

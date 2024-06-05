@@ -1,6 +1,6 @@
-import * as firebase from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { getCredential } from '../config/credential';
+import { setGlobalOptions } from 'firebase-functions/v2/options';
 
 const app = admin.initializeApp({
   credential: getCredential(),
@@ -11,6 +11,6 @@ const auth = app.auth();
 const db = app.firestore();
 
 // Set functions to same region as database and hosting
-const functions = firebase.region('europe-west3');
+setGlobalOptions({ region: 'europe-west3' });
 
-export { firebase, admin, db, functions, auth };
+export { admin, auth, db };

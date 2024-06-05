@@ -1,7 +1,6 @@
-import { CiJob, CiJobQueue, CiJobs, CiJobQueueItem } from '../../model/ciJobs';
+import { CiJob, CiJobQueue, CiJobQueueItem, CiJobs } from '../../model/ciJobs';
 import { CiBuild, CiBuilds } from '../../model/ciBuilds';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
-import { firebase } from '../../service/firebase';
 import { Discord } from '../../service/discord';
 import { Octokit } from '@octokit/rest';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
@@ -11,6 +10,7 @@ import Timestamp = admin.firestore.Timestamp;
 import { settings } from '../../config/settings';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 import { Image } from '../../model/image';
+import { logger } from 'firebase-functions/v2';
 
 export class Ingeminator {
   numberToSchedule: number;
@@ -23,7 +23,7 @@ export class Ingeminator {
     this.repoVersionInfo = repoVersionInfo;
   }
 
-  async rescheduleFailedJobs(jobs: CiJobQueue) {
+  async rescheduleFailedJobs(jobs: CiJobQueue, discordClient: Discord) {
     if (jobs.length <= 0) {
       throw new Error(
         '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
@@ -37,15 +37,15 @@ export class Ingeminator {
         );
       }
 
-      await this.rescheduleFailedBuildsForJob(job);
+      await this.rescheduleFailedBuildsForJob(job, discordClient);
     }
   }
 
-  private async rescheduleFailedBuildsForJob(job: CiJobQueueItem) {
+  private async rescheduleFailedBuildsForJob(job: CiJobQueueItem, discordClient: Discord) {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      await Discord.sendDebug(
+      await discordClient.sendDebug(
         `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
       );
       return;
@@ -56,7 +56,7 @@ export class Ingeminator {
 
       // Space for more?
       if (this.numberToSchedule <= 0) {
-        await Discord.sendDebug(
+        await discordClient.sendDebug(
           `[Ingeminator] waiting for more spots to become available for builds of ${jobId}.`,
         );
         return;
@@ -77,10 +77,10 @@ export class Ingeminator {
         const alertingPeriodMinutes = settings.minutesBetweenScans;
         const alertingPeriodMilliseconds = alertingPeriodMinutes * 60 * 1000;
         if (lastFailure.toMillis() + alertingPeriodMilliseconds >= Timestamp.now().toMillis()) {
-          firebase.logger.error(maxRetriesReachedMessage);
-          await Discord.sendAlert(maxRetriesReachedMessage);
+          logger.error(maxRetriesReachedMessage);
+          await discordClient.sendAlert(maxRetriesReachedMessage);
         } else {
-          await Discord.sendDebug(maxRetriesReachedMessage);
+          await discordClient.sendDebug(maxRetriesReachedMessage);
         }
 
         return;
@@ -90,7 +90,7 @@ export class Ingeminator {
       const backoffMinutes = failureCount * 15;
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
-        await Discord.sendDebug(
+        await discordClient.sendDebug(
           `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
         );
         continue;
@@ -98,16 +98,24 @@ export class Ingeminator {
 
       // Schedule a build
       this.numberToSchedule -= 1;
-      if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData))) {
+      if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData, discordClient))) {
         return;
       }
     }
 
     await CiJobs.markJobAsScheduled(jobId);
-    await Discord.sendDebug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
+    await discordClient.sendDebug(
+      `[Ingeminator] rescheduled any failing editor images for ${jobId}.`,
+    );
   }
 
-  public async rescheduleBuild(jobId: string, jobData: CiJob, buildId: string, buildData: CiBuild) {
+  public async rescheduleBuild(
+    jobId: string,
+    jobData: CiJob,
+    buildId: string,
+    buildData: CiBuild,
+    discordClient: Discord,
+  ) {
     // Info from job
     const { editorVersionInfo } = jobData;
     const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
@@ -142,8 +150,8 @@ export class Ingeminator {
       const failureMessage = `
         [Ingeminator] failed to ingeminate job ${jobId},
         status: ${response.status}, response: ${response.data}.`;
-      firebase.logger.error(failureMessage);
-      await Discord.sendAlert(failureMessage);
+      logger.error(failureMessage);
+      await discordClient.sendAlert(failureMessage);
       return false;
     }
 

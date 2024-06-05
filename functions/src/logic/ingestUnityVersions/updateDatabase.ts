@@ -1,5 +1,5 @@
 import { isMatch } from 'lodash';
-import { firebase } from '../../service/firebase';
+import { logger } from 'firebase-functions/v2';
 import { Discord } from '../../service/discord';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
@@ -7,7 +7,10 @@ const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Promise<void> => {
+export const updateDatabase = async (
+  ingestedInfoList: EditorVersionInfo[],
+  discordClient: Discord,
+): Promise<void> => {
   const existingInfoList = await EditorVersionInfo.getAll();
 
   const newVersions: EditorVersionInfo[] = [];
@@ -46,9 +49,9 @@ export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Pro
 
   message = message.trimEnd();
   if (message.length >= 1) {
-    firebase.logger.info(message);
-    await Discord.sendMessageToMaintainers(message);
+    logger.info(message);
+    await discordClient.sendMessageToMaintainers(message);
   } else {
-    await Discord.sendDebug('Database is up-to-date. (no updated Unity versions found)');
+    await discordClient.sendDebug('Database is up-to-date. (no updated Unity versions found)');
   }
 };

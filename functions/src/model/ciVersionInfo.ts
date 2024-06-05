@@ -1,7 +1,8 @@
-import { db, admin, firebase } from '../service/firebase';
+import { admin, db } from '../service/firebase';
 import Timestamp = admin.firestore.Timestamp;
 import { EditorVersionInfo } from './editorVersionInfo';
 import { RepoVersionInfo } from './repoVersionInfo';
+import { logger } from 'firebase-functions/v2';
 
 export interface CiVersionInfo {
   editorVersion: EditorVersionInfo;
@@ -37,7 +38,7 @@ export class CiVersionInfo {
         addedDate: Timestamp.now(),
       });
     } catch (err) {
-      firebase.logger.error('Error occurred during batch commit of new version', err);
+      logger.error('Error occurred during batch commit of new version', err);
     }
   };
 }

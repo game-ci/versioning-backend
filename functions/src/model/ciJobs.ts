@@ -1,4 +1,4 @@
-import { db, admin, firebase } from '../service/firebase';
+import { admin, db } from '../service/firebase';
 import { EditorVersionInfo } from './editorVersionInfo';
 import FieldValue = admin.firestore.FieldValue;
 import Timestamp = admin.firestore.Timestamp;
@@ -7,6 +7,7 @@ import DocumentSnapshot = admin.firestore.DocumentSnapshot;
 import { chunk } from 'lodash';
 import { settings } from '../config/settings';
 import { Image, ImageType } from './image';
+import { logger } from 'firebase-functions/v2';
 
 export type JobStatus =
   | 'created'
@@ -81,14 +82,14 @@ export class CiJobs {
       .limit(settings.maxConcurrentJobs)
       .get();
 
-    firebase.logger.debug(`BuildQueue size: ${snapshot.docs.length}`);
+    logger.debug(`BuildQueue size: ${snapshot.docs.length}`);
 
     const queue: CiJobQueue = [];
     snapshot.docs.forEach((doc) => {
       queue.push({ id: doc.id, data: doc.data() as CiJob });
     });
 
-    firebase.logger.debug(`BuildQueue`, queue);
+    logger.debug(`BuildQueue`, queue);
 
     return queue;
   };
@@ -103,14 +104,14 @@ export class CiJobs {
       .limit(settings.maxConcurrentJobs)
       .get();
 
-    firebase.logger.debug(`FailingQueue size: ${snapshot.docs.length}`);
+    logger.debug(`FailingQueue size: ${snapshot.docs.length}`);
 
     const queue: CiJobQueue = [];
     snapshot.docs.forEach((doc) => {
       queue.push({ id: doc.id, data: doc.data() as CiJob });
     });
 
-    firebase.logger.debug(`FailingQueue`, queue);
+    logger.debug(`FailingQueue`, queue);
 
     return queue;
   };
@@ -133,7 +134,7 @@ export class CiJobs {
   ) => {
     const job = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
     const result = await db.collection(CiJobs.collection).doc(jobId).create(job);
-    firebase.logger.debug('Job created', result);
+    logger.debug('Job created', result);
   };
 
   static construct = (
@@ -200,7 +201,7 @@ export class CiJobs {
     }
 
     const currentBuild = snapshot.data() as CiJob;
-    firebase.logger.warn(currentBuild);
+    logger.warn(currentBuild);
 
     // Do not override failure or completed
     let { status } = currentBuild;
@@ -244,7 +245,7 @@ export class CiJobs {
   }
 
   static markJobsBeforeRepoVersionAsSuperseded = async (repoVersion: string): Promise<number> => {
-    firebase.logger.info('superseding jobs before repo version', repoVersion);
+    logger.info('superseding jobs before repo version', repoVersion);
 
     let numSuperseded = 0;
     for (const state of ['created', 'failed']) {
@@ -256,7 +257,7 @@ export class CiJobs {
         .get();
 
       numSuperseded += snapshot.docs.length;
-      firebase.logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)} with ${state} status`);
+      logger.debug(`superseding ${CiJobs.pluralise(numSuperseded)} with ${state} status`);
 
       // Batches can only have 20 document access calls per transaction
       // See: https://firebase.google.com/docs/firestore/manage-data/transactions
@@ -269,7 +270,7 @@ export class CiJobs {
           batch.set(doc.ref, { status }, { merge: true });
         }
         await batch.commit();
-        firebase.logger.debug('committed batch of superseded jobs');
+        logger.debug('committed batch of superseded jobs');
       }
     }
 

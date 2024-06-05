@@ -1,14 +1,24 @@
-import { functions, admin } from '../service/firebase';
-import { Request } from 'firebase-functions/v2/https';
+import { admin } from '../service/firebase';
+import { onRequest, Request } from 'firebase-functions/v2/https';
 import { Response } from 'express-serve-static-core';
 import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Ingeminator } from '../logic/buildQueue/ingeminator';
 import { GitHub } from '../service/github';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
+import { Discord } from '../service/discord';
+import { defineSecret } from 'firebase-functions/params';
 
-export const retryBuild = functions.https.onRequest(
+const discordToken = defineSecret('DISCORD_TOKEN');
+const githubPrivateKey = defineSecret('GITHUB_PRIVATE_KEY');
+const githubClientSecret = defineSecret('GITHUB_CLIENT_SECRET');
+
+export const retryBuild = onRequest(
+  { secrets: [discordToken, githubClientSecret, githubPrivateKey] },
   async (request: Request, response: Response) => {
+    const discordClient = new Discord();
+    await discordClient.init(discordToken.value());
+
     try {
       response.set('Content-Type', 'application/json');
 
@@ -69,15 +79,24 @@ export const retryBuild = functions.https.onRequest(
       }
 
       // Schedule new build
-      const gitHubClient = await GitHub.init();
+      const gitHubClient = await GitHub.init(githubPrivateKey.value(), githubClientSecret.value());
       const repoVersionInfo = await RepoVersionInfo.getLatest();
       const scheduler = new Ingeminator(1, gitHubClient, repoVersionInfo);
-      const scheduledSuccessfully = await scheduler.rescheduleBuild(jobId, job, buildId, build);
+      const scheduledSuccessfully = await scheduler.rescheduleBuild(
+        jobId,
+        job,
+        buildId,
+        build,
+        discordClient,
+      );
 
       // Report result
       if (scheduledSuccessfully) {
         response.status(200);
-        response.send({ message: 'Build has been rescheduled', description: request.body.buildId });
+        response.send({
+          message: 'Build has been rescheduled',
+          description: request.body.buildId,
+        });
       } else {
         response.status(408);
         response.send({
