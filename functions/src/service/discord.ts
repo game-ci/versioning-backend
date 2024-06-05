@@ -15,7 +15,16 @@ export class Discord {
     });
 
     await this.instance.connect();
-    await this.becomeReady();
+
+    let secondsWaited = 0;
+    while (!this.instance?.startTime) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      secondsWaited += 1;
+
+      if (secondsWaited >= 15) {
+        throw new Error('Bot never became ready');
+      }
+    }
   }
 
   public async sendDebugLine(message: 'begin' | 'end') {
@@ -90,18 +99,6 @@ export class Discord {
     }
 
     return isSent;
-  }
-
-  async becomeReady(): Promise<void> {
-    let secondsWaited = 0;
-    while (!this.instance?.startTime) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      secondsWaited += 1;
-
-      if (secondsWaited >= 15) {
-        throw new Error('Bot never became ready');
-      }
-    }
   }
 
   public async disconnect(): Promise<void> {
