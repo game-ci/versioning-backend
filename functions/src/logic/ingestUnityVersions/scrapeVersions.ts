@@ -13,16 +13,20 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
     if (script.textContent) {
       const matches = [...script.textContent.matchAll(unity_version_regex)];
       if (matches.length > 0) {
-        return matches.map((match) => {
-          const [_, major, minor, patch, changeSet] = match;
-          return {
-            version: `${major}.${minor}.${patch}`,
-            major: Number(major),
-            minor: Number(minor),
-            patch,
-            changeSet,
-          };
-        });
+        return matches
+          .filter((match) => {
+            return match[4].includes('f');
+          })
+          .map((match) => {
+            const [_, major, minor, patch, changeSet] = match;
+            return {
+              version: `${major}.${minor}.${patch}`,
+              major: Number(major),
+              minor: Number(minor),
+              patch,
+              changeSet,
+            };
+          });
       }
     }
   }

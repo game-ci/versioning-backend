@@ -44,7 +44,11 @@ export const testFunction = onRequest(
         throw new Error('No Unity versions were found.');
       }
 
-      info = `Found ${versions.length} repo versions and ${unityVersions.length} Unity versions. First Unity Version: ${unityVersions[0].version}, ${unityVersions[0].changeSet}`;
+      info = `Found ${versions.length} repo versions and ${
+        unityVersions.length
+      } Unity versions. Unity Versions: \n${unityVersions
+        .map((unity) => `${unity.version}:${unity.changeSet}`)
+        .join('\n')}`;
     } catch (error: any) {
       info = error.message;
       code = 500;
