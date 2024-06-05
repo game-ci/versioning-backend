@@ -58,8 +58,13 @@ jobs:
           args: deploy --only functions:testFunction
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
+
+      - name: Call Test Function
+        run: curl -f -X POST https://testfunction-wbe4ukn6tq-ey.a.run.app
+
       - name: Cleanup Firebase Test
         uses: w9jds/firebase-action@v13.10.2
+        if: always()
         with:
           args: functions:delete testFunction --force
         env:
@@ -86,6 +91,7 @@ jobs:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
       - name: Cleanup Firebase Test
         uses: w9jds/firebase-action@v13.10.2
+        if: always()
         with:
           args: functions:delete testFunction --force
         env:
