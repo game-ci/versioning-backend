@@ -7,10 +7,7 @@ const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabase = async (
-  ingestedInfoList: RepoVersionInfo[],
-  discordClient: Discord,
-): Promise<void> => {
+export const updateDatabase = async (ingestedInfoList: RepoVersionInfo[]): Promise<void> => {
   const existingInfoList = await RepoVersionInfo.getAll();
 
   const newVersions: RepoVersionInfo[] = [];
@@ -53,7 +50,7 @@ export const updateDatabase = async (
   message = message.trimEnd();
   if (message.length >= 1) {
     logger.info(message);
-    await discordClient.sendNews(message);
+    await Discord.sendNews(message);
   } else {
     logger.info('Database is up-to-date. (no updated repo versions found)');
   }

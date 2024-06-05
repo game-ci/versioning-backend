@@ -14,8 +14,7 @@ const internalToken = defineSecret('INTERNAL_TOKEN');
 export const reportPublication = onRequest(
   { secrets: [discordToken, internalToken] },
   async (req: Request, res: Response) => {
-    const discordClient = new Discord();
-    await discordClient.init(discordToken.value());
+    await Discord.init(discordToken.value());
 
     try {
       if (!Token.isValid(req.header('authorization'), internalToken.value())) {
@@ -50,7 +49,7 @@ export const reportPublication = onRequest(
         }
         logger.info(message);
         if (!isDryRun) {
-          await discordClient.sendNews(message);
+          await Discord.sendNews(message);
         }
       }
 
@@ -67,7 +66,7 @@ export const reportPublication = onRequest(
       ${err.message}
     `;
       logger.error(message, err);
-      await discordClient.sendAlert(message);
+      await Discord.sendAlert(message);
 
       if (req.body?.jobId?.toString().startsWith('dryRun')) {
         await CiBuilds.removeDryRunBuild(req.body.buildId);
@@ -77,6 +76,6 @@ export const reportPublication = onRequest(
       res.status(500).send('Something went wrong');
     }
 
-    await discordClient.disconnect();
+    await Discord.disconnect();
   },
 );
