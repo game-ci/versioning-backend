@@ -16,8 +16,9 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
         const uniqueVersions = new Set<string>();
         return matches
           .filter((match) => {
-            // Filter out prerelease versions
-            return match[3].includes('f');
+            // Filter out prerelease and unsupported versions
+            const [_, major, minor, patch, changeSet] = match;
+            return patch.includes('f') && Number(major) >= 2017;
           })
           .map((match) => {
             const [_, major, minor, patch, changeSet] = match;
@@ -32,6 +33,8 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
                 patch,
               };
             }
+
+            // Return null if version is not unique
             return null;
           })
           .filter((version) => version !== null) as EditorVersionInfo[];
