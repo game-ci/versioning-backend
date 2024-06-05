@@ -26,10 +26,10 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
               uniqueVersions.add(version);
               return {
                 version,
+                changeSet,
                 major: Number(major),
                 minor: Number(minor),
                 patch,
-                changeSet,
               };
             }
             return null;
