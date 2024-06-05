@@ -1,13 +1,13 @@
-import { onRequest, Request } from "firebase-functions/v2/https";
-import { Response } from "express-serve-static-core";
-import { defineSecret } from "firebase-functions/params";
-import { scrapeVersions } from "../logic/ingestRepoVersions/scrapeVersions";
-import { Discord } from "../service/discord";
+import { onRequest, Request } from 'firebase-functions/v2/https';
+import { Response } from 'express-serve-static-core';
+import { defineSecret } from 'firebase-functions/params';
+import { scrapeVersions } from '../logic/ingestRepoVersions/scrapeVersions';
+import { Discord } from '../service/discord';
 
-const discordToken = defineSecret("DISCORD_TOKEN");
-const githubPrivateKeyConfigSecret = defineSecret("GITHUB_PRIVATE_KEY");
-const githubClientSecretConfigSecret = defineSecret("GITHUB_CLIENT_SECRET");
-const internalToken = defineSecret("INTERNAL_TOKEN");
+const discordToken = defineSecret('DISCORD_TOKEN');
+const githubPrivateKeyConfigSecret = defineSecret('GITHUB_PRIVATE_KEY');
+const githubClientSecretConfigSecret = defineSecret('GITHUB_CLIENT_SECRET');
+const internalToken = defineSecret('INTERNAL_TOKEN');
 
 export const testFunction = onRequest(
   {
@@ -22,7 +22,7 @@ export const testFunction = onRequest(
   async (request: Request, response: Response) => {
     // Run all non-sensitive functions to verify that the deployment is working.
     const discordClient = new Discord();
-    let info = "Ok";
+    let info = 'Ok';
     let code = 200;
 
     try {
@@ -34,7 +34,7 @@ export const testFunction = onRequest(
       );
 
       if (versions.length === 0) {
-        info = "No versions were found.";
+        info = 'No versions were found.';
         code = 500;
         return;
       }
