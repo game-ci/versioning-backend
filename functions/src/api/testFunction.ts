@@ -36,7 +36,6 @@ export const testFunction = onRequest(
       if (versions.length === 0) {
         info = 'No versions were found.';
         code = 500;
-        return;
       }
     } catch (error: any) {
       info = error.message;
