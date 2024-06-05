@@ -1,12 +1,13 @@
-import { onRequest, Request } from 'firebase-functions/v2/https';
-import { Response } from 'express-serve-static-core';
-import { defineSecret } from 'firebase-functions/params';
-import { scrapeVersions } from '../logic/ingestRepoVersions/scrapeVersions';
+import { onRequest, Request } from "firebase-functions/v2/https";
+import { Response } from "express-serve-static-core";
+import { defineSecret } from "firebase-functions/params";
+import { scrapeVersions } from "../logic/ingestRepoVersions/scrapeVersions";
+import { Discord } from "../service/discord";
 
-const discordToken = defineSecret('DISCORD_TOKEN');
-const githubPrivateKeyConfigSecret = defineSecret('GITHUB_PRIVATE_KEY');
-const githubClientSecretConfigSecret = defineSecret('GITHUB_CLIENT_SECRET');
-const internalToken = defineSecret('INTERNAL_TOKEN');
+const discordToken = defineSecret("DISCORD_TOKEN");
+const githubPrivateKeyConfigSecret = defineSecret("GITHUB_PRIVATE_KEY");
+const githubClientSecretConfigSecret = defineSecret("GITHUB_CLIENT_SECRET");
+const internalToken = defineSecret("INTERNAL_TOKEN");
 
 export const testFunction = onRequest(
   {
@@ -20,16 +21,30 @@ export const testFunction = onRequest(
   },
   async (request: Request, response: Response) => {
     // Run all non-sensitive functions to verify that the deployment is working.
-    const versions = await scrapeVersions(
-      githubPrivateKeyConfigSecret.value(),
-      githubClientSecretConfigSecret.value(),
-    );
+    const discordClient = new Discord();
+    let info = "Ok";
+    let code = 200;
 
-    if (versions.length === 0) {
-      response.status(500).send('No versions were found.');
-      return;
+    try {
+      await discordClient.init(discordToken.value());
+
+      const versions = await scrapeVersions(
+        githubPrivateKeyConfigSecret.value(),
+        githubClientSecretConfigSecret.value(),
+      );
+
+      if (versions.length === 0) {
+        info = "No versions were found.";
+        code = 500;
+        return;
+      }
+    } catch (error: any) {
+      info = error.message;
+      code = 500;
+    } finally {
+      await discordClient.disconnect();
     }
 
-    response.status(200).send('Ok');
+    response.status(code).send(info);
   },
 );
