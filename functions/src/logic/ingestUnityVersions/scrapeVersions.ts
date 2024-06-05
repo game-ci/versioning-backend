@@ -13,20 +13,28 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
     if (script.textContent) {
       const matches = [...script.textContent.matchAll(unity_version_regex)];
       if (matches.length > 0) {
+        const uniqueVersions = new Set<string>();
         return matches
           .filter((match) => {
+            // Filter out prerelease versions
             return match[3].includes('f');
           })
           .map((match) => {
             const [_, major, minor, patch, changeSet] = match;
-            return {
-              version: `${major}.${minor}.${patch}`,
-              major: Number(major),
-              minor: Number(minor),
-              patch,
-              changeSet,
-            };
-          });
+            const version = `${major}.${minor}.${patch}`;
+            if (!uniqueVersions.has(version)) {
+              uniqueVersions.add(version);
+              return {
+                version,
+                major: Number(major),
+                minor: Number(minor),
+                patch,
+                changeSet,
+              };
+            }
+            return null;
+          })
+          .filter((version) => version !== null) as EditorVersionInfo[];
       }
     }
   }
