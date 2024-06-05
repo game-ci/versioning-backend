@@ -21,6 +21,7 @@ export const settings = {
   github: {
     auth: {
       appId: 84327,
+      installationId: 12321333,
       clientId: 'Iv1.fa93dce6a47c9357',
     },
   },
