@@ -2,6 +2,8 @@ import { onRequest, Request } from 'firebase-functions/v2/https';
 import { Response } from 'express-serve-static-core';
 import { defineSecret } from 'firebase-functions/params';
 import { scrapeVersions } from '../logic/ingestRepoVersions/scrapeVersions';
+import { scrapeVersions as scrapeUnityVersions } from '../logic/ingestUnityVersions/scrapeVersions';
+
 import { Discord } from '../service/discord';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
@@ -34,9 +36,15 @@ export const testFunction = onRequest(
       );
 
       if (versions.length === 0) {
-        info = 'No versions were found.';
-        code = 500;
+        throw new Error('No versions were found.');
       }
+
+      const unityVersions = await scrapeUnityVersions();
+      if (unityVersions.length === 0) {
+        throw new Error('No Unity versions were found.');
+      }
+
+      info = `Found ${versions.length} repo versions and ${unityVersions.length} Unity versions. First Unity Version: ${unityVersions[0].version}, ${unityVersions[0].changeSet}`;
     } catch (error: any) {
       info = error.message;
       code = 500;

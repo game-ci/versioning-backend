@@ -2,29 +2,30 @@ import { getDocumentFromUrl } from '../utils/get-document-from-url';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
 const UNITY_ARCHIVE_URL = 'https://unity.com/releases/editor/archive';
+const unity_version_regex = /unityhub:\/\/(\d+)\.(\d+)\.(\d+[a-zA-Z]\d+)\/(\w+)/g;
 
-/**
- * Based on https://github.com/BLaZeKiLL/unity-scraper
- */
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
   const document = await getDocumentFromUrl(UNITY_ARCHIVE_URL);
 
-  const links = Array.from(document.querySelectorAll('.release-links div:first-child a[href]'));
-  const hrefs = links.map((a) => a.getAttribute('href')) as string[];
+  const scripts = document.querySelectorAll('script');
 
-  const versionInfoList = hrefs.map((href) => {
-    const info = href.replace('unityhub://', '');
-    const [version, changeSet] = info.split('/');
-    const [major, minor, patch] = version.split('.');
+  for (const script of scripts) {
+    if (script.textContent) {
+      const matches = [...script.textContent.matchAll(unity_version_regex)];
+      if (matches.length > 0) {
+        return matches.map((match) => {
+          const [_, major, minor, patch, changeSet] = match;
+          return {
+            version: `${major}.${minor}.${patch}`,
+            major: Number(major),
+            minor: Number(minor),
+            patch,
+            changeSet,
+          };
+        });
+      }
+    }
+  }
 
-    return {
-      version,
-      changeSet,
-      major: Number(major),
-      minor: Number(minor),
-      patch,
-    };
-  });
-
-  return versionInfoList;
+  throw new Error('No Unity versions found!');
 };
