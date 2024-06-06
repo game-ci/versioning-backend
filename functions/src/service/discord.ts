@@ -2,22 +2,27 @@ import { Client as ErisClient, FileContent, Message, MessageContent } from 'eris
 import { logger } from 'firebase-functions/v2';
 import { settings } from '../config/settings';
 
+let instance: ErisClient | null = null;
+let instanceCount = 0;
 export class Discord {
-  instance: ErisClient | null = null;
+  public static async init(token: string) {
+    if (instance) {
+      instanceCount += 1;
+      return;
+    }
 
-  public async init(token: string) {
-    this.instance = new ErisClient(token);
-    this.instance.on('messageCreate', async (message: Message) => {
+    instance = new ErisClient(token);
+    instance.on('messageCreate', async (message: Message) => {
       if (message.content === '!ping') {
         logger.info('[discord] pong!');
         await message.channel.createMessage('Pong!');
       }
     });
 
-    await this.instance.connect();
+    await instance.connect();
 
     let secondsWaited = 0;
-    while (!this.instance?.startTime) {
+    while (!instance?.startTime) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       secondsWaited += 1;
 
@@ -25,13 +30,15 @@ export class Discord {
         throw new Error('Bot never became ready');
       }
     }
+
+    instanceCount += 1;
   }
 
-  public async sendDebugLine(message: 'begin' | 'end') {
-    await this.instance?.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
+  public static async sendDebugLine(message: 'begin' | 'end') {
+    await instance?.createMessage(settings.discord.channels.debug, `--- ${message} ---`);
   }
 
-  public async sendDebug(
+  public static async sendDebug(
     message: MessageContent,
     files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
@@ -41,28 +48,28 @@ export class Discord {
     return this.sendMessage(null, message, 'info', files);
   }
 
-  public async sendNews(
+  public static async sendNews(
     message: MessageContent,
     files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.news, message, 'info', files);
   }
 
-  public async sendAlert(
+  public static async sendAlert(
     message: MessageContent,
     files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.alerts, message, 'error', files);
   }
 
-  public async sendMessageToMaintainers(
+  public static async sendMessageToMaintainers(
     message: MessageContent,
     files: FileContent | FileContent[] | undefined = undefined,
   ): Promise<boolean> {
     return this.sendMessage(settings.discord.channels.maintainers, message, 'info', files);
   }
 
-  private async sendMessage(
+  private static async sendMessage(
     channelId: string | null,
     messageContent: MessageContent,
     level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
@@ -73,11 +80,11 @@ export class Discord {
       if (typeof messageContent === 'string') {
         for (const message of Discord.splitMessage(messageContent)) {
           if (channelId) {
-            await this.instance?.createMessage(channelId, message, files);
+            await instance?.createMessage(channelId, message, files);
           }
 
           // Also send to debug channel
-          await this.instance?.createMessage(
+          await instance?.createMessage(
             settings.discord.channels.debug,
             `[${level}] ${message}`,
             files,
@@ -85,12 +92,12 @@ export class Discord {
         }
       } else {
         if (channelId) {
-          await this.instance?.createMessage(channelId, messageContent, files);
+          await instance?.createMessage(channelId, messageContent, files);
         }
 
         // Also send to debug channel
         messageContent.content = `[${level}] ${messageContent.content}`;
-        await this.instance?.createMessage(settings.discord.channels.debug, messageContent, files);
+        await instance?.createMessage(settings.discord.channels.debug, messageContent, files);
       }
 
       isSent = true;
@@ -101,11 +108,19 @@ export class Discord {
     return isSent;
   }
 
-  public async disconnect(): Promise<void> {
-    if (!this.instance) return;
+  public static disconnect() {
+    if (!instance) return;
+    instanceCount -= 1;
 
-    this.instance.disconnect({ reconnect: false });
-    this.instance = null;
+    if (instanceCount > 0) return;
+
+    instance.disconnect({ reconnect: false });
+    instance = null;
+
+    if (instanceCount < 0) {
+      logger.error('Discord instance count is negative! This should not happen');
+      instanceCount = 0;
+    }
   }
 
   // Max message size must account for ellipsis and level parts that are added to the message.

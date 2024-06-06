@@ -23,8 +23,7 @@ export const onCreate = onDocumentCreated(
     secrets: [discordToken],
   },
   async (snapshot: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
-    const discordClient = new Discord();
-    await discordClient.init(discordToken.value());
+    await Discord.init(discordToken.value());
 
     const repoVersionInfo = snapshot.data?.data() as RepoVersionInfo;
     const currentRepoVersion = repoVersionInfo.version;
@@ -36,8 +35,8 @@ export const onCreate = onDocumentCreated(
         Skipped scheduling all editorVersions for new repoVersion,
         as it does not seem to be the newest version.`;
       logger.warn(semverMessage);
-      await discordClient.sendAlert(semverMessage);
-      await discordClient.disconnect();
+      await Discord.sendAlert(semverMessage);
+      Discord.disconnect();
       return;
     }
 
@@ -100,7 +99,7 @@ export const onCreate = onDocumentCreated(
       const skippedVersionsMessage = `
         Skipped creating CiJobs for the following jobs \`${skippedVersions.join('`, `')}\`.`;
       logger.warn(skippedVersionsMessage);
-      await discordClient.sendAlert(skippedVersionsMessage);
+      await Discord.sendAlert(skippedVersionsMessage);
     }
 
     // Report that probably many new jobs have now been scheduled
@@ -110,7 +109,7 @@ export const onCreate = onDocumentCreated(
     const newJobs = CiJobs.pluralise(totalNewJobs);
     const newJobsMessage = `Created ${newJobs} for version \`${currentRepoVersion}\` of unity-ci/docker.`;
     logger.info(newJobsMessage);
-    await discordClient.sendNews(newJobsMessage);
+    await Discord.sendNews(newJobsMessage);
 
     // Supersede any non-complete jobs before the current version
     const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(currentRepoVersion);
@@ -118,11 +117,11 @@ export const onCreate = onDocumentCreated(
       const replacementMessage = `
       ${CiJobs.pluralise(numSuperseded)} that were for older versions are now superseded.`;
       logger.warn(replacementMessage);
-      await discordClient.sendMessageToMaintainers(replacementMessage);
+      await Discord.sendMessageToMaintainers(replacementMessage);
     } else {
       logger.debug('no versions were superseded, as expected.');
     }
 
-    await discordClient.disconnect();
+    await Discord.disconnect();
   },
 );

@@ -7,10 +7,7 @@ const plural = (amount: number) => {
   return amount === 1 ? 'version' : 'versions';
 };
 
-export const updateDatabase = async (
-  ingestedInfoList: EditorVersionInfo[],
-  discordClient: Discord,
-): Promise<void> => {
+export const updateDatabase = async (ingestedInfoList: EditorVersionInfo[]): Promise<void> => {
   const existingInfoList = await EditorVersionInfo.getAll();
 
   const newVersions: EditorVersionInfo[] = [];
@@ -50,8 +47,8 @@ export const updateDatabase = async (
   message = message.trimEnd();
   if (message.length >= 1) {
     logger.info(message);
-    await discordClient.sendMessageToMaintainers(message);
+    await Discord.sendMessageToMaintainers(message);
   } else {
-    await discordClient.sendDebug('Database is up-to-date. (no updated Unity versions found)');
+    await Discord.sendDebug('Database is up-to-date. (no updated Unity versions found)');
   }
 };

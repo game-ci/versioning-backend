@@ -8,12 +8,12 @@ export class Cleaner {
 
   static buildsProcessed: number;
 
-  public static async cleanUp(discordClient: Discord) {
+  public static async cleanUp() {
     this.buildsProcessed = 0;
-    await this.cleanUpBuildsThatDidntReportBack(discordClient);
+    await this.cleanUpBuildsThatDidntReportBack();
   }
 
-  private static async cleanUpBuildsThatDidntReportBack(discordClient: Discord) {
+  private static async cleanUpBuildsThatDidntReportBack() {
     const startedBuilds = await CiBuilds.getStartedBuilds();
 
     for (const startedBuild of startedBuilds) {
@@ -27,7 +27,7 @@ export class Cleaner {
 
       if (publishedDate) {
         const buildWasPublishedAlreadyMessage = `[Cleaner] Build "${tag}" has a publication date, but it's status is "started". Was a rebuild requested for this build?`;
-        await discordClient.sendDebug(buildWasPublishedAlreadyMessage);
+        await Discord.sendDebug(buildWasPublishedAlreadyMessage);
 
         // Maybe set status to published. However, that will increase complexity.
         // Deleting a tag from dockerhub and rebuilding will yield this error currently.
@@ -38,7 +38,7 @@ export class Cleaner {
 
       if (!lastBuildStart) {
         // In theory this should never happen.
-        await discordClient.sendAlert(
+        await Discord.sendAlert(
           `[Cleaner] Build "${tag}" with status "started" does not have a "lastBuildStart" date.`,
         );
         continue;
@@ -59,7 +59,7 @@ export class Cleaner {
         // Image does not exist
         if (!response) {
           const markAsFailedMessage = `[Cleaner] Build for "${tag}" with status "started" never reported back in. Marking it as failed. It will retry automatically.`;
-          await discordClient.sendAlert(markAsFailedMessage);
+          await Discord.sendAlert(markAsFailedMessage);
           await CiBuilds.markBuildAsFailed(buildId, {
             reason: markAsFailedMessage,
           });
@@ -69,7 +69,7 @@ export class Cleaner {
 
         // Image exists
         const markAsSuccessfulMessage = `[Cleaner] Build for "${tag}" got stuck. But the image was successfully uploaded. Marking it as published.`;
-        await discordClient.sendDebug(markAsSuccessfulMessage);
+        await Discord.sendDebug(markAsSuccessfulMessage);
         await CiBuilds.markBuildAsPublished(buildId, jobId, {
           digest: '', // missing from dockerhub v1 api payload
           specificTag: `${baseOs}-${repoVersion}`,

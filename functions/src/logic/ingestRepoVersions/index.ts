@@ -3,16 +3,12 @@ import { Discord } from '../../service/discord';
 import { scrapeVersions } from './scrapeVersions';
 import { updateDatabase } from './updateDatabase';
 
-export const ingestRepoVersions = async (
-  discordClient: Discord,
-  githubPrivateKey: string,
-  githubClientSecret: string,
-) => {
+export const ingestRepoVersions = async (githubPrivateKey: string, githubClientSecret: string) => {
   try {
     const scrapedInfoList = await scrapeVersions(githubPrivateKey, githubClientSecret);
 
     // Note: this triggers repoVersionInfo.onCreate modelTrigger
-    await updateDatabase(scrapedInfoList, discordClient);
+    await updateDatabase(scrapedInfoList);
   } catch (err: any) {
     const message = `
         Something went wrong while importing repository versions for unity-ci/docker:
@@ -20,6 +16,6 @@ export const ingestRepoVersions = async (
       `;
 
     logger.error(message);
-    await discordClient.sendAlert(message);
+    await Discord.sendAlert(message);
   }
 };

@@ -26,12 +26,10 @@ export const trigger = onSchedule(
     secrets: [discordToken, githubPrivateKeyConfigSecret, githubClientSecretConfigSecret],
   },
   async () => {
-    const discordClient = new Discord();
-    await discordClient.init(discordToken.value());
+    await Discord.init(discordToken.value());
 
     try {
       await routineTasks(
-        discordClient,
         githubPrivateKeyConfigSecret.value(),
         githubClientSecretConfigSecret.value(),
       );
@@ -43,29 +41,25 @@ export const trigger = onSchedule(
       const routineTasksFailedMessage = `Something went wrong while running routine tasks.\n${fullError}`;
 
       logger.error(routineTasksFailedMessage);
-      await discordClient.sendAlert(routineTasksFailedMessage);
+      await Discord.sendAlert(routineTasksFailedMessage);
     }
 
-    await discordClient.disconnect();
+    Discord.disconnect();
   },
 );
 
-const routineTasks = async (
-  discordClient: Discord,
-  githubPrivateKey: string,
-  githubClientSecret: string,
-) => {
+const routineTasks = async (githubPrivateKey: string, githubClientSecret: string) => {
   try {
-    await discordClient.sendDebugLine('begin');
+    await Discord.sendDebugLine('begin');
     await dataMigrations();
-    await ingestRepoVersions(discordClient, githubPrivateKey, githubClientSecret);
-    await ingestUnityVersions(discordClient);
-    await cleanUpBuilds(discordClient);
-    await scheduleBuildsFromTheQueue(discordClient, githubPrivateKey, githubClientSecret);
+    await ingestRepoVersions(githubPrivateKey, githubClientSecret);
+    await ingestUnityVersions();
+    await cleanUpBuilds();
+    await scheduleBuildsFromTheQueue(githubPrivateKey, githubClientSecret);
   } catch (error: any) {
     logger.error(error);
-    await discordClient.sendAlert(error);
+    await Discord.sendAlert(error);
   } finally {
-    await discordClient.sendDebugLine('end');
+    await Discord.sendDebugLine('end');
   }
 };

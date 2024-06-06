@@ -3,12 +3,12 @@ import { logger } from 'firebase-functions/v2';
 import { Discord } from '../../service/discord';
 import { scrapeVersions } from './scrapeVersions';
 
-export const ingestUnityVersions = async (discordClient: Discord) => {
+export const ingestUnityVersions = async () => {
   try {
     const scrapedInfoList = await scrapeVersions();
 
     // Note: this triggers editorVersionInfo.onCreate modelTrigger
-    await updateDatabase(scrapedInfoList, discordClient);
+    await updateDatabase(scrapedInfoList);
   } catch (err: any) {
     const message = `
         Something went wrong while importing new versions from unity:
@@ -16,6 +16,6 @@ export const ingestUnityVersions = async (discordClient: Discord) => {
       `;
 
     logger.error(message);
-    await discordClient.sendAlert(message);
+    await Discord.sendAlert(message);
   }
 };

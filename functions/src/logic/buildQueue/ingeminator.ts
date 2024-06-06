@@ -23,7 +23,7 @@ export class Ingeminator {
     this.repoVersionInfo = repoVersionInfo;
   }
 
-  async rescheduleFailedJobs(jobs: CiJobQueue, discordClient: Discord) {
+  async rescheduleFailedJobs(jobs: CiJobQueue) {
     if (jobs.length <= 0) {
       throw new Error(
         '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
@@ -37,15 +37,15 @@ export class Ingeminator {
         );
       }
 
-      await this.rescheduleFailedBuildsForJob(job, discordClient);
+      await this.rescheduleFailedBuildsForJob(job);
     }
   }
 
-  private async rescheduleFailedBuildsForJob(job: CiJobQueueItem, discordClient: Discord) {
+  private async rescheduleFailedBuildsForJob(job: CiJobQueueItem) {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      await discordClient.sendDebug(
+      await Discord.sendDebug(
         `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
       );
       return;
@@ -56,7 +56,7 @@ export class Ingeminator {
 
       // Space for more?
       if (this.numberToSchedule <= 0) {
-        await discordClient.sendDebug(
+        await Discord.sendDebug(
           `[Ingeminator] waiting for more spots to become available for builds of ${jobId}.`,
         );
         return;
@@ -78,9 +78,9 @@ export class Ingeminator {
         const alertingPeriodMilliseconds = alertingPeriodMinutes * 60 * 1000;
         if (lastFailure.toMillis() + alertingPeriodMilliseconds >= Timestamp.now().toMillis()) {
           logger.error(maxRetriesReachedMessage);
-          await discordClient.sendAlert(maxRetriesReachedMessage);
+          await Discord.sendAlert(maxRetriesReachedMessage);
         } else {
-          await discordClient.sendDebug(maxRetriesReachedMessage);
+          await Discord.sendDebug(maxRetriesReachedMessage);
         }
 
         return;
@@ -90,7 +90,7 @@ export class Ingeminator {
       const backoffMinutes = failureCount * 15;
       const backoffMilliseconds = backoffMinutes * 60 * 1000;
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
-        await discordClient.sendDebug(
+        await Discord.sendDebug(
           `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
         );
         continue;
@@ -98,24 +98,16 @@ export class Ingeminator {
 
       // Schedule a build
       this.numberToSchedule -= 1;
-      if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData, discordClient))) {
+      if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData))) {
         return;
       }
     }
 
     await CiJobs.markJobAsScheduled(jobId);
-    await discordClient.sendDebug(
-      `[Ingeminator] rescheduled any failing editor images for ${jobId}.`,
-    );
+    await Discord.sendDebug(`[Ingeminator] rescheduled any failing editor images for ${jobId}.`);
   }
 
-  public async rescheduleBuild(
-    jobId: string,
-    jobData: CiJob,
-    buildId: string,
-    buildData: CiBuild,
-    discordClient: Discord,
-  ) {
+  public async rescheduleBuild(jobId: string, jobData: CiJob, buildId: string, buildData: CiBuild) {
     // Info from job
     const { editorVersionInfo } = jobData;
     const { version: editorVersion, changeSet } = editorVersionInfo as EditorVersionInfo;
@@ -151,7 +143,7 @@ export class Ingeminator {
         [Ingeminator] failed to ingeminate job ${jobId},
         status: ${response.status}, response: ${response.data}.`;
       logger.error(failureMessage);
-      await discordClient.sendAlert(failureMessage);
+      await Discord.sendAlert(failureMessage);
       return false;
     }
 

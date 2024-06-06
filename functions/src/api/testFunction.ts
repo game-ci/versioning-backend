@@ -23,12 +23,11 @@ export const testFunction = onRequest(
   },
   async (request: Request, response: Response) => {
     // Run all non-sensitive functions to verify that the deployment is working.
-    const discordClient = new Discord();
     let info = 'Ok';
     let code = 200;
 
     try {
-      await discordClient.init(discordToken.value());
+      await Discord.init(discordToken.value());
 
       const versions = await scrapeVersions(
         githubPrivateKeyConfigSecret.value(),
@@ -53,7 +52,7 @@ export const testFunction = onRequest(
       info = error.message;
       code = 500;
     } finally {
-      await discordClient.disconnect();
+      await Discord.disconnect();
     }
 
     response.status(code).send(info);

@@ -16,8 +16,7 @@ const githubClientSecret = defineSecret('GITHUB_CLIENT_SECRET');
 export const retryBuild = onRequest(
   { secrets: [discordToken, githubClientSecret, githubPrivateKey] },
   async (request: Request, response: Response) => {
-    const discordClient = new Discord();
-    await discordClient.init(discordToken.value());
+    await Discord.init(discordToken.value());
 
     try {
       response.set('Content-Type', 'application/json');
@@ -82,13 +81,7 @@ export const retryBuild = onRequest(
       const gitHubClient = await GitHub.init(githubPrivateKey.value(), githubClientSecret.value());
       const repoVersionInfo = await RepoVersionInfo.getLatest();
       const scheduler = new Ingeminator(1, gitHubClient, repoVersionInfo);
-      const scheduledSuccessfully = await scheduler.rescheduleBuild(
-        jobId,
-        job,
-        buildId,
-        build,
-        discordClient,
-      );
+      const scheduledSuccessfully = await scheduler.rescheduleBuild(jobId, job, buildId, build);
 
       // Report result
       if (scheduledSuccessfully) {
@@ -108,5 +101,7 @@ export const retryBuild = onRequest(
       console.log('error', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       response.status(401).send({ message: 'Unauthorized' });
     }
+
+    Discord.disconnect();
   },
 );
