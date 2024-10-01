@@ -23,6 +23,7 @@ This guide will help you set up the development environment, deploy the backend,
   * [Updating Configuration Variables in Firebase](#updating-configuration-variables-in-firebase)
   * [Local Development Commands](#local-development-commands)
   * [Troubleshooting & Tips](#troubleshooting--tips)
+  * [Contributing](#contributing)
 <!-- TOC -->
 
 ## Prerequisites
@@ -30,7 +31,7 @@ This guide will help you set up the development environment, deploy the backend,
 Ensure you have the following installed:
 
 - **Node.js** (Recommended: Version 20 or later)
-- **npm** (Node package manager)
+- **Yarn** (Package manager)
 
 ## Setup
 
@@ -39,7 +40,7 @@ Ensure you have the following installed:
 To interact with Firebase, install the Firebase CLI globally:
 
 ```bash
-npm install -g firebase-tools
+yarn global add firebase-tools
 ```
 
 ### 2. Install Project Dependencies
@@ -47,7 +48,7 @@ npm install -g firebase-tools
 Navigate to the project directory and install all required dependencies:
 
 ```bash
-npm install
+yarn install
 ```
 
 ### 3. Run the Project Locally
