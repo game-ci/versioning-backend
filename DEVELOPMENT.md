@@ -188,4 +188,10 @@ firebase functions:config:set internal.token="your_internal_token"
 - **Ensure Environment Variables are Set:** Make sure all necessary environment variables are set correctly before running the emulators or deploying.
 - **Testing Integrations Locally:** When testing functionality that requires external services (e.g., Discord, GitHub), ensure your local credentials are set up as described above.
 
-Happy coding!
+---
+
+## Contributing
+
+If you're interested in contributing to the project, make sure to review our [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines, code style, and other requirements.
+
+Happy coding! ❤️
