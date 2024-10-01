@@ -76,3 +76,9 @@ More information about the `backfire` tool can be found in the [official documen
 ## Development
 
 For instructions on setting up the development environment, running the project locally, and deploying changes, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+---
+
+## Contributing
+
+We welcome contributions to improve this project! If you'd like to contribute, please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to get started.
