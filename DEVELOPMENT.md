@@ -30,8 +30,8 @@ This guide will help you set up the development environment, deploy the backend,
 
 Ensure you have the following installed:
 
-- **Node.js** (Recommended: Version 20 or later)
-- **Yarn** (Package manager)
+- [**Node.js**](https://nodejs.org/en) (Recommended: Version 20 or later)
+- [**Yarn**](https://classic.yarnpkg.com/en/docs/install/) (Package manager)
 
 ## Setup
 
