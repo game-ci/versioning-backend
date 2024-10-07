@@ -40,7 +40,7 @@ Ensure you have the following installed:
 To interact with Firebase, install the Firebase CLI globally:
 
 ```bash
-yarn global add firebase-tools
+npm i -g firebase-tools
 ```
 
 ### 2. Install Project Dependencies
