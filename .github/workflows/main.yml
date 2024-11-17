@@ -53,7 +53,7 @@ jobs:
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
       - name: Deploy test to Firebase
-        uses: w9jds/firebase-action@v13.10.2
+        uses: w9jds/firebase-action@v13.25.0
         with:
           args: deploy --only functions:testFunction
         env:
@@ -63,7 +63,7 @@ jobs:
         run: curl -f -s -S -X POST https://testfunction-wbe4ukn6tq-ey.a.run.app
 
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v13.10.2
+        uses: w9jds/firebase-action@v13.25.0
         if: always()
         with:
           args: functions:delete testFunction --force
@@ -84,13 +84,13 @@ jobs:
       - name: install dependencies
         run: yarn && yarn --cwd ./functions
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v13.10.2
+        uses: w9jds/firebase-action@v13.25.0
         with:
           args: deploy
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v13.10.2
+        uses: w9jds/firebase-action@v13.25.0
         if: always()
         with:
           args: functions:delete testFunction --force
