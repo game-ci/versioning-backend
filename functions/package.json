@@ -25,7 +25,8 @@
     "jsdom": "^24.1.0",
     "lodash": "^4.17.21",
     "node-fetch": "^2.7.0",
-    "semver": "^7.6.2"
+    "semver": "^7.6.2",
+    "unity-changeset": "^2.3.0"
   },
   "devDependencies": {
     "@octokit/types": "^13.5.0",
