@@ -1,5 +1,5 @@
-import { EditorVersionInfo } from "../../model/editorVersionInfo";
-import { searchChangesets, SearchMode } from "unity-changeset";
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
+import { searchChangesets, SearchMode } from 'unity-changeset';
 
 const unity_version_regex = /^(\d+)\.(\d+)\.(\d+)([a-zA-Z]+)(-?\d+)$/;
 
@@ -13,7 +13,7 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
         if (match) {
           const [_, major, minor, patch, lifecycle, build] = match;
 
-          if (lifecycle !== "f" || Number(major) < 2017) {
+          if (lifecycle !== 'f' || Number(major) < 2017) {
             return null;
           }
 
@@ -27,10 +27,8 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
         }
         return null;
       })
-      .filter((versionInfo): versionInfo is EditorVersionInfo =>
-        versionInfo !== null
-      );
+      .filter((versionInfo): versionInfo is EditorVersionInfo => versionInfo !== null);
   }
 
-  throw new Error("No Unity versions found!");
+  throw new Error('No Unity versions found!');
 };
