@@ -1,53 +1,33 @@
-import { getDocumentFromUrl } from '../utils/get-document-from-url';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
+import { searchChangesets, SearchMode } from 'unity-changeset';
 
-const UNITY_ARCHIVE_URL = 'https://unity.com/releases/editor/archive';
-const unity_version_regex = /unityhub:\/\/(\d+)\.(\d+)\.(\d+[a-zA-Z]\d+)\/(\w+)/g;
+const unity_version_regex = /^(\d+)\.(\d+)\.(\d+)([a-zA-Z]+)(-?\d+)$/;
 
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
-  const document = await getDocumentFromUrl(UNITY_ARCHIVE_URL);
+  const unityVersions = await searchChangesets(SearchMode.Default);
 
-  const scripts = document.querySelectorAll('script');
+  if (unityVersions?.length > 0) {
+    return unityVersions
+      .map((unityVersion) => {
+        const match = RegExp(unity_version_regex).exec(unityVersion.version);
+        if (match) {
+          const [_, major, minor, patch, lifecycle, build] = match;
 
-  const allVersions = new Map<string, EditorVersionInfo>();
-
-  for (const script of scripts) {
-    if (script.textContent) {
-      const matches = [...script.textContent.matchAll(unity_version_regex)];
-      if (matches.length > 0) {
-        const versions = matches
-          .filter((match) => {
-            // Filter out prerelease and unsupported versions
-            const [_, major, minor, patch, changeSet] = match;
-            return patch.includes('f') && Number(major) >= 2017;
-          })
-          .map((match) => {
-            const [_, major, minor, patch, changeSet] = match;
-            const version = `${major}.${minor}.${patch}`;
-            if (!allVersions.has(version)) {
-              return {
-                version,
-                changeSet,
-                major: Number(major),
-                minor: Number(minor),
-                patch,
-              };
-            }
-
-            // Return null if version is not unique
+          if (lifecycle !== 'f' || Number(major) < 2017) {
             return null;
-          })
-          .filter((version) => version !== null) as EditorVersionInfo[];
+          }
 
-        versions.forEach((it) => {
-          allVersions.set(it.version, it);
-        });
-      }
-    }
-  }
-
-  if (allVersions.size > 0) {
-    return Array.from(allVersions.values());
+          return {
+            version: unityVersion.version,
+            changeSet: unityVersion.changeset,
+            major: Number(major),
+            minor: Number(minor),
+            patch,
+          } as EditorVersionInfo;
+        }
+        return null;
+      })
+      .filter((versionInfo): versionInfo is EditorVersionInfo => versionInfo !== null);
   }
 
   throw new Error('No Unity versions found!');
