@@ -26,7 +26,7 @@
   },
   "homepage": "https://github.com/game-ci/versioning-backend#readme",
   "dependencies": {
-    "@google-cloud/firestore": "^7.8.0",
+    "@google-cloud/firestore": "^7.11.0",
     "firebase-tools": "^13.10.2",
     "firestore-backfire": "^2.5.3",
     "prettier": "^2.8.7"
