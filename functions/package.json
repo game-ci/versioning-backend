@@ -21,7 +21,7 @@
     "eris": "^0.17.2",
     "firebase-admin": "^12.7.0",
     "firebase-functions": "^6.1.0",
-    "graphql": "^16.9.0",
+    "graphql": "^16.10.0",
     "lodash": "^4.17.21",
     "node-fetch": "^2.7.0",
     "semver": "^7.6.3",
