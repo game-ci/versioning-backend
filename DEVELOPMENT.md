@@ -38,7 +38,7 @@ yarn install
 firebase emulators:start
 ```
 
-This starts the Firebase emulators for Functions and Firestore.
+This starts the Firebase emulators for Functions and Firestore, with hosting on port 5002 to avoid common port conflicts.
 
 #### Prerequisites for Emulators
 
@@ -47,7 +47,9 @@ This starts the Firebase emulators for Functions and Firestore.
 
 #### Port Configuration
 
-On macOS, port 5000 (used by the Hosting emulator) might be in use by AirPlay Receiver. You can configure a different port in your `firebase.json`:
+This project's `firebase.json` is already configured to use port 5002 for the hosting emulator instead of the default port 5000, which helps avoid conflicts with AirPlay Receiver on macOS.
+
+You're free to customize these ports for your local development environment as needed. If you encounter port conflicts, you can modify the port numbers in your `firebase.json`:
 
 ```json
 {
@@ -64,6 +66,8 @@ On macOS, port 5000 (used by the Hosting emulator) might be in use by AirPlay Re
   }
 }
 ```
+
+Modifying these ports only affects local development environment and won't impact deployment.
 
 ## Credentials Setup
 
@@ -161,7 +165,9 @@ firebase functions:config:set internal.token="your_internal_token"
 - **Firebase Login Issues**: Make sure you have access to the Firebase project
 - **Emulator Port Conflicts**: 
   - Check for services using ports 4000, 5001, 8080, or 9000
-  - On macOS, port 5000 is commonly used by AirPlay Receiver - configure a different port as shown in the [Port Configuration](#port-configuration) section
+  - This project uses port 5002 for hosting to avoid conflicts with AirPlay Receiver on macOS
+  - Feel free to change any port in your local `firebase.json` if you encounter conflicts
+  - See the [Port Configuration](#port-configuration) section for details
 - **Java Not Found Error**: 
   - The Firebase emulators require Java to be installed
   - On macOS, install Java using `brew install openjdk@17` or download from [java.com](https://www.java.com)
