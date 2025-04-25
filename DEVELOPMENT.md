@@ -1,119 +1,136 @@
-# Development
+# Development Guide
+
+This guide helps you set up the development environment for the GameCI Versioning Backend.
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) v20+ (required for Firebase Functions)
+- [Yarn](https://yarnpkg.com/) for package management
+- [Firebase CLI](https://firebase.google.com/docs/cli) for local development and deployment
+
+> **Tip:** Use [nvm](https://github.com/nvm-sh/nvm), [n](https://github.com/tj/n), or [volta](https://volta.sh/) to manage Node.js versions.
 
 ## Setup
 
-Install firebase globally
+### 1. Install Firebase CLI
 
 ```bash
 npm i -g firebase-tools
 ```
 
-Install dependencies
+### 2. Install Dependencies
+
+Install dependencies in both root repository and `functions` directory:
 
 ```bash
-npm install
+yarn install
 ```
-
-Run everything locally
 
 ```bash
-firebase serve
+cd functions
+yarn install
 ```
+
+### 3. Run Locally
+
+```bash
+firebase emulators:start
+```
+
+This starts the Firebase emulators for Functions and Firestore.
+
+## Credentials Setup
+
+### Firebase Admin SDK
+
+To use Firebase Admin SDK locally:
+
+1. Download a service account key from your Firebase project settings
+2. Set the environment variable to the key file
+
+**Linux / macOS**:
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-file.json"
+```
+
+**Windows (PowerShell)**:
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\service-account-file.json"
+```
+
+### Integration Environment Variables
+
+To test integrations locally, set these environment variables:
+
+**Discord**:
+```bash
+export discord.token="your_discord_token"
+```
+
+**GitHub**:
+```bash
+export github.client-secret="your_github_app_client_secret"
+export github.private-key="your_github_app_private_key"
+```
+
+**Internal Token**:
+```bash
+export internal.token="your_internal_token"
+```
+
+> The internal token is used for self-authentication and communication with the [docker repo](https://github.com/Unity-CI/docker).
 
 ## Deployment
 
-___Note:__ for this you will need access to the project._
+> **Note:** You need project access to deploy.
 
-Login to your account
+1. Login to Firebase:
+   ```bash
+   firebase login
+   ```
 
-```bash
-firebase login
-```
+2. Deploy everything:
+   ```bash
+   firebase deploy
+   ```
 
-Deploy everything
+   Or deploy specific services:
+   ```bash
+   firebase deploy --only functions
+   ```
 
-```bash
-firebase deploy
-```
+## Firebase Configuration
 
-## Additional local setup (optional)
-
-#### Credentials
-
-To be able to use functions that use the Firebase AdminSDK you need to set credentials.
-
-1. Download the service account file from firebase
-2. Set the path to that file to an environment variable
-
-__Linux / MacOS__
+Update environment variables in Firebase (useful when rotating tokens or migrating environments):
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/home/user/Downloads/service-account-file.json"
+firebase functions:config:set discord.token="your_discord_token"
+firebase functions:config:set github.client-secret="your_github_app_client_secret"
+firebase functions:config:set github.private-key="your_github_app_private_key"
+firebase functions:config:set internal.token="your_internal_token"
 ```
 
-__Windows (PowerShell)__
+## Development Workflow
 
-```ps
-$env:GOOGLE_APPLICATION_CREDENTIALS="C:\Users\username\Downloads\service-account-file.json"
-```
+1. Make changes to code in `functions/src/`
+2. Run the emulator to test locally:
+   ```bash
+   firebase emulators:start
+   ```
+3. For hot reloading during development:
+   ```bash
+   # In one terminal
+   cd functions && yarn watch
+   
+   # In another terminal  
+   firebase emulators:start
+   ```
+4. Test your changes
+5. Deploy when ready
 
-_(for more information, please see the [docs](https://firebase.google.com/docs/admin/setup))_
+## Troubleshooting
 
-#### Integrations
-
-To test specific functionality like the integrations you will also have to set the following environment variables
-
-__Discord__
-
-```bash
-export discord.token="my_discord_token"
-```
-
-__Github__
-
-```bash
-export github.client-secret="my_github_app_client_secret"`
-export github.private-key="my_github_app_private_key"
-```
-
-__Internal__
-
-_Internal token is used for self-authentication and for communication with th
-[docker repo](https://github.com/Unity-CI/docker)._
-
-```
-export internal.token="my_internal_token"
-```
-
-_(value can be any single-line string, as long as it's the same in the docker repo)_
-
-## Local Commands
-
-In order to run firebase locally simply use
-
-```
-firebase serve
-```
-
-To only run one component, like `hosting`, `functions` or `firestore` you may use the `--only` flag.
-
-```
-firebase serve --only functions
-```
-
-If everything works, finally deploy the changes
-
-```
-firebase deploy
-```
-
-## Updating env/config variables 
-
-_Typically this is only needed when migrating to new firebase project or environment, or when security token needs to rotate._
-
-```
-firebase functions:config:set discord.token="my_discord_token"
-firebase functions:config:set github.client-secret="my_github_app_client_secret"
-firebase functions:config:set discord.private-key="my_github_app_private_key"
-firebase functions:config:set internal.token="my_internal_token"
-```
+- **Firebase Login Issues**: Make sure you have access to the Firebase project
+- **Emulator Port Conflicts**: Check for services using ports 4000, 5001, 8080, or 9000
+- **Admin SDK Errors**: Verify your service account file has the correct permissions
+- **Integration Issues**: Ensure environment variables are correctly set
