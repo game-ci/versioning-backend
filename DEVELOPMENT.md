@@ -32,7 +32,69 @@ cd functions
 yarn install
 ```
 
-### 3. Run Locally
+### 3. Build Functions Code
+
+Before running the emulators, you need to build the functions code:
+
+```bash
+cd functions
+yarn build
+```
+
+This will compile the TypeScript code into JavaScript in the `lib` directory, which the emulator needs to run the functions.
+
+### 4. Set Up Credentials
+
+> **Note**: For basic local development and testing, you can skip this step initially. You'll see some warnings in the emulator output, but most functionality will still work. If you need to test integrations or need full functionality, follow these steps.
+
+#### Firebase Admin SDK
+
+To use Firebase Admin SDK locally:
+
+1. Download a service account key from your Firebase project settings:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Select your project
+   - Go to Project Settings > Service accounts
+   - Click "Generate new private key"
+   - Save the JSON file securely
+
+2. Set the environment variable to the key file:
+
+**Linux / macOS**:
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
+```
+
+**Windows (PowerShell)**:
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
+```
+
+> Note: Without this setup, you'll see warnings about being unable to fetch Admin SDK configuration, but the emulators will still run in a limited capacity.
+
+#### Integration Environment Variables
+
+To test integrations locally, set these environment variables:
+
+**Discord**:
+```bash
+export DISCORD_TOKEN="your_discord_token"
+```
+
+**GitHub**:
+```bash
+export GITHUB_CLIENT_SECRET="your_github_app_client_secret"
+export GITHUB_PRIVATE_KEY="your_github_app_private_key"
+```
+
+**Internal Token**:
+```bash
+export INTERNAL_TOKEN="your_internal_token"
+```
+
+> The internal token is used for self-authentication and communication with the [docker repo](https://github.com/Unity-CI/docker).
+
+### 5. Run Locally
 
 ```bash
 firebase emulators:start
@@ -145,11 +207,15 @@ firebase functions:config:set internal.token="your_internal_token"
 ## Development Workflow
 
 1. Make changes to code in `functions/src/`
-2. Run the emulator to test locally:
+2. Build the functions code:
+   ```bash
+   cd functions && yarn build
+   ```
+3. Run the emulator to test locally:
    ```bash
    firebase emulators:start
    ```
-3. For hot reloading during development:
+4. For hot reloading during development:
    ```bash
    # In one terminal
    cd functions && yarn watch
@@ -157,8 +223,8 @@ firebase functions:config:set internal.token="your_internal_token"
    # In another terminal  
    firebase emulators:start
    ```
-4. Test your changes
-5. Deploy when ready
+5. Test your changes
+6. Deploy when ready
 
 ## Troubleshooting
 
@@ -172,5 +238,13 @@ firebase functions:config:set internal.token="your_internal_token"
   - The Firebase emulators require Java to be installed
   - On macOS, install Java using `brew install openjdk@17` or download from [java.com](https://www.java.com)
   - Make sure Java is on your PATH: `java -version` should return the installed version
-- **Admin SDK Errors**: Verify your service account file has the correct permissions
-- **Integration Issues**: Ensure environment variables are correctly set
+- **Missing Functions Library Error** (`functions/lib/index.js does not exist`):
+  - This indicates that the TypeScript code hasn't been compiled
+  - Run `cd functions && yarn build` to compile the code
+  - If that doesn't work, check for TypeScript compilation errors in the build output
+- **Admin SDK Configuration Errors**:
+  - Set up the `GOOGLE_APPLICATION_CREDENTIALS` environment variable as described in the [Set Up Credentials](#4-set-up-credentials) section
+  - For testing, you can often ignore this warning as the emulators will still run with limited functionality
+- **Integration Issues**: 
+  - Ensure all required environment variables are correctly set
+  - For local development without integration testing, you can often proceed without setting these variables
