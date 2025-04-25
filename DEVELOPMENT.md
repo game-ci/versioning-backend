@@ -64,18 +64,18 @@ To test integrations locally, set these environment variables:
 
 **Discord**:
 ```bash
-export discord.token="your_discord_token"
+export DISCORD_TOKEN="your_discord_token"
 ```
 
 **GitHub**:
 ```bash
-export github.client-secret="your_github_app_client_secret"
-export github.private-key="your_github_app_private_key"
+export GITHUB_CLIENT_SECRET="your_github_app_client_secret"
+export GITHUB_PRIVATE_KEY="your_github_app_private_key"
 ```
 
 **Internal Token**:
 ```bash
-export internal.token="your_internal_token"
+export INTERNAL_TOKEN="your_internal_token"
 ```
 
 > The internal token is used for self-authentication and communication with the [docker repo](https://github.com/Unity-CI/docker).
@@ -109,6 +109,8 @@ firebase functions:config:set github.client-secret="your_github_app_client_secre
 firebase functions:config:set github.private-key="your_github_app_private_key"
 firebase functions:config:set internal.token="your_internal_token"
 ```
+
+> Note: Firebase Functions configuration uses dot notation (e.g., `internal.token`) when setting with the CLI, but when using environment variables locally, use uppercase without dots (e.g., `INTERNAL_TOKEN`). This is due to how Firebase handles different configuration methods.
 
 ## Development Workflow
 
