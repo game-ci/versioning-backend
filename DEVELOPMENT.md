@@ -50,12 +50,12 @@ To use Firebase Admin SDK locally:
 
 **Linux / macOS**:
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-file.json"
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
 ```
 
 **Windows (PowerShell)**:
 ```powershell
-$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\service-account-file.json"
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
 ```
 
 ### Integration Environment Variables
