@@ -25,7 +25,7 @@
     "lodash": "^4.17.21",
     "node-fetch": "^2.7.0",
     "semver": "^7.6.3",
-    "unity-changeset": "^2.3.0"
+    "unity-changeset": "^2.5.0"
   },
   "devDependencies": {
     "@octokit/types": "^13.5.0",
