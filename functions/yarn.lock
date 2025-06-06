@@ -2072,10 +2072,10 @@ end-of-stream@^1.4.1:
   dependencies:
     once "^1.4.0"
 
-eris@^0.17.2:
-  version "0.17.2"
-  resolved "https://registry.yarnpkg.com/eris/-/eris-0.17.2.tgz#927542885b3b2ba6b14fffaaac85aa7ba02dc2ed"
-  integrity sha512-OzffDSL81VooFXfRn56ienSg7J6fagoN8WdkmCHjn0B9a4jUA3bVouMztQiaXT54jHV5jaX9D0mJ/b9/0mFoVg==
+eris@^0.18.0:
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/eris/-/eris-0.18.0.tgz#41e34179fd6759a046d24b5ec2d114439370d9ab"
+  integrity sha512-zv2hjAfs4SYjR/EHUwBGNoKClctbqki1jPMed4SiQ4KKfafV1MIBLqKodQSGDgT9qkSUI5+MQ4EQW/8MkbAPkg==
   dependencies:
     ws "^8.2.3"
   optionalDependencies:
