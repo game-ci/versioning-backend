@@ -1,11 +1,16 @@
-import { defineConfig } from 'vitest/config';
+import { defineProject } from 'vitest/config';
+import { baseConfig } from '../vitest.config.base';
 
-export default defineConfig({
+export default defineProject({
+  ...baseConfig,
   test: {
+    ...baseConfig.test,
+    include: [
+      'test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'src/**/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+    ],
+    exclude: ['node_modules', 'dist', '.idea', '.git', 'coverage'],
     globals: true,
     environment: 'node',
-    include: ['test/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}', 'src/**/__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.nyc_output', 'coverage'],
-    root: './',
   },
 });

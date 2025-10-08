@@ -10,6 +10,7 @@
     "lint": "prettier --check \"functions/src/**/*.{js,jsx,ts,tsx}\"",
     "format": "prettier --write \"functions/src/**/*.{js,jsx,ts,tsx}\"",
     "test": "vitest",
+    "coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
   },
@@ -36,13 +37,14 @@
     "firestore-backfire": "^2.5.3",
     "prettier": "^2.8.7"
   },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "vitest": "^3.2.4"
+  },
   "volta": {
     "node": "22.20.0",
     "yarn": "4.10.3"
   },
-  "packageManager": "yarn@4.10.3",
-  "devDependencies": {
-    "@vitest/ui": "^3.2.4",
-    "vitest": "^3.2.4"
-  }
+  "packageManager": "yarn@4.10.3"
 }

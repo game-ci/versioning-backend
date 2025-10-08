@@ -30,7 +30,15 @@ jobs:
         run: yarn lint && yarn workspace functions lint
 
       - name: run tests
-        run: yarn test && yarn workspace functions test
+        run: yarn coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: webbertakken/minigames
+          files: ./apps/*/coverage/lcov.info,./packages/*/coverage/lcov.info
+          flags: unittests,integration
 
   build:
     name: 🛠 Build
