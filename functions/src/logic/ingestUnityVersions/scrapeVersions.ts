@@ -5,6 +5,15 @@ const unity_version_regex = /^(\d+)\.(\d+)\.(\d+)([a-zA-Z]+)(-?\d+)$/;
 
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
   const unityVersions = await searchChangesets(SearchMode.Default);
+  const unityXltsVersions = await searchChangesets(SearchMode.XLTS);
+
+  // Merge XLTS versions into main list, avoiding duplicates
+  const existingVersions = new Set(unityVersions.map((v) => v.version));
+  for (const xltsVersion of unityXltsVersions) {
+    if (!existingVersions.has(xltsVersion.version)) {
+      unityVersions.push(xltsVersion);
+    }
+  }
 
   if (unityVersions?.length > 0) {
     return unityVersions
