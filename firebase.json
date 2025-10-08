@@ -4,19 +4,16 @@
     "indexes": "firestore.indexes.json"
   },
   "functions": {
+    "runtime": "nodejs22",
     "predeploy": [
-      "yarn --cwd \"$RESOURCE_DIR\" lint",
-      "yarn --cwd \"$RESOURCE_DIR\" test",
-      "yarn --cwd \"$RESOURCE_DIR\" build"
+      "yarn workspace functions lint",
+      "yarn workspace functions test",
+      "yarn workspace functions build"
     ]
   },
   "hosting": {
     "public": "public",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
   },
   "storage": {
     "rules": "storage.rules"

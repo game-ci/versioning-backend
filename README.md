@@ -60,12 +60,14 @@ The Ingeminator ("repeater") handles the reliability of the build system:
 ## Database Backup
 
 Back up the Firestore database:
+
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
 yarn run backfire export ./export/versioningBackendBackup --project unity-ci-versions --keyFile $GOOGLE_APPLICATION_CREDENTIALS
 ```
 
 Restore a backup:
+
 ```bash
 yarn run backfire import ./export/versioningBackendBackup --project unity-ci-versions --keyFile $GOOGLE_APPLICATION_CREDENTIALS
 ```
