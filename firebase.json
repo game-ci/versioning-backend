@@ -6,9 +6,9 @@
   "functions": {
     "runtime": "nodejs24",
     "predeploy": [
-      "yarn --cwd \"$RESOURCE_DIR\" lint",
-      "yarn --cwd \"$RESOURCE_DIR\" test",
-      "yarn --cwd \"$RESOURCE_DIR\" build"
+      "yarn workspace functions lint",
+      "yarn workspace functions test",
+      "yarn workspace functions build"
     ]
   },
   "hosting": {
