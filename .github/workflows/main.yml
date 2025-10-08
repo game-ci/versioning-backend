@@ -9,34 +9,50 @@ jobs:
     name: 🧪 Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: package.json
           cache: 'yarn'
-      - name: install dependencies
-        run: yarn && yarn --cwd ./functions
+
+      - name: Install deps
+        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+
       - name: run linter
         run: yarn lint && yarn --cwd ./functions lint
+
       - name: run tests
         run: yarn test && yarn --cwd ./functions test
-  #      - name: Upload test results
-  #        uses: actions/upload-artifact@v1
-  #        with:
-  #          name: Test results
-  #          path: "**/artifacs"
 
   build:
     name: 🛠 Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: package.json
           cache: 'yarn'
-      - name: install dependencies
-        run: yarn && yarn --cwd ./functions
+
+      - name: Install deps
+        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+
       - name: build
         run: yarn --cwd ./functions build
 
@@ -45,13 +61,23 @@ jobs:
     needs: [test, build]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: package.json
           cache: 'yarn'
-      - name: install dependencies
-        run: yarn && yarn --cwd ./functions
+
+      - name: Install deps
+        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+
       - name: Deploy test to Firebase
         uses: w9jds/firebase-action@v13.25.0
         with:
@@ -76,19 +102,30 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: package.json
           cache: 'yarn'
-      - name: install dependencies
-        run: yarn && yarn --cwd ./functions
+
+      - name: Install deps
+        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@v13.25.0
         with:
           args: deploy
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
+
       - name: Cleanup Firebase Test
         uses: w9jds/firebase-action@v13.25.0
         if: always()
