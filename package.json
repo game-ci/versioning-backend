@@ -9,7 +9,9 @@
   "scripts": {
     "lint": "prettier --check \"functions/src/**/*.{js,jsx,ts,tsx}\"",
     "format": "prettier --write \"functions/src/**/*.{js,jsx,ts,tsx}\"",
-    "test": "echo \"No tests yet, feel free to add\" && exit 0"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -38,5 +40,9 @@
     "node": "22.20.0",
     "yarn": "4.10.3"
   },
-  "packageManager": "yarn@4.10.3"
+  "packageManager": "yarn@4.10.3",
+  "devDependencies": {
+    "@vitest/ui": "^3.2.4",
+    "vitest": "^3.2.4"
+  }
 }
