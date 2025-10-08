@@ -12,7 +12,7 @@
     "test": "echo \"No tests yet, feel free to add\" && exit 0"
   },
   "engines": {
-    "node": "24"
+    "node": "22"
   },
   "main": "lib/index.js",
   "dependencies": {
@@ -43,7 +43,7 @@
   },
   "private": true,
   "volta": {
-    "node": "24.9.0",
+    "node": "22.20.0",
     "yarn": "4.10.3"
   },
   "packageManager": "yarn@4.10.3"
