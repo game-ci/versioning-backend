@@ -81,7 +81,7 @@ jobs:
       - name: Deploy test to Firebase
         uses: w9jds/firebase-action@v14.19.0
         with:
-          args: deploy --only functions:testFunction
+          args: help ; corepack enable ; corepack install ; firebase deploy --only functions:testFunction
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
@@ -92,7 +92,7 @@ jobs:
         uses: w9jds/firebase-action@v14.19.0
         if: always()
         with:
-          args: functions:delete testFunction --force
+          args: help ; corepack enable ; corepack install ; firebase functions:delete testFunction --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
@@ -122,7 +122,7 @@ jobs:
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@v14.19.0
         with:
-          args: deploy
+          args: help ; corepack enable ; corepack install ; firebase deploy
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
@@ -130,6 +130,6 @@ jobs:
         uses: w9jds/firebase-action@v14.19.0
         if: always()
         with:
-          args: functions:delete testFunction --force
+          args: help ; corepack enable ; corepack install ; firebase functions:delete testFunction --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
