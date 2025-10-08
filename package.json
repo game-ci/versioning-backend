@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Stateful backend to keep track of unity versions and docker build queues",
   "main": "src/index.js",
+  "workspaces": [
+    "functions"
+  ],
   "scripts": {
     "lint": "prettier --check \"functions/src/**/*.{js,jsx,ts,tsx}\"",
     "format": "prettier --write \"functions/src/**/*.{js,jsx,ts,tsx}\"",

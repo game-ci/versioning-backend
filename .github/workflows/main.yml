@@ -24,13 +24,13 @@ jobs:
           cache: 'yarn'
 
       - name: Install deps
-        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+        run: yarn install --immutable
 
       - name: run linter
-        run: yarn lint && yarn --cwd ./functions lint
+        run: yarn lint && yarn workspace functions lint
 
       - name: run tests
-        run: yarn test && yarn --cwd ./functions test
+        run: yarn test && yarn workspace functions test
 
   build:
     name: 🛠 Build
@@ -51,10 +51,10 @@ jobs:
           cache: 'yarn'
 
       - name: Install deps
-        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+        run: yarn install --immutable
 
       - name: build
-        run: yarn --cwd ./functions build
+        run: yarn workspace functions build
 
   testDeploy:
     name: Test Deploy
@@ -76,7 +76,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install deps
-        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+        run: yarn install
 
       - name: Deploy test to Firebase
         uses: w9jds/firebase-action@v13.25.0
@@ -117,7 +117,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install deps
-        run: yarn install --immutable && yarn --cwd ./functions install --immutable
+        run: yarn install --immutable
 
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@v13.25.0
