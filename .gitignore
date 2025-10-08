@@ -69,4 +69,7 @@ node_modules/
 .idea
 .vs
 .vscode
+
+# Yarn
 functions/.yarn/
+.yarn/
