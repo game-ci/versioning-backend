@@ -36,8 +36,8 @@ jobs:
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: webbertakken/minigames
-          files: ./apps/*/coverage/lcov.info,./packages/*/coverage/lcov.info
+          slug: game-ci/versioning-backend
+          files: ./functions/coverage/lcov.info
           flags: unittests,integration
 
   build:
