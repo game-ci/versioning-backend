@@ -1,15 +1,20 @@
 {
   "name": "functions",
   "scripts": {
+    "dev": "yarn watch",
     "lint": "eslint \"src/**/*\"",
-    "build": "tsc",
-    "watch": "tsc --watch",
-    "serve": "npm run build && firebase emulators:start --only functions",
-    "shell": "npm run build && firebase functions:shell",
-    "start": "npm run shell",
+    "build": "run -T tsc",
+    "watch": "run -T tsc --watch",
+    "serve": "yarn build && firebase emulators:start --only functions",
+    "shell": "yarn build && firebase functions:shell",
+    "start": "yarn shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "echo \"No tests yet, feel free to add\" && exit 0"
+    "test": "run -T vitest",
+    "typecheck": "run -T tsc --noEmit",
+    "coverage": "run -T vitest run --coverage",
+    "test:run": "run -T vitest run",
+    "test:ui": "run -T vitest --ui"
   },
   "engines": {
     "node": "22"
@@ -38,8 +43,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
     "firebase-functions-test": "^3.3.0",
-    "jest": "^29.7.0",
-    "typescript": "^5.6.3"
+    "jest": "^29.7.0"
   },
   "private": true,
   "volta": {

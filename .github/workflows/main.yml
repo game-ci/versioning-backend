@@ -27,10 +27,24 @@ jobs:
         run: yarn install --immutable
 
       - name: run linter
-        run: yarn lint && yarn workspace functions lint
+        run: yarn lint
+
+      - name: run format
+        run: yarn format
+
+      - name: run typecheck
+        run: yarn typecheck
 
       - name: run tests
-        run: yarn test && yarn workspace functions test
+        run: yarn coverage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: game-ci/versioning-backend
+          files: ./functions/coverage/lcov.info
+          flags: unittests,integration
 
   build:
     name: 🛠 Build

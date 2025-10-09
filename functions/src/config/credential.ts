@@ -5,7 +5,7 @@ export const getCredential = (): credential.Credential => {
     const serviceAccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS ??
       '../../service-account.json');
     return credential.cert(serviceAccount);
-  } catch (e) {
+  } catch {
     return credential.applicationDefault();
   }
 };

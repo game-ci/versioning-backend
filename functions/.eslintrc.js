@@ -21,11 +21,11 @@ module.exports = {
     '@typescript-eslint/prefer-for-of': 'warn',
     '@typescript-eslint/triple-slash-reference': 'error',
     '@typescript-eslint/unified-signatures': 'warn',
-    "@typescript-eslint/no-redeclare": [
-      "error",
+    '@typescript-eslint/no-redeclare': [
+      'error',
       {
-        "ignoreDeclarationMerge": true,
-      }
+        ignoreDeclarationMerge: true,
+      },
     ],
     'comma-dangle': ['warn', 'always-multiline'],
     'constructor-super': 'error',
