@@ -7,12 +7,26 @@
     "functions"
   ],
   "scripts": {
-    "lint": "prettier --check \"functions/src/**/*.{js,jsx,ts,tsx}\"",
-    "format": "prettier --write \"functions/src/**/*.{js,jsx,ts,tsx}\"",
+    "dev": "husky install && turbo dev",
+    "lint": "oxlint --deny-warnings . && yarn workspace functions lint",
+    "format": "prettier --write .",
+    "typecheck": "yarn workspace functions typecheck",
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "prepare": "husky install || true"
+  },
+  "lint-staged": {
+    "*.@(sh|bash|zsh|fish)": [
+      "shellcheck",
+      "git update-index --chmod=+x"
+    ],
+    "*.@(json|jsonc|json5|md|mdx|yaml|yml)": "prettier --write",
+    "*.@(ts|tsx|mts|js|jsx|mjs|cjs)": [
+      "oxlint --fix",
+      "prettier --write"
+    ]
   },
   "repository": {
     "type": "git",
@@ -40,6 +54,11 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "oxlint": "^1.22.0",
+    "shellcheck": "^4.1.0",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
   "volta": {

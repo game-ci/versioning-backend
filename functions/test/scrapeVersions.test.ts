@@ -68,7 +68,7 @@ describe('scrapeVersions', () => {
         major: 2022,
         minor: 3,
         patch: '20',
-      })
+      }),
     );
 
     expect(result).toContainEqual(
@@ -78,7 +78,7 @@ describe('scrapeVersions', () => {
         major: 2023,
         minor: 2,
         patch: '10',
-      })
+      }),
     );
 
     // Check that the XLTS versions are present
@@ -89,7 +89,7 @@ describe('scrapeVersions', () => {
         major: 2022,
         minor: 3,
         patch: '21',
-      })
+      }),
     );
 
     expect(result).toContainEqual(
@@ -99,7 +99,7 @@ describe('scrapeVersions', () => {
         major: 2021,
         minor: 3,
         patch: '25',
-      })
+      }),
     );
   });
 
@@ -123,10 +123,10 @@ describe('scrapeVersions', () => {
       },
     ];
 
-    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (mode: SearchMode) => {
-      if (mode === SearchMode.Default) {
+    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (_mode: SearchMode) => {
+      if (_mode === SearchMode.Default) {
         return mockDefaultVersions;
-      } else if (mode === SearchMode.XLTS) {
+      } else if (_mode === SearchMode.XLTS) {
         return mockXltsVersions;
       }
       return [];
@@ -136,8 +136,8 @@ describe('scrapeVersions', () => {
 
     // Verify that duplicate was filtered out
     expect(result).toHaveLength(2); // Only 2 unique versions
-    expect(result.some(v => v.version === '2022.3.20f1')).toBe(true);
-    expect(result.some(v => v.version === '2022.3.21f1')).toBe(true);
+    expect(result.some((v) => v.version === '2022.3.20f1')).toBe(true);
+    expect(result.some((v) => v.version === '2022.3.21f1')).toBe(true);
   });
 
   it('should filter out non-final versions (not containing "f")', async () => {
@@ -160,13 +160,13 @@ describe('scrapeVersions', () => {
       {
         version: '2020.3.15a2', // Alpha version - should be excluded
         changeset: 'uvw123rst456',
-      }
+      },
     ];
 
-    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (mode: SearchMode) => {
-      if (mode === SearchMode.Default) {
+    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (_mode: SearchMode) => {
+      if (_mode === SearchMode.Default) {
         return mockDefaultVersions;
-      } else if (mode === SearchMode.XLTS) {
+      } else if (_mode === SearchMode.XLTS) {
         return mockXltsVersions;
       }
       return [];
@@ -183,7 +183,7 @@ describe('scrapeVersions', () => {
         major: 2022,
         minor: 3,
         patch: '20',
-      })
+      }),
     );
     expect(result).toContainEqual(
       expect.objectContaining({
@@ -192,11 +192,11 @@ describe('scrapeVersions', () => {
         major: 2021,
         minor: 3,
         patch: '25',
-      })
+      }),
     );
     // Alpha versions should be excluded
-    expect(result.some(v => v.version.includes('a1'))).toBe(false);
-    expect(result.some(v => v.version.includes('a2'))).toBe(false);
+    expect(result.some((v) => v.version.includes('a1'))).toBe(false);
+    expect(result.some((v) => v.version.includes('a2'))).toBe(false);
   });
 
   it('should filter out versions with major number less than 2017', async () => {
@@ -238,7 +238,7 @@ describe('scrapeVersions', () => {
         major: 2022,
         minor: 3,
         patch: '20',
-      })
+      }),
     );
     expect(result).toContainEqual(
       expect.objectContaining({
@@ -247,14 +247,14 @@ describe('scrapeVersions', () => {
         major: 2021,
         minor: 3,
         patch: '25',
-      })
+      }),
     );
     // Old version should be excluded
-    expect(result.some(v => v.major < 2017)).toBe(false);
+    expect(result.some((v) => v.major < 2017)).toBe(false);
   });
 
   it('should throw an error when no Unity versions are found', async () => {
-    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (mode: SearchMode) => {
+    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (_mode: SearchMode) => {
       return [];
     });
 

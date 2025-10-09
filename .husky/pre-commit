@@ -1,0 +1,8 @@
+#!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Fix from https://github.com/typicode/husky/issues/968#issuecomment-1176848345
+if [ -t 2 ] ; then exec >/dev/tty 2>&1 ; fi
+
+# Check changes that are staged for commit
+yarn lint-staged

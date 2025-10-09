@@ -20,7 +20,7 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
       .map((unityVersion) => {
         const match = RegExp(unity_version_regex).exec(unityVersion.version);
         if (match) {
-          const [_, major, minor, patch, lifecycle, build] = match;
+          const [_, major, minor, patch, lifecycle] = match;
 
           if (lifecycle !== 'f' || Number(major) < 2017) {
             return null;

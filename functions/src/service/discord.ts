@@ -126,7 +126,7 @@ export class Discord {
   // Max message size must account for ellipsis and level parts that are added to the message.
   static splitMessage(message: string, maxMessageSize: number = 1940): Array<string> {
     const numberOfMessages = Math.ceil(message.length / maxMessageSize);
-    const messages: Array<string> = new Array<string>(numberOfMessages);
+    const messages: Array<string> = Array.from({ length: numberOfMessages });
 
     for (let i = 0, pointer = 0; i < numberOfMessages; i++) {
       let messageSize = maxMessageSize;

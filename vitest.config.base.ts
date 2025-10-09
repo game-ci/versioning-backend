@@ -1,4 +1,4 @@
-import { defineConfig, UserConfigExport } from 'vitest/config'
+import { defineConfig, UserConfigExport } from 'vitest/config';
 
 export const baseConfig = {
   test: {
@@ -13,6 +13,6 @@ export const baseConfig = {
       // },
     },
   },
-} satisfies UserConfigExport
+} satisfies UserConfigExport;
 
-export default defineConfig(baseConfig)
+export default defineConfig(baseConfig);

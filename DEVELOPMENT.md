@@ -52,6 +52,7 @@ This will compile the TypeScript code into JavaScript in the `lib` directory, wh
 To use Firebase Admin SDK locally:
 
 1. Download a service account key from your Firebase project settings:
+
    - Go to [Firebase Console](https://console.firebase.google.com/)
    - Select your project
    - Go to Project Settings > Service accounts
@@ -61,11 +62,13 @@ To use Firebase Admin SDK locally:
 2. Set the environment variable to the key file:
 
 **Linux / macOS**:
+
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
 ```
 
 **Windows (PowerShell)**:
+
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
 ```
@@ -77,17 +80,20 @@ $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
 To test integrations locally, set these environment variables:
 
 **Discord**:
+
 ```bash
 export DISCORD_TOKEN="your_discord_token"
 ```
 
 **GitHub**:
+
 ```bash
 export GITHUB_CLIENT_SECRET="your_github_app_client_secret"
 export GITHUB_PRIVATE_KEY="your_github_app_private_key"
 ```
 
 **Internal Token**:
+
 ```bash
 export INTERNAL_TOKEN="your_internal_token"
 ```
@@ -141,11 +147,13 @@ To use Firebase Admin SDK locally:
 2. Set the environment variable to the key file
 
 **Linux / macOS**:
+
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json"
 ```
 
 **Windows (PowerShell)**:
+
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
 ```
@@ -155,17 +163,20 @@ $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\serviceAccountKey.json"
 To test integrations locally, set these environment variables:
 
 **Discord**:
+
 ```bash
 export DISCORD_TOKEN="your_discord_token"
 ```
 
 **GitHub**:
+
 ```bash
 export GITHUB_CLIENT_SECRET="your_github_app_client_secret"
 export GITHUB_PRIVATE_KEY="your_github_app_private_key"
 ```
 
 **Internal Token**:
+
 ```bash
 export INTERNAL_TOKEN="your_internal_token"
 ```
@@ -177,16 +188,19 @@ export INTERNAL_TOKEN="your_internal_token"
 > **Note:** You need project access to deploy.
 
 1. Login to Firebase:
+
    ```bash
    firebase login
    ```
 
 2. Deploy everything:
+
    ```bash
    firebase deploy
    ```
 
    Or deploy specific services:
+
    ```bash
    firebase deploy --only functions
    ```
@@ -216,25 +230,27 @@ firebase functions:config:set internal.token="your_internal_token"
    firebase emulators:start
    ```
 4. For hot reloading during development:
+
    ```bash
    # In one terminal
    cd functions && yarn watch
-   
-   # In another terminal  
+
+   # In another terminal
    firebase emulators:start
    ```
+
 5. Test your changes
 6. Deploy when ready
 
 ## Troubleshooting
 
 - **Firebase Login Issues**: Make sure you have access to the Firebase project
-- **Emulator Port Conflicts**: 
+- **Emulator Port Conflicts**:
   - Check for services using ports 4000, 5001, 8080, or 9000
   - This project uses port 5002 for hosting to avoid conflicts with AirPlay Receiver on macOS
   - Feel free to change any port in your local `firebase.json` if you encounter conflicts
   - See the [Port Configuration](#port-configuration) section for details
-- **Java Not Found Error**: 
+- **Java Not Found Error**:
   - The Firebase emulators require Java to be installed
   - On macOS, install Java using `brew install openjdk@17` or download from [java.com](https://www.java.com)
   - Make sure Java is on your PATH: `java -version` should return the installed version
@@ -245,6 +261,6 @@ firebase functions:config:set internal.token="your_internal_token"
 - **Admin SDK Configuration Errors**:
   - Set up the `GOOGLE_APPLICATION_CREDENTIALS` environment variable as described in the [Set Up Credentials](#4-set-up-credentials) section
   - For testing, you can often ignore this warning as the emulators will still run with limited functionality
-- **Integration Issues**: 
+- **Integration Issues**:
   - Ensure all required environment variables are correctly set
   - For local development without integration testing, you can often proceed without setting these variables

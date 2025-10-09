@@ -27,7 +27,13 @@ jobs:
         run: yarn install --immutable
 
       - name: run linter
-        run: yarn lint && yarn workspace functions lint
+        run: yarn lint
+
+      - name: run format
+        run: yarn format
+
+      - name: run typecheck
+        run: yarn typecheck
 
       - name: run tests
         run: yarn coverage
