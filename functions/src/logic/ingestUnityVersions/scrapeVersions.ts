@@ -22,7 +22,7 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
         if (match) {
           const [_, major, minor, patch, lifecycle] = match;
 
-          if (lifecycle !== 'f' || Number(major) < 2017) {
+          if (lifecycle !== 'f' || Number(major) < 2021) {
             return null;
           }
 
