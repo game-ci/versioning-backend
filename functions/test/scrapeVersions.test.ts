@@ -199,14 +199,14 @@ describe('scrapeVersions', () => {
     expect(result.some((v) => v.version.includes('a2'))).toBe(false);
   });
 
-  it('should filter out versions with major number less than 2021', async () => {
+  it('should filter out versions with major number less than 2017', async () => {
     const mockDefaultVersions = [
       {
         version: '2022.3.20f1', // Should be included
         changeset: 'abc123def456',
       },
       {
-        version: '5.6.7f1', // Should be excluded (major < 2021)
+        version: '5.6.7f1', // Should be excluded (major < 2017)
         changeset: 'def456ghi789',
       },
     ];
@@ -229,7 +229,7 @@ describe('scrapeVersions', () => {
 
     const result = await scrapeVersions();
 
-    // Should only contain versions with major >= 2021
+    // Should only contain versions with major >= 2017
     expect(result).toHaveLength(2);
     expect(result).toContainEqual(
       expect.objectContaining({
@@ -250,7 +250,7 @@ describe('scrapeVersions', () => {
       }),
     );
     // Old version should be excluded
-    expect(result.some((v) => v.major < 2021)).toBe(false);
+    expect(result.some((v) => v.major < 2017)).toBe(false);
   });
 
   it('should throw an error when no Unity versions are found', async () => {

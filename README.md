@@ -22,7 +22,7 @@ graph TD
 The backend regularly scrapes Unity version information:
 
 1. Uses the [`unity-changeset` package](https://github.com/mob-sakai/unity-changeset) from [mob-sakai](https://github.com/mob-sakai) to detect new Unity versions
-2. Filters versions (only stable versions 2021+)
+2. Filters versions (only stable versions 2017+)
 3. Stores version details in Firestore
 4. Notifies maintainers via Discord
 5. Schedules build jobs for new versions
