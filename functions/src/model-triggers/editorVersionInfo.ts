@@ -24,6 +24,15 @@ export const onCreate = onDocumentCreated(
     const editorVersionInfo = snapshot.data?.data() as EditorVersionInfo;
     const repoVersionInfo = await RepoVersionInfo.getLatest();
 
+    // Only create CIJob to build non-legacy Unity versions (2021+)
+    if (editorVersionInfo.major < 2021) {
+      const message = `Skipped creating CiJob for legacy editorVersion (${editorVersionInfo.version}).`;
+      logger.warn(message);
+      await Discord.sendAlert(message);
+      Discord.disconnect();
+      return;
+    }
+
     const jobId = CiJobs.generateJobId(Image.types.editor, repoVersionInfo, editorVersionInfo);
     if (await CiJobs.exists(jobId)) {
       const message = `Skipped creating CiJob for new editorVersion (${editorVersionInfo.version}).`;

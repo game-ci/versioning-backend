@@ -25,7 +25,7 @@ The backend regularly scrapes Unity version information:
 2. Filters versions (only stable versions 2017+)
 3. Stores version details in Firestore
 4. Notifies maintainers via Discord
-5. Schedules build jobs for new versions
+5. Schedules build jobs for new/non-legacy versions (2021+)
 
 ## CI Job Workflow
 
