@@ -29,8 +29,6 @@ export const onCreate = onDocumentCreated(
     if (editorVersionInfo.major < settings.editorVersionMin) {
       const message = `Skipped creating CiJob for legacy editorVersion (${editorVersionInfo.version}).`;
       logger.warn(message);
-      await Discord.sendAlert(message);
-      Discord.disconnect();
       return;
     }
 
