@@ -83,10 +83,7 @@ export const onCreate = onDocumentCreated(
       for (const editorVersionInfo of editorVersionInfoChunk) {
         const editorJobId = CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
 
-        if (
-          existingJobIds.includes(editorJobId) ||
-          editorVersionInfo.major < settings.editorVersionMin
-        ) {
+        if (existingJobIds.includes(editorJobId) || CiJobs.shouldSkip(editorVersionInfo)) {
           skippedVersions.push(editorJobId);
         } else {
           const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);

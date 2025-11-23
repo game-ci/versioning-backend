@@ -10,7 +10,6 @@ export const settings = {
   maxExtraJobsForRescheduling: 1,
   maxToleratedFailures: 2,
   maxFailuresPerBuild: 15,
-  editorVersionMin: 2021,
   discord: {
     channels: {
       news: '731947345478156391', // #news (public)

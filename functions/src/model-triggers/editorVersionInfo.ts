@@ -10,7 +10,6 @@ import { Discord } from '../service/discord';
 import { Image } from '../model/image';
 import { logger } from 'firebase-functions/v2';
 import { defineSecret } from 'firebase-functions/params';
-import { settings } from '../config/settings';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
 
@@ -26,7 +25,7 @@ export const onCreate = onDocumentCreated(
     const repoVersionInfo = await RepoVersionInfo.getLatest();
 
     // Only create CIJob to build non-legacy Unity versions
-    if (editorVersionInfo.major < settings.editorVersionMin) {
+    if (CiJobs.shouldSkip(editorVersionInfo)) {
       const message = `Skipped creating CiJob for legacy editorVersion (${editorVersionInfo.version}).`;
       logger.warn(message);
       return;

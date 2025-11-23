@@ -315,4 +315,8 @@ export class CiJobs {
     const word = number === 1 ? 'CI Job' : 'CI Jobs';
     return `${number} ${word}`;
   }
+
+  static shouldSkip(editorVersionInfo: EditorVersionInfo): boolean {
+    return editorVersionInfo.major < 2021;
+  }
 }
