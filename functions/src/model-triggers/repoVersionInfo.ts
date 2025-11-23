@@ -14,6 +14,7 @@ import { Discord } from '../service/discord';
 import { chunk } from 'lodash';
 import { Image } from '../model/image';
 import { defineSecret } from 'firebase-functions/params';
+import { settings } from '../config/settings';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
 
@@ -82,7 +83,10 @@ export const onCreate = onDocumentCreated(
       for (const editorVersionInfo of editorVersionInfoChunk) {
         const editorJobId = CiJobs.generateJobId(imageType, repoVersionInfo, editorVersionInfo);
 
-        if (existingJobIds.includes(editorJobId)) {
+        if (
+          existingJobIds.includes(editorJobId) ||
+          editorVersionInfo.major < settings.editorVersionMin
+        ) {
           skippedVersions.push(editorJobId);
         } else {
           const editorJobData = CiJobs.construct(imageType, repoVersionInfo, editorVersionInfo);
