@@ -143,7 +143,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ): CiJob => {
     let status: JobStatus = 'deprecated';
-    if (editorVersionInfo === null || editorVersionInfo.major >= 2021) {
+    if (editorVersionInfo === null || editorVersionInfo.major >= 2022) {
       status = 'created';
     }
 
