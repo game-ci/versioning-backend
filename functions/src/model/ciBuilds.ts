@@ -135,14 +135,29 @@ export class CiBuilds {
 
     let result;
     if (snapshot.exists) {
-      // Builds can be retried after a failure.
-      if (snapshot.data()?.status === 'failed') {
-        // In case or reporting a new build during retry step, only overwrite these fields
+      const existingStatus = snapshot.data()?.status;
+      if (existingStatus === 'failed') {
+        // Builds can be retried after a failure.
+        // In case of reporting a new build during retry step, only overwrite these fields
         result = await ref.set(data, {
           mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
         });
+      } else if (existingStatus === 'started') {
+        const existingJobId = snapshot.data()?.relatedJobId;
+        if (existingJobId !== relatedJobId) {
+          // Different job trying to register same build - this is unexpected and should fail
+          throw new Error(
+            `Build "${buildId}" already exists with jobId "${existingJobId}", ` +
+              `but received conflicting request from jobId "${relatedJobId}"`,
+          );
+        }
+        // Idempotent - same job retrying after network timeout, safe to skip
+        logger.info(`Build "${buildId}" already exists with status "started", skipping`);
+        return;
       } else {
-        throw new Error(`A build with "${buildId}" as identifier already exists`);
+        throw new Error(
+          `A build with "${buildId}" already exists with status "${existingStatus}"`,
+        );
       }
     } else {
       result = await ref.create(data);
