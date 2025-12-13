@@ -5982,7 +5982,7 @@ __metadata:
     lodash: "npm:^4.17.21"
     node-fetch: "npm:^2.7.0"
     semver: "npm:^7.6.3"
-    unity-changeset: "npm:^3.0.1"
+    unity-changeset: "npm:3.0.1"
   languageName: unknown
   linkType: soft
 
@@ -11927,16 +11927,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unity-changeset@npm:^3.0.1":
-  version: 3.1.0
-  resolution: "unity-changeset@npm:3.1.0"
+"unity-changeset@npm:3.0.1":
+  version: 3.0.1
+  resolution: "unity-changeset@npm:3.0.1"
   dependencies:
     "@deno/shim-deno": "npm:~0.18.0"
     graphql: "npm:^16.8.1"
     graphql-request: "npm:6.1.0"
   bin:
     unity-changeset: esm/cli.js
-  checksum: 10c0/32a5375188fda385dd92b4a74ec922fe89e8dd0a0a42a4269c0076456b954d1e40dd356fd0a2b1cc017abf3a7f76f056b6e1a1f151e5317393bdc89e96f1f961
+  checksum: 10c0/ab7cdfd6e697aa8f046854d52213891100cfa3f06352701753bfc473c8e1fd0df7b678b37ae2cb0b2ed0697a9248d0976f2dfcfa89088fd1b9d05857655e3f87
   languageName: node
   linkType: hard
 
