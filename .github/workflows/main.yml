@@ -24,7 +24,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install deps
-        run: yarn install # --immutable
+        run: yarn install --immutable
 
       - name: run linter
         run: yarn lint
