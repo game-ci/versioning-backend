@@ -26,7 +26,7 @@ export const trigger = onSchedule(
     secrets: [discordToken, githubPrivateKeyConfigSecret, githubClientSecretConfigSecret],
   },
   async () => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     try {
       await routineTasks(

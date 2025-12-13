@@ -13,7 +13,7 @@ const internalToken = defineSecret('INTERNAL_TOKEN');
 export const reportBuildFailure = onRequest(
   { secrets: [discordToken, internalToken] },
   async (req: Request, res: Response) => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     try {
       if (!Token.isValid(req.header('authorization'), internalToken.value())) {

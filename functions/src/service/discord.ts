@@ -5,6 +5,14 @@ import { settings } from '../config/settings';
 let instance: ErisClient | null = null;
 let instanceCount = 0;
 export class Discord {
+  public static async initSafely(token: string) {
+    try {
+      await this.init(token);
+    } catch (err) {
+      logger.error('Failed to initialize Discord client safely:', err);
+    }
+  }
+
   public static async init(token: string) {
     if (instance) {
       instanceCount += 1;
@@ -109,17 +117,21 @@ export class Discord {
   }
 
   public static disconnect() {
-    if (!instance) return;
-    instanceCount -= 1;
+    try {
+      if (!instance) return;
+      instanceCount -= 1;
 
-    if (instanceCount > 0) return;
+      if (instanceCount > 0) return;
 
-    instance.disconnect({ reconnect: false });
-    instance = null;
+      instance.disconnect({ reconnect: false });
+      instance = null;
 
-    if (instanceCount < 0) {
-      logger.error('Discord instance count is negative! This should not happen');
-      instanceCount = 0;
+      if (instanceCount < 0) {
+        logger.error('Discord instance count is negative! This should not happen');
+        instanceCount = 0;
+      }
+    } catch (err) {
+      logger.error('An error occurred while trying to disconnect from discord.', err);
     }
   }
 
