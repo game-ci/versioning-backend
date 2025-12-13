@@ -56,7 +56,7 @@
     "@vitest/ui": "^3.2.4",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
-    "oxlint": "^1.22.0",
+    "oxlint": "^1.32.0",
     "shellcheck": "^4.1.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
