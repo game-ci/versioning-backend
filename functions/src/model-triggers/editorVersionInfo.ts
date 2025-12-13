@@ -19,7 +19,7 @@ export const onCreate = onDocumentCreated(
     secrets: [discordToken],
   },
   async (snapshot: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     const editorVersionInfo = snapshot.data?.data() as EditorVersionInfo;
     const repoVersionInfo = await RepoVersionInfo.getLatest();

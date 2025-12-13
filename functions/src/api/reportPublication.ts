@@ -14,7 +14,13 @@ const internalToken = defineSecret('INTERNAL_TOKEN');
 export const reportPublication = onRequest(
   { secrets: [discordToken, internalToken] },
   async (req: Request, res: Response) => {
-    await Discord.init(discordToken.value());
+    try {
+      await Discord.initSafely(discordToken.value());
+    } catch (err: any) {
+      logger.error('Failed to initialize Discord client:', err);
+      res.status(500).send('Internal Server Error');
+      return;
+    }
 
     try {
       if (!Token.isValid(req.header('authorization'), internalToken.value())) {

@@ -5,6 +5,14 @@ import { settings } from '../config/settings';
 let instance: ErisClient | null = null;
 let instanceCount = 0;
 export class Discord {
+  public static async initSafely(token: string) {
+    try {
+      await this.init(token);
+    } catch (err) {
+      logger.error('Failed to initialize Discord client safely:', err);
+    }
+  }
+
   public static async init(token: string) {
     if (instance) {
       instanceCount += 1;

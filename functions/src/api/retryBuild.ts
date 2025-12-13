@@ -16,7 +16,7 @@ const githubClientSecret = defineSecret('GITHUB_CLIENT_SECRET');
 export const retryBuild = onRequest(
   { secrets: [discordToken, githubClientSecret, githubPrivateKey] },
   async (request: Request, response: Response) => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     try {
       response.set('Content-Type', 'application/json');
