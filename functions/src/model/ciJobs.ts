@@ -205,7 +205,7 @@ export class CiJobs {
 
     // Do not override failure or completed
     let { status } = currentBuild;
-    if (['scheduled'].includes(status)) {
+    if (['created', 'scheduled'].includes(status)) {
       status = 'inProgress';
     }
 
