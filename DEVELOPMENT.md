@@ -210,13 +210,11 @@ export INTERNAL_TOKEN="your_internal_token"
 Update environment variables in Firebase (useful when rotating tokens or migrating environments):
 
 ```bash
-firebase functions:config:set discord.token="your_discord_token"
-firebase functions:config:set github.client-secret="your_github_app_client_secret"
-firebase functions:config:set github.private-key="your_github_app_private_key"
-firebase functions:config:set internal.token="your_internal_token"
+firebase functions:secrets:set DISCORD_TOKEN
+firebase functions:secrets:set GITHUB_CLIENT_SECRET
+firebase functions:secrets:set GITHUB_PRIVATE_KEY
+firebase functions:secrets:set INTERNAL_TOKEN
 ```
-
-> Note: Firebase Functions configuration uses dot notation (e.g., `internal.token`) when setting with the CLI, but when using environment variables locally, use uppercase without dots (e.g., `INTERNAL_TOKEN`). This is due to how Firebase handles different configuration methods.
 
 ## Development Workflow
 

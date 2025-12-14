@@ -7,7 +7,7 @@
     "runtime": "nodejs22",
     "predeploy": [
       "yarn workspace functions lint",
-      "yarn workspace functions test",
+      "yarn workspace functions test run",
       "yarn workspace functions build"
     ]
   },
