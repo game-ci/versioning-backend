@@ -85,6 +85,16 @@ export class Scheduler {
 
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
+      // Check retry limit before re-dispatching
+      if (CiJobs.hasExceededRetryLimit(job, settings.maxFailuresPerBuild)) {
+        const message =
+          `[Scheduler] Base image job ${jobId} has exceeded the maximum retry limit ` +
+          `(${settings.maxFailuresPerBuild}). Manual action is required.`;
+        logger.warn(message);
+        await Discord.sendAlert(message);
+        return false;
+      }
+
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',
@@ -126,6 +136,16 @@ export class Scheduler {
 
     // Schedule it
     if (['created', 'failed'].includes(job.status)) {
+      // Check retry limit before re-dispatching
+      if (CiJobs.hasExceededRetryLimit(job, settings.maxFailuresPerBuild)) {
+        const message =
+          `[Scheduler] Hub image job ${jobId} has exceeded the maximum retry limit ` +
+          `(${settings.maxFailuresPerBuild}). Manual action is required.`;
+        logger.warn(message);
+        await Discord.sendAlert(message);
+        return false;
+      }
+
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
         owner: 'unity-ci',

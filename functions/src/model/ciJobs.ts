@@ -205,7 +205,7 @@ export class CiJobs {
 
     // Do not override failure or completed
     let { status } = currentBuild;
-    if (['scheduled'].includes(status)) {
+    if (['created', 'scheduled'].includes(status)) {
       status = 'inProgress';
     }
 
@@ -225,6 +225,10 @@ export class CiJobs {
       'meta.lastBuildFailure': Timestamp.now(),
       modifiedDate: Timestamp.now(),
     });
+  };
+
+  static hasExceededRetryLimit = (job: CiJob, maxRetries: number): boolean => {
+    return job.meta.failureCount >= maxRetries;
   };
 
   static markJobAsCompleted = async (jobId: string) => {
