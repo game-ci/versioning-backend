@@ -4,6 +4,7 @@ export const settings = {
     'lebreton.gabriel@gmail.com',
     'davidmfinol@gmail.com',
     'andrewk010110@gmail.com',
+    'mark.drmc798@gmail.com',
   ],
   minutesBetweenScans: 15,
   maxConcurrentJobs: 9,
