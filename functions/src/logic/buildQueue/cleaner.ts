@@ -44,8 +44,7 @@ export class Cleaner {
       const response = await Dockerhub.fetchImageData(imageType, tag);
 
       if (!response) {
-        const message = `[FAILED] "${tag}" not found on DockerHub. Marking as failed for automatic retry.`;
-        results.push(message);
+        results.push(`[FAILED] "${tag}" not found on DockerHub. Marking as failed for automatic retry.`);
         await Discord.sendAlert(`[ManualCleanup] Build for "${tag}" not on DockerHub. Marking as failed.`);
         await CiBuilds.markBuildAsFailed(buildId, {
           reason: `[ManualCleanup] Build never reported back and image not found on DockerHub.`,
@@ -54,8 +53,7 @@ export class Cleaner {
       }
 
       const digest = response.digest || '';
-      const message = `[PUBLISHED] "${tag}" found on DockerHub (digest: ${digest || 'n/a'}). Marking as published.`;
-      results.push(message);
+      results.push(`[PUBLISHED] "${tag}" found on DockerHub (digest: ${digest || 'n/a'}). Marking as published.`);
       await Discord.sendDebug(`[ManualCleanup] Build for "${tag}" found on DockerHub. Marking as published.`);
       await CiBuilds.markBuildAsPublished(buildId, jobId, {
         digest,
