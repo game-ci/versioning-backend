@@ -27,7 +27,7 @@ export const settings = {
     },
   },
   dockerhub: {
-    host: 'https://index.docker.io/v1',
+    host: 'https://hub.docker.com/v2',
     repositoryBaseName: 'unityci',
     baseImageName: 'base',
     hubImageName: 'hub',

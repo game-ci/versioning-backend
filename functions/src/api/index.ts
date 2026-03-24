@@ -1,3 +1,4 @@
+export { cleanUpStuckBuilds } from './cleanUpStuckBuilds';
 export { queueStatus } from './queueStatus';
 export { reportBuildFailure } from './reportBuildFailure';
 export { reportNewBuild } from './reportNewBuild';
