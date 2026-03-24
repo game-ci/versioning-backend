@@ -106,12 +106,17 @@ export class CiBuilds {
     }));
   };
 
+  /**
+   * Registers a new build or handles duplicate dispatches gracefully.
+   * Returns the existing status if the build is already in progress or published,
+   * so the caller can respond appropriately without causing errors.
+   */
   public static registerNewBuild = async (
     buildId: string,
     relatedJobId: string,
     imageType: ImageType,
     buildInfo: BuildInfo,
-  ) => {
+  ): Promise<{ alreadyExists: boolean; existingStatus?: BuildStatus }> => {
     const data: CiBuild = {
       status: 'started',
       buildId,
@@ -135,20 +140,27 @@ export class CiBuilds {
 
     let result;
     if (snapshot.exists) {
+      const existingStatus = snapshot.data()?.status as BuildStatus;
+
       // Builds can be retried after a failure.
-      if (snapshot.data()?.status === 'failed') {
+      if (existingStatus === 'failed') {
         // In case or reporting a new build during retry step, only overwrite these fields
         result = await ref.set(data, {
           mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
         });
       } else {
-        throw new Error(`A build with "${buildId}" as identifier already exists`);
+        // Build is already in progress or published — duplicate dispatch, not an error.
+        logger.info(
+          `Build "${buildId}" already exists with status "${existingStatus}". Ignoring duplicate dispatch.`,
+        );
+        return { alreadyExists: true, existingStatus };
       }
     } else {
       result = await ref.create(data);
     }
 
     logger.debug('Build created', result);
+    return { alreadyExists: false };
   };
 
   public static async removeDryRunBuild(buildId: string) {
@@ -164,7 +176,14 @@ export class CiBuilds {
   }
 
   public static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
-    const build = await db.collection(CiBuilds.collection).doc(buildId);
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    const snapshot = await build.get();
+
+    // Never overwrite a published build — it was already successfully uploaded.
+    if (snapshot.exists && snapshot.data()?.status === 'published') {
+      logger.warn(`Ignoring failure report for "${buildId}" because it is already published.`);
+      return;
+    }
 
     await build.update({
       status: 'failed',
