@@ -30,22 +30,20 @@ export class Cleaner {
     results.push(`Found ${startedBuilds.length} build(s) with status "started".`);
 
     for (const startedBuild of startedBuilds) {
-      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
-      const { publishedDate } = meta;
+      const { buildId, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
       const { baseOs, repoVersion } = buildInfo;
 
       const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
 
-      if (publishedDate) {
-        results.push(`[SKIP] "${tag}" has a publishedDate but status is "started". Needs manual review.`);
-        continue;
-      }
-
       const response = await Dockerhub.fetchImageData(imageType, tag);
 
       if (!response) {
-        results.push(`[FAILED] "${tag}" not found on DockerHub. Marking as failed for automatic retry.`);
-        await Discord.sendAlert(`[ManualCleanup] Build for "${tag}" not on DockerHub. Marking as failed.`);
+        results.push(
+          `[FAILED] "${tag}" not found on DockerHub. Marking as failed for automatic retry.`,
+        );
+        await Discord.sendAlert(
+          `[ManualCleanup] Build for "${tag}" not on DockerHub. Marking as failed.`,
+        );
         await CiBuilds.markBuildAsFailed(buildId, {
           reason: `[ManualCleanup] Build never reported back and image not found on DockerHub.`,
         });
@@ -53,8 +51,14 @@ export class Cleaner {
       }
 
       const digest = response.digest || '';
-      results.push(`[PUBLISHED] "${tag}" found on DockerHub (digest: ${digest || 'n/a'}). Marking as published.`);
-      await Discord.sendDebug(`[ManualCleanup] Build for "${tag}" found on DockerHub. Marking as published.`);
+      results.push(
+        `[PUBLISHED] "${tag}" found on DockerHub (digest: ${
+          digest || 'n/a'
+        }). Marking as published.`,
+      );
+      await Discord.sendDebug(
+        `[ManualCleanup] Build for "${tag}" found on DockerHub. Marking as published.`,
+      );
       await CiBuilds.markBuildAsPublished(buildId, jobId, {
         digest,
         specificTag: `${baseOs}-${repoVersion}`,
