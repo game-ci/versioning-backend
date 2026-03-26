@@ -83,7 +83,7 @@ export class Ingeminator {
           await Discord.sendDebug(maxRetriesReachedMessage);
         }
 
-        return;
+        continue;
       }
 
       // Incremental backoff
