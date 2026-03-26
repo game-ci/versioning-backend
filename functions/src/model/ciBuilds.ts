@@ -216,6 +216,28 @@ export class CiBuilds {
     return parentJobIsNowCompleted;
   };
 
+  public static resetFailureCount = async (buildId: string): Promise<void> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    await build.update({
+      'meta.failureCount': 0,
+      'meta.lastBuildFailure': null,
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  public static getMaxedOutFailedBuilds = async (): Promise<CiBuildQueue> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .where('meta.failureCount', '>=', settings.maxFailuresPerBuild)
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data() as CiBuild,
+    }));
+  };
+
   public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
     const snapshot = await db
       .collection(CiBuilds.collection)
