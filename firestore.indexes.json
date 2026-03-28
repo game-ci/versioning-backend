@@ -15,6 +15,20 @@
       ]
     },
     {
+      "collectionGroup": "ciBuilds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "meta.failureCount",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "ciJobs",
       "queryScope": "COLLECTION",
       "fields": [
