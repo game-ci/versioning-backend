@@ -226,16 +226,17 @@ export class CiBuilds {
   };
 
   public static getMaxedOutFailedBuilds = async (): Promise<CiBuildQueue> => {
-    const snapshot = await db
-      .collection(CiBuilds.collection)
-      .where('status', '==', 'failed')
-      .where('meta.failureCount', '>=', settings.maxFailuresPerBuild)
-      .get();
+    const snapshot = await db.collection(CiBuilds.collection).where('status', '==', 'failed').get();
 
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      data: doc.data() as CiBuild,
-    }));
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as CiBuild;
+        return (data.meta?.failureCount ?? 0) >= settings.maxFailuresPerBuild;
+      })
+      .map((doc) => ({
+        id: doc.id,
+        data: doc.data() as CiBuild,
+      }));
   };
 
   public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {

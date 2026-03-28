@@ -77,7 +77,7 @@ export const resetFailedBuilds = onRequest(
           return;
         }
         await CiBuilds.resetFailureCount(buildId);
-        const msg = `Reset failure count for "${buildId}" (was ${build.meta.failureCount}).`;
+        const msg = `Reset failure count for "${buildId}" (was ${build.meta?.failureCount ?? 0}).`;
         results.push(msg);
         logger.info(msg);
         await Discord.sendDebug(`[ResetFailedBuilds] ${msg}`);
@@ -91,7 +91,7 @@ export const resetFailedBuilds = onRequest(
           results.push(`Found ${maxedBuilds.length} build(s) at max retries.`);
           for (const { id, data } of maxedBuilds) {
             await CiBuilds.resetFailureCount(id);
-            const msg = `Reset "${id}" (was ${data.meta.failureCount} failures).`;
+            const msg = `Reset "${id}" (was ${data.meta?.failureCount ?? 0} failures).`;
             results.push(msg);
           }
           const summary = `[ResetFailedBuilds] Reset failure counts for ${maxedBuilds.length} build(s).`;
