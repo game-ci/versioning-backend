@@ -230,6 +230,16 @@ export class CiBuilds {
     });
   };
 
+  public static getFailedBuilds = async (limit: number): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data() as CiBuild);
+  };
+
   public static getMaxedOutFailedBuilds = async (): Promise<CiBuildQueue> => {
     const snapshot = await db.collection(CiBuilds.collection).where('status', '==', 'failed').get();
 
