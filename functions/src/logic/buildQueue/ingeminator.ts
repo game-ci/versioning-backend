@@ -45,9 +45,18 @@ export class Ingeminator {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      await Discord.sendDebug(
-        `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
-      );
+      // No failed builds — check if all builds are published and heal the job status
+      const allPublished = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
+      if (allPublished) {
+        await CiJobs.markJobAsCompleted(jobId);
+        await Discord.sendDebug(
+          `[Ingeminator] All builds for job \`${jobId}\` are published. Marked job as completed.`,
+        );
+      } else {
+        await Discord.sendDebug(
+          `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
+        );
+      }
       return;
     }
 

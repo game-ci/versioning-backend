@@ -28,8 +28,14 @@ export const reportBuildFailure = onRequest(
       const { jobId, buildId, reason } = body;
       const failure: BuildFailure = { reason };
 
-      await CiJobs.markFailureForJob(jobId);
-      await CiBuilds.markBuildAsFailed(buildId, failure);
+      const wasMarkedAsFailed = await CiBuilds.markBuildAsFailed(buildId, failure);
+      if (wasMarkedAsFailed) {
+        await CiJobs.markFailureForJob(jobId);
+      } else {
+        logger.info(
+          `Skipping job-level failure for "${jobId}" because build "${buildId}" was not marked as failed.`,
+        );
+      }
 
       logger.info('Build failure reported.', body);
       res.status(200).send('OK');
