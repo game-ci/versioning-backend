@@ -175,14 +175,17 @@ export class CiBuilds {
     await ref.delete();
   }
 
-  public static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
+  public static markBuildAsFailed = async (
+    buildId: string,
+    failure: BuildFailure,
+  ): Promise<boolean> => {
     const build = db.collection(CiBuilds.collection).doc(buildId);
     const snapshot = await build.get();
 
     // Never overwrite a published build — it was already successfully uploaded.
     if (snapshot.exists && snapshot.data()?.status === 'published') {
       logger.warn(`Ignoring failure report for "${buildId}" because it is already published.`);
-      return;
+      return false;
     }
 
     await build.update({
@@ -192,6 +195,8 @@ export class CiBuilds {
       'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
     });
+
+    return true;
   };
 
   public static markBuildAsPublished = async (
