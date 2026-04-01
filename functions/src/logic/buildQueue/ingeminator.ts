@@ -2,7 +2,6 @@ import { CiJob, CiJobQueue, CiJobQueueItem, CiJobs } from '../../model/ciJobs';
 import { CiBuild, CiBuilds } from '../../model/ciBuilds';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { Discord } from '../../service/discord';
-import { Dockerhub } from '../../service/dockerhub';
 import { Octokit } from '@octokit/rest';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';
@@ -46,18 +45,9 @@ export class Ingeminator {
     const { id: jobId, data: jobData } = job;
     const builds = await CiBuilds.getFailedBuildsQueue(jobId);
     if (builds.length <= 0) {
-      // No failed builds — check if all builds are published and heal the job status
-      const allPublished = await CiBuilds.haveAllBuildsForJobBeenPublished(jobId);
-      if (allPublished) {
-        await CiJobs.markJobAsCompleted(jobId);
-        await Discord.sendDebug(
-          `[Ingeminator] All builds for job \`${jobId}\` are published. Marked job as completed.`,
-        );
-      } else {
-        await Discord.sendDebug(
-          `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
-        );
-      }
+      await Discord.sendDebug(
+        `[Ingeminator] Looks like all failed builds for job \`${jobId}\` are already scheduled.`,
+      );
       return;
     }
 
@@ -102,25 +92,6 @@ export class Ingeminator {
       if (lastFailure.toMillis() + backoffMilliseconds >= Timestamp.now().toMillis()) {
         await Discord.sendDebug(
           `[Ingeminator] Backoff period of ${backoffMinutes} minutes has not expired for ${buildId}.`,
-        );
-        continue;
-      }
-
-      // Check DockerHub before dispatching — the image may already exist
-      const { imageType, buildInfo } = BuildData;
-      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
-      const existingImage = await Dockerhub.fetchImageData(imageType, tag);
-      if (existingImage) {
-        const digest = existingImage.digest || '';
-        await CiBuilds.markBuildAsPublished(buildId, jobId, {
-          digest,
-          specificTag: `${buildInfo.baseOs}-${buildInfo.repoVersion}`,
-          friendlyTag: buildInfo.repoVersion.replace(/\.\d+$/, ''),
-          imageName: Dockerhub.getImageName(imageType),
-          imageRepo: Dockerhub.getRepositoryBaseName(),
-        });
-        await Discord.sendDebug(
-          `[Ingeminator] Build "${buildId}" already exists on DockerHub. Marked as published.`,
         );
         continue;
       }

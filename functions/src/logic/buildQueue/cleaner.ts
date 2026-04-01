@@ -11,6 +11,7 @@ export class Cleaner {
   public static async cleanUp() {
     this.buildsProcessed = 0;
     await this.cleanUpBuildsThatDidntReportBack();
+    await this.healFailedBuildsAlreadyOnDockerHub();
   }
 
   /**
@@ -69,6 +70,42 @@ export class Cleaner {
     }
 
     return results;
+  }
+
+  /**
+   * Reconcile "failed" builds against DockerHub.
+   * A build can end up "failed" in Firestore while the image was actually
+   * pushed to DockerHub (e.g. the workflow pushed the image but crashed
+   * before reporting publication). Mark these as published so the
+   * Ingeminator stops retrying them.
+   */
+  private static async healFailedBuildsAlreadyOnDockerHub() {
+    const failedBuilds = await CiBuilds.getFailedBuilds(this.maxBuildsProcessedPerRun);
+
+    for (const failedBuild of failedBuilds) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      const { buildId, relatedJobId: jobId, imageType, buildInfo } = failedBuild;
+      const { baseOs, repoVersion } = buildInfo;
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
+
+      this.buildsProcessed += 1;
+
+      const response = await Dockerhub.fetchImageData(imageType, tag);
+      if (!response) continue;
+
+      const digest = response.digest || '';
+      await Discord.sendDebug(
+        `[Cleaner] Build "${tag}" is "failed" but exists on DockerHub. Marking as published.`,
+      );
+      await CiBuilds.markBuildAsPublished(buildId, jobId, {
+        digest,
+        specificTag: `${baseOs}-${repoVersion}`,
+        friendlyTag: repoVersion.replace(/\.\d+$/, ''),
+        imageName: Dockerhub.getImageName(imageType),
+        imageRepo: Dockerhub.getRepositoryBaseName(),
+      });
+    }
   }
 
   private static async cleanUpBuildsThatDidntReportBack() {
