@@ -176,7 +176,7 @@ export class Scheduler {
         return false;
       }
 
-      const ingeminator = new Ingeminator(numberToReschedule, this.gitHub, this.repoVersionInfo);
+      const ingeminator = new Ingeminator(numberToReschedule, this.gitHub);
       await ingeminator.rescheduleFailedJobs(failingJobs);
     }
 
