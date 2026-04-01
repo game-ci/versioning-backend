@@ -1,6 +1,7 @@
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';
 import { Discord } from '../../service/discord';
+import { CiJobs } from '../../model/ciJobs';
 
 /**
  * When a new Unity version gets ingested:
@@ -19,6 +20,16 @@ export const scheduleBuildsFromTheQueue = async (
   githubClientSecret: string,
 ) => {
   const repoVersionInfo = await RepoVersionInfo.getLatest();
+  const numSuperseded = await CiJobs.markJobsBeforeRepoVersionAsSuperseded(repoVersionInfo.version);
+
+  if (numSuperseded >= 1) {
+    await Discord.sendDebug(
+      `[Build queue] Superseded ${CiJobs.pluralise(
+        numSuperseded,
+      )} from older repo versions before scheduling.`,
+    );
+  }
+
   const scheduler = await new Scheduler(repoVersionInfo).init(githubPrivateKey, githubClientSecret);
 
   const testVersion = '0.1.0';
