@@ -12124,6 +12124,13 @@ __metadata:
     shellcheck: "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vitest: "npm:^3.2.4"
+  dependenciesMeta:
+    esbuild:
+      built: true
+    protobufjs:
+      built: true
+    re2:
+      built: true
   languageName: unknown
   linkType: soft
 
