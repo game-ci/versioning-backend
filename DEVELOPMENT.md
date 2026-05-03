@@ -9,7 +9,7 @@ This guide helps you set up the development environment for the GameCI Versionin
 - [Firebase CLI](https://firebase.google.com/docs/cli) for local development and deployment
 - [Java Runtime Environment](https://www.java.com/) for Firebase emulators
 
-> **Tip:** Use [nvm](https://github.com/nvm-sh/nvm), [n](https://github.com/tj/n), or [volta](https://volta.sh/) to manage Node.js versions.
+> **Tip:** This repo uses [mise](https://mise.jdx.dev/) (`mise.toml`) to pin the Node version. Run `mise install` in the repo root.
 
 ## Setup
 

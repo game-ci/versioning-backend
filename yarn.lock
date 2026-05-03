@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 9
   cacheKey: 10c0
 
 "@ampproject/remapping@npm:^2.3.0":
@@ -12124,6 +12124,13 @@ __metadata:
     shellcheck: "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vitest: "npm:^3.2.4"
+  dependenciesMeta:
+    esbuild:
+      built: true
+    protobufjs:
+      built: true
+    re2:
+      built: true
   languageName: unknown
   linkType: soft
 
