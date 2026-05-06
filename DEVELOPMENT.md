@@ -52,7 +52,6 @@ This will compile the TypeScript code into JavaScript in the `lib` directory, wh
 To use Firebase Admin SDK locally:
 
 1. Download a service account key from your Firebase project settings:
-
    - Go to [Firebase Console](https://console.firebase.google.com/)
    - Select your project
    - Go to Project Settings > Service accounts
