@@ -70,6 +70,15 @@ export class CiBuilds {
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
 
+  public static getAllForRepoVersion = async (repoVersion: string): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
+  };
+
   public static get = async (buildId: string): Promise<CiBuild | null> => {
     const snapshot = await db.doc(`${CiBuilds.collection}/${buildId}`).get();
 
