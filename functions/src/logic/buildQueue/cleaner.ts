@@ -15,6 +15,47 @@ export class Cleaner {
   }
 
   /**
+   * Automatically recover maxed-out failed builds for the latest repo version.
+   * If the image is already on DockerHub, mark it as published.
+   * Otherwise reset its failure count so the Ingeminator can retry it again.
+   */
+  public static async recoverMaxedOutFailedBuilds(repoVersion: string): Promise<string[]> {
+    const results: string[] = [];
+    const maxedBuilds = await CiBuilds.getMaxedOutFailedBuildsForRepoVersion(repoVersion);
+
+    for (const { id: buildId, data: build } of maxedBuilds) {
+      const { relatedJobId: jobId, imageType, buildInfo } = build;
+      const { baseOs } = buildInfo;
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
+
+      const response = await Dockerhub.fetchImageData(imageType, tag);
+      if (response) {
+        const digest = response.digest || '';
+        await Discord.sendDebug(
+          `[Cleaner] Maxed-out build "${tag}" already exists on DockerHub. Marking as published.`,
+        );
+        await CiBuilds.markBuildAsPublished(buildId, jobId, {
+          digest,
+          specificTag: `${baseOs}-${repoVersion}`,
+          friendlyTag: repoVersion.replace(/\.\d+$/, ''),
+          imageName: Dockerhub.getImageName(imageType),
+          imageRepo: Dockerhub.getRepositoryBaseName(),
+        });
+        results.push(`published:${buildId}`);
+        continue;
+      }
+
+      await CiBuilds.resetFailureCount(buildId);
+      await Discord.sendAlert(
+        `[Cleaner] Reset failure count for maxed-out build "${tag}" so it can retry automatically.`,
+      );
+      results.push(`reset:${buildId}`);
+    }
+
+    return results;
+  }
+
+  /**
    * Manual cleanup for maintainers. Processes all stuck builds without the
    * 6-hour wait and without the per-run build limit.
    * Returns a summary of actions taken.

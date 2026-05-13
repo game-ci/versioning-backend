@@ -263,6 +263,26 @@ export class CiBuilds {
       }));
   };
 
+  public static getMaxedOutFailedBuildsForRepoVersion = async (
+    repoVersion: string,
+  ): Promise<CiBuildQueue> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
+
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as CiBuild;
+        return (data.meta?.failureCount ?? 0) >= settings.maxFailuresPerBuild;
+      })
+      .map((doc) => ({
+        id: doc.id,
+        data: doc.data() as CiBuild,
+      }));
+  };
+
   public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {
     const snapshot = await db
       .collection(CiBuilds.collection)
