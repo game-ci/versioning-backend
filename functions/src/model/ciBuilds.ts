@@ -36,6 +36,7 @@ interface MetaData {
   failureCount: number;
   lastBuildFailure: Timestamp | null;
   publishedDate: Timestamp | null;
+  recoveryCount?: number;
 }
 
 export interface CiBuild {
@@ -232,9 +233,19 @@ export class CiBuilds {
 
   public static resetFailureCount = async (buildId: string): Promise<void> => {
     const build = db.collection(CiBuilds.collection).doc(buildId);
+    // Use an epoch sentinel rather than null so the Ingeminator's backoff math
+    // (lastBuildFailure.toMillis() + backoffMs) never reads null at runtime.
     await build.update({
       'meta.failureCount': 0,
-      'meta.lastBuildFailure': null,
+      'meta.lastBuildFailure': Timestamp.fromMillis(0),
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  public static incrementRecoveryCount = async (buildId: string): Promise<void> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    await build.update({
+      'meta.recoveryCount': FieldValue.increment(1),
       modifiedDate: Timestamp.now(),
     });
   };

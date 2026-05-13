@@ -121,6 +121,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "ciBuilds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "buildInfo.repoVersion",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
