@@ -17,12 +17,12 @@ if (MINUTES < 10) {
   throw new Error('Is the result really worth the machine time? Remove me.');
 }
 
-// Timeout of 60 seconds will keep our routine process tight.
+// Allow enough time for DockerHub-backed healing work during queue recovery.
 export const trigger = onSchedule(
   {
     schedule: `every ${MINUTES} minutes`,
     memory: '512MiB',
-    timeoutSeconds: 60,
+    timeoutSeconds: 300,
     secrets: [discordToken, githubPrivateKeyConfigSecret, githubClientSecretConfigSecret],
   },
   async () => {

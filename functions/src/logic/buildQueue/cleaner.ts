@@ -1,15 +1,23 @@
 import { CiBuilds } from '../../model/ciBuilds';
+import { CiJobs } from '../../model/ciJobs';
 import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
 
 export class Cleaner {
-  // Cronjob intentionally has a limited runtime
-  static readonly maxBuildsProcessedPerRun: number = 5;
+  // Cronjob intentionally has a limited runtime, but it still needs enough
+  // throughput to drain queue backlogs without requiring manual intervention.
+  static readonly maxBuildsProcessedPerRun: number = 25;
+  static readonly activeJobWithoutBuildsAfterMinutes: number = 30;
+  static readonly startedBuildPublishProbeAfterMinutes: number = 45;
+  static readonly startedBuildFailureAfterHours: number = 6;
 
   static buildsProcessed: number;
 
-  public static async cleanUp() {
+  public static async cleanUp(latestRepoVersion: string) {
     this.buildsProcessed = 0;
+    await this.requeueActiveJobsWithoutBuilds();
+    await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
+    await this.reconcileStartedBuildsThatMayHavePublished();
     await this.cleanUpBuildsThatDidntReportBack();
     await this.healFailedBuildsAlreadyOnDockerHub();
   }
@@ -21,6 +29,36 @@ export class Cleaner {
    * resets only burn GitHub Actions minutes and DockerHub API quota.
    */
   static readonly maxRecoveryAttempts: number = 2;
+
+  /**
+   * Jobs can get stuck in "scheduled" or "inProgress" without ever creating a
+   * build record when the dispatch path flakes before reportNewBuild. Reset
+   * those jobs back to created so the scheduler can dispatch them again.
+   */
+  private static async requeueActiveJobsWithoutBuilds() {
+    const activeJobs = await CiJobs.getActiveJobs();
+    const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
+
+    for (const activeJob of activeJobs) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      const { id: jobId, data: job } = activeJob;
+      const lastTouchedSeconds = job.modifiedDate?.seconds || job.addedDate?.seconds;
+      if (!lastTouchedSeconds) continue;
+
+      const ageMs = Date.now() - lastTouchedSeconds * 1000;
+      if (ageMs < staleThresholdMs) continue;
+
+      const hasBuilds = await CiBuilds.hasAnyBuildsForJob(jobId);
+      if (hasBuilds) continue;
+
+      this.buildsProcessed += 1;
+      await CiJobs.resetJobToCreated(jobId);
+      await Discord.sendAlert(
+        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
+      );
+    }
+  }
 
   /**
    * Automatically recover maxed-out failed builds for the latest repo version.
@@ -183,6 +221,49 @@ export class Cleaner {
     }
   }
 
+  /**
+   * If a started build has been running for a while and the image already
+   * exists on DockerHub, we can mark it as published without waiting for the
+   * full GitHub Actions timeout window. This frees queue capacity earlier.
+   */
+  private static async reconcileStartedBuildsThatMayHavePublished() {
+    const startedBuilds = await CiBuilds.getStartedBuilds();
+    const probeThresholdMs = this.startedBuildPublishProbeAfterMinutes * 60 * 1000;
+
+    for (const startedBuild of startedBuilds) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
+      const { lastBuildStart, publishedDate } = meta;
+      const { baseOs, repoVersion } = buildInfo;
+
+      if (!lastBuildStart) continue;
+
+      const buildStartMs = new Date(lastBuildStart.seconds * 1000).getTime();
+      const nowMs = Date.now();
+      if (nowMs - buildStartMs < probeThresholdMs) continue;
+
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
+      this.buildsProcessed += 1;
+
+      const response = await Dockerhub.fetchImageData(imageType, tag);
+      if (!response) continue;
+
+      const digest = response.digest || '';
+      const message = publishedDate
+        ? `[Cleaner] Build "${tag}" has published metadata and exists on DockerHub. Reconciling status back to published.`
+        : `[Cleaner] Build "${tag}" is still "started" but already exists on DockerHub. Marking as published early.`;
+      await Discord.sendDebug(message);
+      await CiBuilds.markBuildAsPublished(buildId, jobId, {
+        digest,
+        specificTag: `${baseOs}-${repoVersion}`,
+        friendlyTag: repoVersion.replace(/\.\d+$/, ''),
+        imageName: Dockerhub.getImageName(imageType),
+        imageRepo: Dockerhub.getRepositoryBaseName(),
+      });
+    }
+  }
+
   private static async cleanUpBuildsThatDidntReportBack() {
     const startedBuilds = await CiBuilds.getStartedBuilds();
 
@@ -218,7 +299,8 @@ export class Cleaner {
       // If a job reaches this limit, the job is terminated and fails to complete.
       // @see https://docs.github.com/en/actions/learn-github-actions/usage-limits-billing-and-administration
       const ONE_HOUR = 1000 * 60 * 60;
-      const sixHoursAgo = new Date().getTime() - 6 * ONE_HOUR;
+      const failureThresholdMs = this.startedBuildFailureAfterHours * ONE_HOUR;
+      const sixHoursAgo = new Date().getTime() - failureThresholdMs;
       const buildStart = new Date(lastBuildStart.seconds * 1000).getTime();
 
       if (buildStart < sixHoursAgo) {
