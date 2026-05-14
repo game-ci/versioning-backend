@@ -1,4 +1,5 @@
 import { CiBuilds } from '../../model/ciBuilds';
+import { CiJobs } from '../../model/ciJobs';
 import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
 
@@ -6,6 +7,7 @@ export class Cleaner {
   // Cronjob intentionally has a limited runtime, but it still needs enough
   // throughput to drain queue backlogs without requiring manual intervention.
   static readonly maxBuildsProcessedPerRun: number = 25;
+  static readonly activeJobWithoutBuildsAfterMinutes: number = 30;
   static readonly startedBuildPublishProbeAfterMinutes: number = 45;
   static readonly startedBuildFailureAfterHours: number = 6;
 
@@ -13,6 +15,7 @@ export class Cleaner {
 
   public static async cleanUp(latestRepoVersion: string) {
     this.buildsProcessed = 0;
+    await this.requeueActiveJobsWithoutBuilds();
     await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
     await this.reconcileStartedBuildsThatMayHavePublished();
     await this.cleanUpBuildsThatDidntReportBack();
@@ -26,6 +29,36 @@ export class Cleaner {
    * resets only burn GitHub Actions minutes and DockerHub API quota.
    */
   static readonly maxRecoveryAttempts: number = 2;
+
+  /**
+   * Jobs can get stuck in "scheduled" or "inProgress" without ever creating a
+   * build record when the dispatch path flakes before reportNewBuild. Reset
+   * those jobs back to created so the scheduler can dispatch them again.
+   */
+  private static async requeueActiveJobsWithoutBuilds() {
+    const activeJobs = await CiJobs.getActiveJobs();
+    const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
+
+    for (const activeJob of activeJobs) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      const { id: jobId, data: job } = activeJob;
+      const lastTouchedSeconds = job.modifiedDate?.seconds || job.addedDate?.seconds;
+      if (!lastTouchedSeconds) continue;
+
+      const ageMs = Date.now() - lastTouchedSeconds * 1000;
+      if (ageMs < staleThresholdMs) continue;
+
+      const hasBuilds = await CiBuilds.hasAnyBuildsForJob(jobId);
+      if (hasBuilds) continue;
+
+      this.buildsProcessed += 1;
+      await CiJobs.resetJobToCreated(jobId);
+      await Discord.sendAlert(
+        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
+      );
+    }
+  }
 
   /**
    * Automatically recover maxed-out failed builds for the latest repo version.

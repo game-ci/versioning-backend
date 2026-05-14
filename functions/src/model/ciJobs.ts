@@ -126,6 +126,19 @@ export class CiJobs {
     return snapshot.docs.length;
   };
 
+  static getActiveJobs = async (): Promise<CiJobQueue> => {
+    const snapshot = await db
+      .collection(CiJobs.collection)
+      .where('status', 'in', ['scheduled', 'inProgress'])
+      .limit(settings.maxConcurrentJobs)
+      .get();
+
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data() as CiJob,
+    }));
+  };
+
   static create = async (
     jobId: string,
     imageType: ImageType,
@@ -232,6 +245,15 @@ export class CiJobs {
 
     await job.update({
       status: 'completed',
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  static resetJobToCreated = async (jobId: string) => {
+    const job = await db.collection(CiJobs.collection).doc(jobId);
+
+    await job.update({
+      status: 'created',
       modifiedDate: Timestamp.now(),
     });
   };
