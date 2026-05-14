@@ -36,6 +36,7 @@ interface MetaData {
   failureCount: number;
   lastBuildFailure: Timestamp | null;
   publishedDate: Timestamp | null;
+  recoveryCount?: number;
 }
 
 export interface CiBuild {
@@ -66,6 +67,15 @@ export class CiBuilds {
 
   public static getAll = async (): Promise<CiBuild[]> => {
     const snapshot = await db.collection(CiBuilds.collection).get();
+
+    return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
+  };
+
+  public static getAllForRepoVersion = async (repoVersion: string): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
@@ -223,9 +233,19 @@ export class CiBuilds {
 
   public static resetFailureCount = async (buildId: string): Promise<void> => {
     const build = db.collection(CiBuilds.collection).doc(buildId);
+    // Use an epoch sentinel rather than null so the Ingeminator's backoff math
+    // (lastBuildFailure.toMillis() + backoffMs) never reads null at runtime.
     await build.update({
       'meta.failureCount': 0,
-      'meta.lastBuildFailure': null,
+      'meta.lastBuildFailure': Timestamp.fromMillis(0),
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  public static incrementRecoveryCount = async (buildId: string): Promise<void> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    await build.update({
+      'meta.recoveryCount': FieldValue.increment(1),
       modifiedDate: Timestamp.now(),
     });
   };
@@ -242,6 +262,26 @@ export class CiBuilds {
 
   public static getMaxedOutFailedBuilds = async (): Promise<CiBuildQueue> => {
     const snapshot = await db.collection(CiBuilds.collection).where('status', '==', 'failed').get();
+
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as CiBuild;
+        return (data.meta?.failureCount ?? 0) >= settings.maxFailuresPerBuild;
+      })
+      .map((doc) => ({
+        id: doc.id,
+        data: doc.data() as CiBuild,
+      }));
+  };
+
+  public static getMaxedOutFailedBuildsForRepoVersion = async (
+    repoVersion: string,
+  ): Promise<CiBuildQueue> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
 
     return snapshot.docs
       .filter((doc) => {

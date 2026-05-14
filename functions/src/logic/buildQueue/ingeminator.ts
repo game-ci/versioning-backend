@@ -62,7 +62,10 @@ export class Ingeminator {
       // Max retries check
       const { maxFailuresPerBuild } = settings;
       const { lastBuildFailure, failureCount } = build.data.meta;
-      const lastFailure = lastBuildFailure as Timestamp;
+      // `lastBuildFailure` can be null after Cleaner.recoverMaxedOutFailedBuilds
+      // or the admin reset endpoint clears it. Fall back to the epoch so the
+      // backoff window is always considered elapsed.
+      const lastFailure = lastBuildFailure ?? Timestamp.fromMillis(0);
       if (failureCount >= maxFailuresPerBuild) {
         // Log warning
         const retries: number = maxFailuresPerBuild - 1;

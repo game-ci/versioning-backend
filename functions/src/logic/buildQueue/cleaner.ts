@@ -15,6 +15,81 @@ export class Cleaner {
   }
 
   /**
+   * A build that has been auto-recovered this many times will not be reset
+   * again. Beyond this point the build is almost certainly fundamentally
+   * broken (e.g. an unbuildable editor version on a given base OS); further
+   * resets only burn GitHub Actions minutes and DockerHub API quota.
+   */
+  static readonly maxRecoveryAttempts: number = 2;
+
+  /**
+   * Automatically recover maxed-out failed builds for the latest repo version.
+   * If the image is already on DockerHub, mark it as published.
+   * Otherwise reset its failure count so the Ingeminator can retry it again.
+   *
+   * Per run we process at most `maxBuildsProcessedPerRun` builds and we cap
+   * the number of times any single build can be auto-reset. Builds that
+   * exceed `maxRecoveryAttempts` are left alone and an alert is sent so a
+   * maintainer can investigate.
+   */
+  public static async recoverMaxedOutFailedBuilds(repoVersion: string): Promise<string[]> {
+    const results: string[] = [];
+    const maxedBuilds = await CiBuilds.getMaxedOutFailedBuildsForRepoVersion(repoVersion);
+
+    let processed = 0;
+    for (const { id: buildId, data: build } of maxedBuilds) {
+      if (processed >= this.maxBuildsProcessedPerRun) {
+        results.push(`deferred:${buildId}`);
+        continue;
+      }
+
+      const { relatedJobId: jobId, imageType, buildInfo, meta } = build;
+      const { baseOs } = buildInfo;
+      const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
+      const recoveryCount = meta?.recoveryCount ?? 0;
+
+      processed += 1;
+
+      const response = await Dockerhub.fetchImageData(imageType, tag);
+      if (response) {
+        const digest = response.digest || '';
+        await Discord.sendDebug(
+          `[Cleaner] Maxed-out build "${tag}" already exists on DockerHub. Marking as published.`,
+        );
+        await CiBuilds.markBuildAsPublished(buildId, jobId, {
+          digest,
+          specificTag: `${baseOs}-${repoVersion}`,
+          friendlyTag: repoVersion.replace(/\.\d+$/, ''),
+          imageName: Dockerhub.getImageName(imageType),
+          imageRepo: Dockerhub.getRepositoryBaseName(),
+        });
+        results.push(`published:${buildId}`);
+        continue;
+      }
+
+      if (recoveryCount >= this.maxRecoveryAttempts) {
+        await Discord.sendAlert(
+          `[Cleaner] Build "${tag}" has been auto-recovered ${recoveryCount} time(s) and is still failing. ` +
+            `Leaving it at max retries - manual investigation required.`,
+        );
+        results.push(`exhausted:${buildId}`);
+        continue;
+      }
+
+      await CiBuilds.resetFailureCount(buildId);
+      await CiBuilds.incrementRecoveryCount(buildId);
+      await Discord.sendAlert(
+        `[Cleaner] Reset failure count for maxed-out build "${tag}" (recovery attempt ${
+          recoveryCount + 1
+        }/${this.maxRecoveryAttempts}).`,
+      );
+      results.push(`reset:${buildId}`);
+    }
+
+    return results;
+  }
+
+  /**
    * Manual cleanup for maintainers. Processes all stuck builds without the
    * 6-hour wait and without the per-run build limit.
    * Returns a summary of actions taken.

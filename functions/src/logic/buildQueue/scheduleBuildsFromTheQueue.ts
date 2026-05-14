@@ -2,6 +2,7 @@ import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';
 import { Discord } from '../../service/discord';
 import { CiJobs } from '../../model/ciJobs';
+import { Cleaner } from './cleaner';
 
 /**
  * When a new Unity version gets ingested:
@@ -27,6 +28,13 @@ export const scheduleBuildsFromTheQueue = async (
       `[Build queue] Superseded ${CiJobs.pluralise(
         numSuperseded,
       )} from older repo versions before scheduling.`,
+    );
+  }
+
+  const recoveredBuilds = await Cleaner.recoverMaxedOutFailedBuilds(repoVersionInfo.version);
+  if (recoveredBuilds.length >= 1) {
+    await Discord.sendDebug(
+      `[Build queue] Recovered ${recoveredBuilds.length} maxed-out failed build(s) for repo version ${repoVersionInfo.version}.`,
     );
   }
 
