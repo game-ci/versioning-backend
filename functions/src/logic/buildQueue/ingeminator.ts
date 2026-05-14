@@ -14,13 +14,14 @@ import { logger } from 'firebase-functions/v2';
 export class Ingeminator {
   numberToSchedule: number;
   gitHubClient: Octokit;
+  private scheduledBuilds = 0;
 
   constructor(numberToSchedule: number, gitHubClient: Octokit) {
     this.numberToSchedule = numberToSchedule;
     this.gitHubClient = gitHubClient;
   }
 
-  async rescheduleFailedJobs(jobs: CiJobQueue) {
+  async rescheduleFailedJobs(jobs: CiJobQueue): Promise<number> {
     if (jobs.length <= 0) {
       throw new Error(
         '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
@@ -36,6 +37,8 @@ export class Ingeminator {
 
       await this.rescheduleFailedBuildsForJob(job);
     }
+
+    return this.scheduledBuilds;
   }
 
   private async rescheduleFailedBuildsForJob(job: CiJobQueueItem) {
@@ -101,6 +104,7 @@ export class Ingeminator {
       if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData))) {
         return;
       }
+      this.scheduledBuilds += 1;
     }
 
     await CiJobs.markJobAsScheduled(jobId);

@@ -19,6 +19,7 @@ export class Scheduler {
   private _gitHub: Octokit | undefined;
   private maxConcurrentJobs: number;
   private repoVersionInfo: RepoVersionInfo;
+  private reservedRetrySlots = 0;
 
   private get gitHub(): Octokit {
     // @ts-ignore
@@ -166,6 +167,7 @@ export class Scheduler {
   async ensureThereAreNoFailedJobs(): Promise<boolean> {
     const { maxToleratedFailures, maxExtraJobsForRescheduling } = settings;
     const failingJobs = await CiJobs.getFailingJobsQueue();
+    this.reservedRetrySlots = 0;
 
     if (failingJobs.length >= 1) {
       const openSpots = await this.determineOpenSpots();
@@ -177,14 +179,23 @@ export class Scheduler {
       }
 
       const ingeminator = new Ingeminator(numberToReschedule, this.gitHub);
-      await ingeminator.rescheduleFailedJobs(failingJobs);
+      const scheduledRetries = await ingeminator.rescheduleFailedJobs(failingJobs);
+      this.reservedRetrySlots = Math.min(scheduledRetries, openSpots);
+
+      const remainingFreshSlots = openSpots - this.reservedRetrySlots;
+      if (remainingFreshSlots > 0) {
+        await Discord.sendDebug(
+          `[Scheduler] Reserved ${this.reservedRetrySlots} slot(s) for retries and kept ${remainingFreshSlots} slot(s) available for fresh jobs.`,
+        );
+      }
     }
 
-    return failingJobs.length <= maxToleratedFailures;
+    const openSpotsAfterRetries = await this.determineOpenSpotsForFreshJobs();
+    return failingJobs.length <= maxToleratedFailures || openSpotsAfterRetries > 0;
   }
 
   async buildLatestEditorImages(): Promise<boolean> {
-    const openSpots = await this.determineOpenSpots();
+    const openSpots = await this.determineOpenSpotsForFreshJobs();
     if (openSpots <= 0) {
       await Discord.sendDebug('[Scheduler] Not scheduling any new jobs, as the queue is full');
       return false;
@@ -245,5 +256,11 @@ export class Scheduler {
     const currentlyRunningJobs = await CiJobs.getNumberOfScheduledJobs();
     const openSpots = this.maxConcurrentJobs - currentlyRunningJobs;
     return openSpots <= 0 ? 0 : openSpots;
+  }
+
+  private async determineOpenSpotsForFreshJobs(): Promise<number> {
+    const openSpots = await this.determineOpenSpots();
+    const availableSpots = openSpots - this.reservedRetrySlots;
+    return availableSpots <= 0 ? 0 : availableSpots;
   }
 }
