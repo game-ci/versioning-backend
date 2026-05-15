@@ -126,6 +126,17 @@ export class CiBuilds {
     return snapshot.docs.length > 0;
   };
 
+  public static hasAnyStartedBuildsForJob = async (jobId: string): Promise<boolean> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('relatedJobId', '==', jobId)
+      .where('status', '==', 'started')
+      .limit(1)
+      .get();
+
+    return snapshot.docs.length > 0;
+  };
+
   /**
    * Registers a new build or handles duplicate dispatches gracefully.
    * Returns the existing status if the build is already in progress or published,

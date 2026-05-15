@@ -16,6 +16,7 @@ export class Cleaner {
   public static async cleanUp(latestRepoVersion: string) {
     this.buildsProcessed = 0;
     await this.requeueActiveJobsWithoutBuilds();
+    await this.transitionStaleInProgressJobsToFailed();
     await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
     await this.reconcileStartedBuildsThatMayHavePublished();
     await this.cleanUpBuildsThatDidntReportBack();
@@ -56,6 +57,40 @@ export class Cleaner {
       await CiJobs.resetJobToCreated(jobId);
       await Discord.sendAlert(
         `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
+      );
+    }
+  }
+
+  /**
+   * An inProgress job whose builds have all finished (none are "started") is
+   * stuck — the job will never self-transition because only the build-report
+   * path calls markFailureForJob. Move these to "failed" so the Ingeminator
+   * can schedule retries and free up queue capacity for fresh jobs.
+   */
+  private static async transitionStaleInProgressJobsToFailed() {
+    const activeJobs = await CiJobs.getActiveJobs();
+    const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
+
+    for (const activeJob of activeJobs) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      const { id: jobId, data: job } = activeJob;
+      const lastTouchedSeconds = job.modifiedDate?.seconds || job.addedDate?.seconds;
+      if (!lastTouchedSeconds) continue;
+
+      const ageMs = Date.now() - lastTouchedSeconds * 1000;
+      if (ageMs < staleThresholdMs) continue;
+
+      const hasBuilds = await CiBuilds.hasAnyBuildsForJob(jobId);
+      if (!hasBuilds) continue; // no builds at all — handled by requeueActiveJobsWithoutBuilds
+
+      const hasStartedBuilds = await CiBuilds.hasAnyStartedBuildsForJob(jobId);
+      if (hasStartedBuilds) continue; // at least one build is still running
+
+      this.buildsProcessed += 1;
+      await CiJobs.markFailureForJob(jobId);
+      await Discord.sendAlert(
+        `[Cleaner] Transitioned ${job.status} job "${jobId}" to failed: all its builds have settled with no started builds remaining.`,
       );
     }
   }
@@ -161,6 +196,7 @@ export class Cleaner {
         await CiBuilds.markBuildAsFailed(buildId, {
           reason: `[ManualCleanup] Build never reported back and image not found on DockerHub.`,
         });
+        await CiJobs.markFailureForJob(jobId);
         continue;
       }
 
@@ -315,6 +351,7 @@ export class Cleaner {
           await CiBuilds.markBuildAsFailed(buildId, {
             reason: markAsFailedMessage,
           });
+          await CiJobs.markFailureForJob(jobId);
 
           continue;
         }
