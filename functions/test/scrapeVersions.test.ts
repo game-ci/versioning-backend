@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { scrapeVersions } from '../src/logic/ingestUnityVersions/scrapeVersions';
+import { scrapeLatestOfficialUnityVersion, scrapeVersions } from '../src/logic/ingestUnityVersions/scrapeVersions';
 import { SearchMode } from 'unity-changeset';
+import fetch from 'node-fetch';
 
 // Mock the unity-changeset module
 vi.mock('unity-changeset', async () => {
@@ -11,11 +12,25 @@ vi.mock('unity-changeset', async () => {
   };
 });
 
+vi.mock('node-fetch', () => ({
+  default: vi.fn(),
+}));
+
 const { searchChangesets } = await import('unity-changeset');
+const mockedFetch = fetch as unknown as vi.MockedFunction<typeof fetch>;
+
+const mockOfficialUnityRelease = (html = '<h1>Unity 6000.4.10f1</h1><p>Changeset: feeafc12a938</p>') => {
+  mockedFetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    text: async () => html,
+  } as any);
+};
 
 describe('scrapeVersions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOfficialUnityRelease('');
   });
 
   it('should fetch both default and XLTS versions', async () => {
@@ -99,6 +114,60 @@ describe('scrapeVersions', () => {
         major: 2021,
         minor: 3,
         patch: '25',
+      }),
+    );
+  });
+
+  it('should merge the latest official Unity release when unity-changeset is stale', async () => {
+    mockOfficialUnityRelease();
+    const mockDefaultVersions = [
+      {
+        version: '6000.4.7f1',
+        changeset: 'f3c3c4248748',
+      },
+    ];
+
+    (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (mode: SearchMode) => {
+      if (mode === SearchMode.Default) {
+        return mockDefaultVersions;
+      }
+      return [];
+    });
+
+    const result = await scrapeVersions();
+
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+        major: 6000,
+        minor: 4,
+        patch: '10',
+      }),
+    );
+  });
+
+  it('should parse the latest official Unity release page', async () => {
+    mockOfficialUnityRelease('<h1>Unity 6000.4.10f1</h1><div>Changeset: feeafc12a938</div>');
+
+    await expect(scrapeLatestOfficialUnityVersion()).resolves.toEqual(
+      expect.objectContaining({
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+        major: 6000,
+        minor: 4,
+        patch: '10',
+      }),
+    );
+  });
+
+  it('should parse the Unity Hub install URL from the official release page', async () => {
+    mockOfficialUnityRelease('<h1>Unity 6000.4.10f1</h1><a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>');
+
+    await expect(scrapeLatestOfficialUnityVersion()).resolves.toEqual(
+      expect.objectContaining({
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
       }),
     );
   });
