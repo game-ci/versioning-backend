@@ -41,25 +41,16 @@ export class DockerImageReconciler {
     this.repoVersionMajor = String(major);
   }
 
-  private async isDockerImageMissing(
-    repository: string,
-    tag: string,
-  ): Promise<boolean> {
+  private async isDockerImageMissing(repository: string, tag: string): Promise<boolean> {
     try {
-      const response = await fetch(
-        `${DOCKERHUB_API}/${repository}/tags/${tag}`,
-        {
-          headers: { 'User-Agent': 'game-ci-versioning-backend/1.0' },
-        },
-      );
+      const response = await fetch(`${DOCKERHUB_API}/${repository}/tags/${tag}`, {
+        headers: { 'User-Agent': 'game-ci-versioning-backend/1.0' },
+      });
       if (response.status === 404) return true;
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return false;
     } catch (error) {
-      logger.warn(
-        `DockerHub API error checking ${repository}:${tag}`,
-        error,
-      );
+      logger.warn(`DockerHub API error checking ${repository}:${tag}`, error);
       return false;
     }
   }
@@ -76,9 +67,7 @@ export class DockerImageReconciler {
     await this.reportResults();
   }
 
-  private async checkVersionImages(
-    version: EditorVersionInfo,
-  ): Promise<void> {
+  private async checkVersionImages(version: EditorVersionInfo): Promise<void> {
     const { version: editorVersion, changeSet: changeset } = version;
 
     const baseImages = [
@@ -144,10 +133,7 @@ export class DockerImageReconciler {
   private async checkImage(image: DockerImage): Promise<void> {
     this.imagesChecked += 1;
     try {
-      const isMissing = await this.isDockerImageMissing(
-        image.repository,
-        image.tag,
-      );
+      const isMissing = await this.isDockerImageMissing(image.repository, image.tag);
       if (!isMissing) {
         logger.debug(`OK ${image.repository}:${image.tag}`);
         return;
@@ -210,15 +196,11 @@ export class DockerImageReconciler {
 
   private async reportResults(): Promise<void> {
     if (this.missingImages.length === 0) {
-      await Discord.sendDebug(
-        `[DockerImageReconciler] Checked ${this.imagesChecked} images OK`,
-      );
+      await Discord.sendDebug(`[DockerImageReconciler] Checked ${this.imagesChecked} images OK`);
       return;
     }
 
-    const successful = this.missingImages.filter(
-      (m) => m.dispatchedRetry,
-    ).length;
+    const successful = this.missingImages.filter((m) => m.dispatchedRetry).length;
     const failedCount = this.missingImages.length - successful;
 
     await Discord.sendAlert(
