@@ -45,7 +45,7 @@ export const scrapeLatestOfficialUnityVersion = async (): Promise<EditorVersionI
 
   const html = await response.text();
   const versionMatch = /Unity\s+(\d+\.\d+\.\d+f\d+)/.exec(html);
-  const escapedVersion = versionMatch?.[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedVersion = versionMatch?.[1].replace(/[.*+?^${}()|[\]\]/g, '\$&');
   const changesetMatch = versionMatch
     ? new RegExp(`unityhub://${escapedVersion}/([a-f0-9]{12})`, 'i').exec(html) ||
       /Changeset:\s*([a-f0-9]{12})/i.exec(html)
@@ -62,14 +62,18 @@ export const scrapeLatestOfficialUnityVersion = async (): Promise<EditorVersionI
 };
 
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
-  const unityVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.Default)).map(({ version, changeset }) => ({
-    version,
-    changeset,
-  }));
-  const unityXltsVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.XLTS)).map(({ version, changeset }) => ({
-    version,
-    changeset,
-  }));
+  const unityVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.Default)).map(
+    ({ version, changeset }) => ({
+      version,
+      changeset,
+    }),
+  );
+  const unityXltsVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.XLTS)).map(
+    ({ version, changeset }) => ({
+      version,
+      changeset,
+    }),
+  );
   const latestOfficialVersion = await scrapeLatestOfficialUnityVersion();
 
   // Merge XLTS versions into main list, avoiding duplicates
