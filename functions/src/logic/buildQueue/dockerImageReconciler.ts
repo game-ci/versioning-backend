@@ -35,7 +35,8 @@ export class DockerImageReconciler {
 
   constructor(gitHubClient: Octokit, repoVersionInfo: RepoVersionInfo) {
     this.gitHubClient = gitHubClient;
-    this.repoVersionFull = `${repoVersionInfo.major}.${repoVersionInfo.minor}.${repoVersionInfo.patch}`;
+    const { major, minor, patch } = repoVersionInfo;
+    this.repoVersionFull = `${major}.${minor}.${patch}`;
     this.repoVersionMinor = `${repoVersionInfo.major}.${repoVersionInfo.minor}`;
     this.repoVersionMajor = String(repoVersionInfo.major);
   }
@@ -72,7 +73,13 @@ export class DockerImageReconciler {
       { repo: 'hub', tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' },
       { repo: 'hub', tag: `windows-${this.repoVersionFull}`, os: 'windows' },
     ]) {
-      const image: DockerImage = { repository: `unityci/${repo}`, tag, baseOs: os, imageType: repo as any };
+      const imageType = repo as 'base' | 'hub';
+      const image: DockerImage = {
+        repository: `unityci/${repo}`,
+        tag,
+        baseOs: os,
+        imageType,
+      };
       await this.checkImage(image);
     }
     for (const platform of ['base', 'linux-il2cpp', 'windows-mono', 'mac-mono', 'ios', 'android', 'webgl']) {
