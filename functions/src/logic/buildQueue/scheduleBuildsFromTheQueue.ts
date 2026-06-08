@@ -3,19 +3,9 @@ import { Scheduler } from './scheduler';
 import { Discord } from '../../service/discord';
 import { CiJobs } from '../../model/ciJobs';
 import { Cleaner } from './cleaner';
+import { DockerImageReconciler } from './dockerImageReconciler';
+import { EditorVersionInfo } from '../../model/editorVersionInfo';
 
-/**
- * When a new Unity version gets ingested:
- *   - a CI Job for that version gets created.
- *
- * When a new repository version gets ingested
- *   - a CI Job for a new base image gets created
- *   - a CI Job for a new hub image gets created
- *   - a CI Job for every Unity version gets created
- *   - Any CI Jobs for older repository versions get status "superseded"
- *
- * This schedule is based on that knowledge and assumption
- */
 export const scheduleBuildsFromTheQueue = async (
   githubPrivateKey: string,
   githubClientSecret: string,
@@ -64,6 +54,16 @@ export const scheduleBuildsFromTheQueue = async (
   if (!(await scheduler.buildLatestEditorImages())) {
     await Discord.sendDebug('[Build queue] Editor images are building.');
     return;
+  }
+
+  // Reconcile DockerHub images with expected versions
+  try {
+    const gitHub = (scheduler as any).gitHub;
+    const versions = await EditorVersionInfo.getAll();
+    const reconciler = new DockerImageReconciler(gitHub, repoVersionInfo);
+    await reconciler.reconcileEditorImages(versions);
+  } catch (error) {
+    await Discord.sendDebug(`[Build queue] DockerHub reconciliation error: ${error}`);
   }
 
   await Discord.sendDebug('[Build queue] Idle 🎈');
