@@ -35,9 +35,10 @@ export class DockerImageReconciler {
 
   constructor(gitHubClient: Octokit, repoVersionInfo: RepoVersionInfo) {
     this.gitHubClient = gitHubClient;
-    this.repoVersionFull = `${repoVersionInfo.major}.${repoVersionInfo.minor}.${repoVersionInfo.patch}`;
-    this.repoVersionMinor = `${repoVersionInfo.major}.${repoVersionInfo.minor}`;
-    this.repoVersionMajor = String(repoVersionInfo.major);
+    const { major, minor, patch } = repoVersionInfo;
+    this.repoVersionFull = `${major}.${minor}.${patch}`;
+    this.repoVersionMinor = `${major}.${minor}`;
+    this.repoVersionMajor = String(major);
   }
 
   private async isDockerImageMissing(repository: string, tag: string): Promise<boolean> {
@@ -58,7 +59,9 @@ export class DockerImageReconciler {
     if (versions.length === 0) return;
     const versionsToCheck = versions.slice(0, RECENT_VERSIONS_TO_CHECK);
     for (const version of versionsToCheck) {
-      if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) break;
+      if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) {
+        break;
+      }
       await this.checkVersionImages(version);
     }
     await this.reportResults();
@@ -66,16 +69,34 @@ export class DockerImageReconciler {
 
   private async checkVersionImages(version: EditorVersionInfo): Promise<void> {
     const { version: editorVersion, changeSet: changeset } = version;
-    for (const { repo, tag, os } of [
-      { repo: 'base', tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' },
-      { repo: 'base', tag: `windows-${this.repoVersionFull}`, os: 'windows' },
-      { repo: 'hub', tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' },
-      { repo: 'hub', tag: `windows-${this.repoVersionFull}`, os: 'windows' },
-    ]) {
-      const image: DockerImage = { repository: `unityci/${repo}`, tag, baseOs: os, imageType: repo as any };
+
+    const baseImages = [
+      { repo: 'base' as const, tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' as const },
+      { repo: 'base' as const, tag: `windows-${this.repoVersionFull}`, os: 'windows' as const },
+      { repo: 'hub' as const, tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' as const },
+      { repo: 'hub' as const, tag: `windows-${this.repoVersionFull}`, os: 'windows' as const },
+    ];
+
+    for (const { repo, tag, os } of baseImages) {
+      const image: DockerImage = {
+        repository: `unityci/${repo}`,
+        tag,
+        baseOs: os,
+        imageType: repo,
+      };
       await this.checkImage(image);
     }
-    for (const platform of ['base', 'linux-il2cpp', 'windows-mono', 'mac-mono', 'ios', 'android', 'webgl']) {
+
+    const ubuntuPlatforms = [
+      'base',
+      'linux-il2cpp',
+      'windows-mono',
+      'mac-mono',
+      'ios',
+      'android',
+      'webgl',
+    ] as const;
+    for (const platform of ubuntuPlatforms) {
       if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) break;
       await this.checkImage({
         repository: 'unityci/editor',
@@ -87,7 +108,15 @@ export class DockerImageReconciler {
         changeset,
       });
     }
-    for (const platform of ['base', 'windows-il2cpp', 'universal-windows-platform', 'appletv', 'android']) {
+
+    const windowsPlatforms = [
+      'base',
+      'windows-il2cpp',
+      'universal-windows-platform',
+      'appletv',
+      'android',
+    ] as const;
+    for (const platform of windowsPlatforms) {
       if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) break;
       await this.checkImage({
         repository: 'unityci/editor',
@@ -113,14 +142,18 @@ export class DockerImageReconciler {
       const dispatchedRetry = await this.dispatchRetry(image);
       this.missingImages.push({ image, dispatchedRetry });
     } catch (error) {
-      this.missingImages.push({ image, dispatchedRetry: false, error: String(error) });
+      this.missingImages.push({
+        image,
+        dispatchedRetry: false,
+        error: String(error),
+      });
     }
   }
 
   private async dispatchRetry(image: DockerImage): Promise<boolean> {
     try {
       const eventType = this.getEventType(image);
-      const payload: any = {
+      const payload: Record<string, any> = {
         jobId: `reconciliation-${Date.now()}-${image.imageType}-${image.tag}`,
         repoVersionFull: this.repoVersionFull,
         repoVersionMinor: this.repoVersionMinor,
@@ -140,7 +173,7 @@ export class DockerImageReconciler {
 
       return response.status >= 200 && response.status < 300;
     } catch (error) {
-      logger.error(`Error dispatching`, error);
+      logger.error('Error dispatching', error);
       return false;
     }
   }
@@ -163,10 +196,16 @@ export class DockerImageReconciler {
 
   private async reportResults(): Promise<void> {
     if (this.missingImages.length === 0) {
-      await Discord.sendDebug(`Checked ${this.imagesChecked} images - OK`);
+      await Discord.sendDebug(`[DockerImageReconciler] Checked ${this.imagesChecked} images OK`);
       return;
     }
+
     const successful = this.missingImages.filter((m) => m.dispatchedRetry).length;
-    await Discord.sendAlert(`DockerHub Reconciliation: Found ${this.missingImages.length} missing, retried ${successful}`);
+    const failedCount = this.missingImages.length - successful;
+
+    await Discord.sendAlert(
+      `DockerHub Reconciliation: Found ${this.missingImages.length} missing, ` +
+        `retried ${successful}, failed ${failedCount}`,
+    );
   }
 }

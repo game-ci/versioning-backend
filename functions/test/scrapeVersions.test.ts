@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { scrapeLatestOfficialUnityVersion, scrapeVersions } from '../src/logic/ingestUnityVersions/scrapeVersions';
+import {
+  scrapeLatestOfficialUnityVersion,
+  scrapeVersions,
+} from '../src/logic/ingestUnityVersions/scrapeVersions';
 import { SearchMode } from 'unity-changeset';
 import fetch from 'node-fetch';
 
@@ -19,7 +22,9 @@ vi.mock('node-fetch', () => ({
 const { searchChangesets } = await import('unity-changeset');
 const mockedFetch = fetch as unknown as vi.MockedFunction<typeof fetch>;
 
-const mockOfficialUnityRelease = (html = '<h1>Unity 6000.4.10f1</h1><p>Changeset: feeafc12a938</p>') => {
+const mockOfficialUnityRelease = (
+  html = '<h1>Unity 6000.4.10f1</h1><p>Changeset: feeafc12a938</p>',
+) => {
   mockedFetch.mockResolvedValue({
     ok: true,
     status: 200,
@@ -162,7 +167,9 @@ describe('scrapeVersions', () => {
   });
 
   it('should parse the Unity Hub install URL from the official release page', async () => {
-    mockOfficialUnityRelease('<h1>Unity 6000.4.10f1</h1><a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>');
+    mockOfficialUnityRelease(
+      '<h1>Unity 6000.4.10f1</h1><a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>',
+    );
 
     await expect(scrapeLatestOfficialUnityVersion()).resolves.toEqual(
       expect.objectContaining({

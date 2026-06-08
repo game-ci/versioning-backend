@@ -62,14 +62,18 @@ export const scrapeLatestOfficialUnityVersion = async (): Promise<EditorVersionI
 };
 
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
-  const unityVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.Default)).map(({ version, changeset }) => ({
-    version,
-    changeset,
-  }));
-  const unityXltsVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.XLTS)).map(({ version, changeset }) => ({
-    version,
-    changeset,
-  }));
+  const unityVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.Default)).map(
+    ({ version, changeset }) => ({
+      version,
+      changeset,
+    }),
+  );
+  const unityXltsVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.XLTS)).map(
+    ({ version, changeset }) => ({
+      version,
+      changeset,
+    }),
+  );
   const latestOfficialVersion = await scrapeLatestOfficialUnityVersion();
 
   // Merge XLTS versions into main list, avoiding duplicates
