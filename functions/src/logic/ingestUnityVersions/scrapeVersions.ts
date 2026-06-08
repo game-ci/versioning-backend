@@ -48,10 +48,7 @@ export const scrapeLatestOfficialUnityVersion =
 
     const html = await response.text();
     const versionMatch = /Unity\s+(\d+\.\d+\.\d+f\d+)/.exec(html);
-    const escapedVersion = versionMatch?.[1].replace(
-      /[.*+?^${}()|[\]\]/g,
-      '\$&',
-    );
+    const escapedVersion = versionMatch?.[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const changesetMatch = versionMatch
       ? new RegExp(
           `unityhub://${escapedVersion}/([a-f0-9]{12})`,
