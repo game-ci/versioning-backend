@@ -10,7 +10,9 @@ type UnityChangesetVersion = {
   changeset: string;
 };
 
-const toEditorVersionInfo = (unityVersion: UnityChangesetVersion): EditorVersionInfo | null => {
+const toEditorVersionInfo = (
+  unityVersion: UnityChangesetVersion,
+): EditorVersionInfo | null => {
   const match = RegExp(unity_version_regex).exec(unityVersion.version);
   if (!match) {
     return null;
@@ -31,42 +33,52 @@ const toEditorVersionInfo = (unityVersion: UnityChangesetVersion): EditorVersion
   } as EditorVersionInfo;
 };
 
-export const scrapeLatestOfficialUnityVersion = async (): Promise<EditorVersionInfo | null> => {
-  const response = await fetch(unity_whats_new_url, {
-    redirect: 'follow',
-    headers: {
-      'User-Agent': 'game-ci-versioning-backend/1.0',
-    },
-  });
+export const scrapeLatestOfficialUnityVersion =
+  async (): Promise<EditorVersionInfo | null> => {
+    const response = await fetch(unity_whats_new_url, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'game-ci-versioning-backend/1.0',
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(`Unity release page returned ${response.status}`);
-  }
+    if (!response.ok) {
+      throw new Error(`Unity release page returned ${response.status}`);
+    }
 
-  const html = await response.text();
-  const versionMatch = /Unity\s+(\d+\.\d+\.\d+f\d+)/.exec(html);
-  const escapedVersion = versionMatch?.[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const changesetMatch = versionMatch
-    ? new RegExp(`unityhub://${escapedVersion}/([a-f0-9]{12})`, 'i').exec(html) ||
-      /Changeset:\s*([a-f0-9]{12})/i.exec(html)
-    : null;
+    const html = await response.text();
+    const versionMatch = /Unity\s+(\d+\.\d+\.\d+f\d+)/.exec(html);
+    const escapedVersion = versionMatch?.[1].replace(
+      /[.*+?^${}()|[\]\]/g,
+      '\$&',
+    );
+    const changesetMatch = versionMatch
+      ? new RegExp(
+          `unityhub://${escapedVersion}/([a-f0-9]{12})`,
+          'i',
+        ).exec(html) || /Changeset:\s*([a-f0-9]{12})/i.exec(html)
+      : null;
 
-  if (!versionMatch || !changesetMatch) {
-    return null;
-  }
+    if (!versionMatch || !changesetMatch) {
+      return null;
+    }
 
-  return toEditorVersionInfo({
-    version: versionMatch[1],
-    changeset: changesetMatch[1],
-  });
-};
+    return toEditorVersionInfo({
+      version: versionMatch[1],
+      changeset: changesetMatch[1],
+    });
+  };
 
 export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
-  const unityVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.Default)).map(({ version, changeset }) => ({
+  const unityVersions: UnityChangesetVersion[] = (
+    await searchChangesets(SearchMode.Default)
+  ).map(({ version, changeset }) => ({
     version,
     changeset,
   }));
-  const unityXltsVersions: UnityChangesetVersion[] = (await searchChangesets(SearchMode.XLTS)).map(({ version, changeset }) => ({
+  const unityXltsVersions: UnityChangesetVersion[] = (
+    await searchChangesets(SearchMode.XLTS)
+  ).map(({ version, changeset }) => ({
     version,
     changeset,
   }));
@@ -81,7 +93,10 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
     }
   }
 
-  if (latestOfficialVersion && !existingVersions.has(latestOfficialVersion.version)) {
+  if (
+    latestOfficialVersion &&
+    !existingVersions.has(latestOfficialVersion.version)
+  ) {
     unityVersions.push({
       version: latestOfficialVersion.version,
       changeset: latestOfficialVersion.changeSet,
@@ -91,7 +106,10 @@ export const scrapeVersions = async (): Promise<EditorVersionInfo[]> => {
   if (unityVersions?.length > 0) {
     return unityVersions
       .map(toEditorVersionInfo)
-      .filter((versionInfo): versionInfo is EditorVersionInfo => versionInfo !== null);
+      .filter(
+        (versionInfo): versionInfo is EditorVersionInfo =>
+          versionInfo !== null,
+      );
   }
 
   throw new Error('No Unity versions found!');
