@@ -6,13 +6,30 @@ import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 
 const DOCKERHUB_API = 'https://hub.docker.com/v2/repositories';
-const MAX_IMAGES_PER_CYCLE = 20;
-const RECENT_VERSIONS_TO_CHECK = 5;
+const TAG_PAGE_SIZE = 100;
+const MAX_TAG_PAGES = 50;
+const MAX_RETRIES_PER_CYCLE = 30;
+const UBUNTU_PLATFORMS = [
+  'base',
+  'linux-il2cpp',
+  'windows-mono',
+  'mac-mono',
+  'ios',
+  'android',
+  'webgl',
+] as const;
+const WINDOWS_PLATFORMS = [
+  'base',
+  'windows-il2cpp',
+  'universal-windows-platform',
+  'appletv',
+  'android',
+] as const;
 
 interface DockerImage {
   repository: string;
   tag: string;
-  baseOs: string;
+  baseOs: 'ubuntu' | 'windows';
   imageType: 'base' | 'hub' | 'editor';
   targetPlatform?: string;
   editorVersion?: string;
@@ -30,8 +47,8 @@ export class DockerImageReconciler {
   private repoVersionFull: string;
   private repoVersionMinor: string;
   private repoVersionMajor: string;
-  private imagesChecked = 0;
   private missingImages: MissingImage[] = [];
+  private retriesDispatched = 0;
 
   constructor(gitHubClient: Octokit, repoVersionInfo: RepoVersionInfo) {
     this.gitHubClient = gitHubClient;
@@ -41,120 +58,137 @@ export class DockerImageReconciler {
     this.repoVersionMajor = String(major);
   }
 
-  private async isDockerImageMissing(repository: string, tag: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${DOCKERHUB_API}/${repository}/tags/${tag}`, {
-        headers: { 'User-Agent': 'game-ci-versioning-backend/1.0' },
-      });
-      if (response.status === 404) return true;
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return false;
-    } catch (error) {
-      logger.warn(`DockerHub API error checking ${repository}:${tag}`, error);
-      return false;
-    }
-  }
-
   async reconcileEditorImages(versions: EditorVersionInfo[]): Promise<void> {
-    if (versions.length === 0) return;
-    const versionsToCheck = versions.slice(0, RECENT_VERSIONS_TO_CHECK);
-    for (const version of versionsToCheck) {
-      if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) {
+    if (versions.length === 0) {
+      return;
+    }
+
+    const [baseTags, hubTags, editorTags] = await Promise.all([
+      this.fetchExistingTags('unityci/base'),
+      this.fetchExistingTags('unityci/hub'),
+      this.fetchExistingTags('unityci/editor'),
+    ]);
+
+    const expectedImages = this.computeExpectedImages(versions);
+    const tagSetByRepo: Record<string, Set<string>> = {
+      'unityci/base': baseTags,
+      'unityci/hub': hubTags,
+      'unityci/editor': editorTags,
+    };
+
+    for (const image of expectedImages) {
+      if (this.retriesDispatched >= MAX_RETRIES_PER_CYCLE) {
         break;
       }
-      await this.checkVersionImages(version);
+      const existing = tagSetByRepo[image.repository];
+      if (existing.has(image.tag)) {
+        continue;
+      }
+      const dispatchedRetry = await this.dispatchRetry(image);
+      if (dispatchedRetry) {
+        this.retriesDispatched += 1;
+      }
+      this.missingImages.push({ image, dispatchedRetry });
     }
-    await this.reportResults();
+
+    await this.reportResults(expectedImages.length);
   }
 
-  private async checkVersionImages(version: EditorVersionInfo): Promise<void> {
-    const { version: editorVersion, changeSet: changeset } = version;
+  private async fetchExistingTags(repository: string): Promise<Set<string>> {
+    const tags = new Set<string>();
+    let nextUrl: string | null =
+      `${DOCKERHUB_API}/${repository}/tags?page_size=${TAG_PAGE_SIZE}&name=${this.repoVersionFull}`;
+    let pagesFetched = 0;
 
-    const baseImages = [
-      { repo: 'base' as const, tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' as const },
-      { repo: 'base' as const, tag: `windows-${this.repoVersionFull}`, os: 'windows' as const },
-      { repo: 'hub' as const, tag: `ubuntu-${this.repoVersionFull}`, os: 'ubuntu' as const },
-      { repo: 'hub' as const, tag: `windows-${this.repoVersionFull}`, os: 'windows' as const },
+    while (nextUrl && pagesFetched < MAX_TAG_PAGES) {
+      try {
+        const response = await fetch(nextUrl, {
+          headers: { 'User-Agent': 'game-ci-versioning-backend/1.0' },
+        });
+        if (!response.ok) {
+          logger.warn(`DockerHub list tags failed for ${repository}: HTTP ${response.status}`);
+          break;
+        }
+        const body = (await response.json()) as {
+          results?: { name: string }[];
+          next?: string | null;
+        };
+        for (const result of body.results ?? []) {
+          tags.add(result.name);
+        }
+        nextUrl = body.next ?? null;
+        pagesFetched += 1;
+      } catch (error) {
+        logger.warn(`DockerHub list tags error for ${repository}`, error);
+        break;
+      }
+    }
+
+    return tags;
+  }
+
+  private computeExpectedImages(versions: EditorVersionInfo[]): DockerImage[] {
+    const expected: DockerImage[] = [
+      {
+        repository: 'unityci/base',
+        tag: `ubuntu-${this.repoVersionFull}`,
+        baseOs: 'ubuntu',
+        imageType: 'base',
+      },
+      {
+        repository: 'unityci/base',
+        tag: `windows-${this.repoVersionFull}`,
+        baseOs: 'windows',
+        imageType: 'base',
+      },
+      {
+        repository: 'unityci/hub',
+        tag: `ubuntu-${this.repoVersionFull}`,
+        baseOs: 'ubuntu',
+        imageType: 'hub',
+      },
+      {
+        repository: 'unityci/hub',
+        tag: `windows-${this.repoVersionFull}`,
+        baseOs: 'windows',
+        imageType: 'hub',
+      },
     ];
 
-    for (const { repo, tag, os } of baseImages) {
-      const image: DockerImage = {
-        repository: `unityci/${repo}`,
-        tag,
-        baseOs: os,
-        imageType: repo,
-      };
-      await this.checkImage(image);
-    }
-
-    const ubuntuPlatforms = [
-      'base',
-      'linux-il2cpp',
-      'windows-mono',
-      'mac-mono',
-      'ios',
-      'android',
-      'webgl',
-    ] as const;
-    for (const platform of ubuntuPlatforms) {
-      if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) break;
-      await this.checkImage({
-        repository: 'unityci/editor',
-        tag: `ubuntu-${editorVersion}-${platform}-${this.repoVersionFull}`,
-        baseOs: 'ubuntu',
-        imageType: 'editor',
-        targetPlatform: platform,
-        editorVersion,
-        changeset,
-      });
-    }
-
-    const windowsPlatforms = [
-      'base',
-      'windows-il2cpp',
-      'universal-windows-platform',
-      'appletv',
-      'android',
-    ] as const;
-    for (const platform of windowsPlatforms) {
-      if (this.imagesChecked >= MAX_IMAGES_PER_CYCLE) break;
-      await this.checkImage({
-        repository: 'unityci/editor',
-        tag: `windows-${editorVersion}-${platform}-${this.repoVersionFull}`,
-        baseOs: 'windows',
-        imageType: 'editor',
-        targetPlatform: platform,
-        editorVersion,
-        changeset,
-      });
-    }
-  }
-
-  private async checkImage(image: DockerImage): Promise<void> {
-    this.imagesChecked += 1;
-    try {
-      const isMissing = await this.isDockerImageMissing(image.repository, image.tag);
-      if (!isMissing) {
-        logger.debug(`OK ${image.repository}:${image.tag}`);
-        return;
+    for (const version of versions) {
+      const { version: editorVersion, changeSet: changeset } = version;
+      for (const platform of UBUNTU_PLATFORMS) {
+        expected.push({
+          repository: 'unityci/editor',
+          tag: `ubuntu-${editorVersion}-${platform}-${this.repoVersionFull}`,
+          baseOs: 'ubuntu',
+          imageType: 'editor',
+          targetPlatform: platform,
+          editorVersion,
+          changeset,
+        });
       }
-      logger.warn(`Missing: ${image.repository}:${image.tag}`);
-      const dispatchedRetry = await this.dispatchRetry(image);
-      this.missingImages.push({ image, dispatchedRetry });
-    } catch (error) {
-      this.missingImages.push({
-        image,
-        dispatchedRetry: false,
-        error: String(error),
-      });
+      for (const platform of WINDOWS_PLATFORMS) {
+        expected.push({
+          repository: 'unityci/editor',
+          tag: `windows-${editorVersion}-${platform}-${this.repoVersionFull}`,
+          baseOs: 'windows',
+          imageType: 'editor',
+          targetPlatform: platform,
+          editorVersion,
+          changeset,
+        });
+      }
     }
+
+    return expected;
   }
 
   private async dispatchRetry(image: DockerImage): Promise<boolean> {
     try {
       const eventType = this.getEventType(image);
-      const payload: Record<string, any> = {
-        jobId: `reconciliation-${Date.now()}-${image.imageType}-${image.tag}`,
+      const payload: Record<string, unknown> = {
+        jobId: `reconciliation-${image.imageType}-${image.tag}`,
         repoVersionFull: this.repoVersionFull,
         repoVersionMinor: this.repoVersionMinor,
         repoVersionMajor: this.repoVersionMajor,
@@ -173,7 +207,7 @@ export class DockerImageReconciler {
 
       return response.status >= 200 && response.status < 300;
     } catch (error) {
-      logger.error('Error dispatching', error);
+      logger.error(`Error dispatching retry for ${image.tag}`, error);
       return false;
     }
   }
@@ -194,18 +228,23 @@ export class DockerImageReconciler {
       : GitHubWorkflow.eventTypes.retryWindowsEditorImage;
   }
 
-  private async reportResults(): Promise<void> {
+  private async reportResults(expectedCount: number): Promise<void> {
     if (this.missingImages.length === 0) {
-      await Discord.sendDebug(`[DockerImageReconciler] Checked ${this.imagesChecked} images OK`);
+      await Discord.sendDebug(
+        `[DockerImageReconciler] Verified ${expectedCount} expected images, all present`,
+      );
       return;
     }
 
     const successful = this.missingImages.filter((m) => m.dispatchedRetry).length;
-    const failedCount = this.missingImages.length - successful;
+    const failed = this.missingImages.length - successful;
 
     await Discord.sendAlert(
-      `DockerHub Reconciliation: Found ${this.missingImages.length} missing, ` +
-        `retried ${successful}, failed ${failedCount}`,
+      `DockerHub Reconciliation: ${this.missingImages.length} missing of ${expectedCount} expected; ` +
+        `retried ${successful}, failed ${failed}` +
+        (this.retriesDispatched >= MAX_RETRIES_PER_CYCLE
+          ? ` (capped at ${MAX_RETRIES_PER_CYCLE} retries; remaining will retry next cycle)`
+          : ''),
     );
   }
 }
