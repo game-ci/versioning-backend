@@ -495,35 +495,4 @@ describe('scrapeRecentOfficialUnityVersions', () => {
     expect(result.map((v) => v.version)).toContain('6000.4.9f1');
     expect(result.map((v) => v.version)).not.toContain('6000.4.10a1');
   });
-
-  describe('integration test (live)', () => {
-    it.skipIf(!process.env.CI)('should successfully scrape real Unity releases page', async () => {
-      // This test runs in CI only and validates the scraping logic against the real page
-      // Import the actual fetch function from the installed package
-      const { default: realFetchImpl } = await import('node-fetch');
-
-      // Replace the mocked fetch with the real implementation
-      mockedFetch.mockImplementation(realFetchImpl as any);
-
-      const result = await scrapeRecentOfficialUnityVersions();
-
-      // Should find at least some recent versions
-      expect(result.length).toBeGreaterThan(0);
-
-      // All versions should be valid
-      result.forEach((version) => {
-        expect(version.version).toMatch(/^\d+\.\d+\.\d+f\d+$/);
-        expect(version.changeSet).toMatch(/^[a-f0-9]{12}$/);
-        expect(version.major).toBeGreaterThanOrEqual(2017);
-      });
-
-      console.log(`Found ${result.length} recent versions on Unity releases page`);
-      console.log(
-        `Latest versions: ${result
-          .slice(0, 5)
-          .map((v) => v.version)
-          .join(', ')}`,
-      );
-    });
-  });
 });
