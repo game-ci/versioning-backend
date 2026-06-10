@@ -353,7 +353,7 @@ describe('scrapeRecentOfficialUnityVersions', () => {
       <p>Changeset: abc123def456</p>
 
       <h2>Unity 6000.2.5f1</h2>
-      <a href="unityhub://6000.2.5f1/xyz789uvw123">Download</a>
+      <a href="unityhub://6000.2.5f1/deadbeef0123">Download</a>
     `;
     mockedFetch.mockResolvedValue({
       ok: true,
@@ -477,10 +477,10 @@ describe('scrapeRecentOfficialUnityVersions', () => {
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
 
       <h2>Unity 6000.4.10a1</h2>
-      <a href="unityhub://6000.4.10a1/abc123456789">Install</a>
+      <a href="unityhub://6000.4.10a1/abc1234567ab">Install</a>
 
       <h2>Unity 6000.4.9f1</h2>
-      <a href="unityhub://6000.4.9f1/xyz789uvw123">Install</a>
+      <a href="unityhub://6000.4.9f1/def1234567cd">Install</a>
     `;
     mockedFetch.mockResolvedValue({
       ok: true,
