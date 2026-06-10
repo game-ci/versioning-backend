@@ -4,7 +4,11 @@ import { Discord } from '../../service/discord';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { ReconciliationState, ReconciliationStateData, VersionCheckRecord } from '../../model/reconciliationState';
+import {
+  ReconciliationState,
+  ReconciliationStateData,
+  VersionCheckRecord,
+} from '../../model/reconciliationState';
 
 const DOCKERHUB_API = 'https://hub.docker.com/v2/repositories';
 

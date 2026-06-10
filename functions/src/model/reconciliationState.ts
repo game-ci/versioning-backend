@@ -57,7 +57,10 @@ export class ReconciliationState {
       .set({ ...state, updatedAt: Timestamp.now() }, { merge: false });
   }
 
-  static getOrCreateVersionRecord(state: ReconciliationStateData, version: string): VersionCheckRecord {
+  static getOrCreateVersionRecord(
+    state: ReconciliationStateData,
+    version: string,
+  ): VersionCheckRecord {
     if (!state.versionHistory[version]) {
       state.versionHistory[version] = { ...DEFAULT_VERSION_RECORD };
     }
