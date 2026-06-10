@@ -4,7 +4,7 @@ import { Discord } from '../../service/discord';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
-import { ReconciliationState, ReconciliationStateData } from '../../model/reconciliationState';
+import { ReconciliationState, ReconciliationStateData, VersionCheckRecord } from '../../model/reconciliationState';
 
 const DOCKERHUB_API = 'https://hub.docker.com/v2/repositories';
 
@@ -14,6 +14,10 @@ const MAX_TAG_PAGES_PER_QUERY = 3;
 const DISPATCH_COOLDOWN_MS = 2 * 60 * 60 * 1000;
 const BASE_HUB_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const COOLDOWN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+const RECENT_VERSIONS_COUNT = 15;
+const MAX_DAYS_WITHOUT_CHECK = 30;
+const MAX_DAYS_WITHOUT_RETRY = 2;
 
 const UBUNTU_PLATFORMS = [
   'base',
@@ -107,9 +111,15 @@ export class DockerImageReconciler {
         summary.cappedAtLimit = true;
         break;
       }
-      await this.processVersion(version, state, summary);
+
+      const versionSummary = { imagesExpected: 0, imagesMissing: 0 };
+      await this.processVersion(version, state, summary, versionSummary);
       summary.versionsScanned += 1;
-      state.cursorVersion = version.version;
+
+      const record = ReconciliationState.getOrCreateVersionRecord(state, version.version);
+      record.lastCheckedAt = this.now();
+      record.imagesExpected = versionSummary.imagesExpected;
+      record.imagesMissing = versionSummary.imagesMissing;
     }
 
     state.cycleCount += 1;
@@ -161,8 +171,9 @@ export class DockerImageReconciler {
       'unityci/hub': hubTags,
     };
 
+    const baseHubSummary = { imagesExpected: 0, imagesMissing: 0 };
     for (const image of checks) {
-      await this.evaluateExpected(image, tagSet[image.repository], state, summary);
+      await this.evaluateExpected(image, tagSet[image.repository], state, summary, baseHubSummary);
     }
   }
 
@@ -170,6 +181,7 @@ export class DockerImageReconciler {
     version: EditorVersionInfo,
     state: ReconciliationStateData,
     summary: CycleSummary,
+    versionSummary: { imagesExpected: number; imagesMissing: number },
   ): Promise<void> {
     const ubuntuExisting = await this.fetchTags('unityci/editor', `ubuntu-${version.version}`);
     const windowsExisting = await this.fetchTags('unityci/editor', `windows-${version.version}`);
@@ -184,7 +196,7 @@ export class DockerImageReconciler {
         editorVersion: version.version,
         changeset: version.changeSet,
       };
-      await this.evaluateExpected(image, ubuntuExisting, state, summary);
+      await this.evaluateExpected(image, ubuntuExisting, state, summary, versionSummary);
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
     }
 
@@ -198,7 +210,7 @@ export class DockerImageReconciler {
         editorVersion: version.version,
         changeset: version.changeSet,
       };
-      await this.evaluateExpected(image, windowsExisting, state, summary);
+      await this.evaluateExpected(image, windowsExisting, state, summary, versionSummary);
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
     }
   }
@@ -208,8 +220,10 @@ export class DockerImageReconciler {
     existing: Set<string> | null,
     state: ReconciliationStateData,
     summary: CycleSummary,
+    versionSummary: { imagesExpected: number; imagesMissing: number },
   ): Promise<void> {
     summary.imagesExpected += 1;
+    versionSummary.imagesExpected += 1;
 
     if (existing === null) {
       logger.debug(`Skipping ${image.tag}: existing-tag fetch failed, assuming present`);
@@ -221,6 +235,7 @@ export class DockerImageReconciler {
     }
 
     summary.imagesMissing += 1;
+    versionSummary.imagesMissing += 1;
     const cooldownKey = `${image.repository}:${image.tag}`;
     const lastDispatchedAt = state.recentDispatches[cooldownKey];
     if (lastDispatchedAt && this.now() - lastDispatchedAt < DISPATCH_COOLDOWN_MS) {
@@ -238,6 +253,17 @@ export class DockerImageReconciler {
     if (dispatched) {
       summary.dispatchesSucceeded += 1;
       state.recentDispatches[cooldownKey] = this.now();
+
+      if (image.editorVersion) {
+        const record = ReconciliationState.getOrCreateVersionRecord(state, image.editorVersion);
+        record.lastDispatchAttemptAt = this.now();
+      }
+    } else {
+      if (image.editorVersion) {
+        const record = ReconciliationState.getOrCreateVersionRecord(state, image.editorVersion);
+        record.lastDispatchAttemptAt = this.now();
+        record.dispatchFailureCount += 1;
+      }
     }
   }
 
@@ -246,16 +272,66 @@ export class DockerImageReconciler {
     state: ReconciliationStateData,
   ): EditorVersionInfo[] {
     if (versions.length === 0) return [];
-    const startIndex = state.cursorVersion
-      ? Math.max(0, versions.findIndex((v) => v.version === state.cursorVersion) + 1)
-      : 0;
-    const effectiveStart = startIndex >= versions.length ? 0 : startIndex;
-    const slice = versions.slice(effectiveStart, effectiveStart + VERSIONS_PER_CYCLE);
-    if (slice.length < VERSIONS_PER_CYCLE && effectiveStart > 0) {
-      const remainder = VERSIONS_PER_CYCLE - slice.length;
-      slice.push(...versions.slice(0, remainder));
+
+    const now = this.now();
+    const scored = versions.map((v) => {
+      const record = state.versionHistory[v.version];
+      const score = this.calculateVersionPriority(v.version, versions, record, now);
+      return { version: v, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, VERSIONS_PER_CYCLE).map((s) => s.version);
+  }
+
+  private calculateVersionPriority(
+    version: string,
+    allVersions: EditorVersionInfo[],
+    record: VersionCheckRecord | undefined,
+    now: number,
+  ): number {
+    const versionIndex = allVersions.findIndex((v) => v.version === version);
+    const isRecent = versionIndex < RECENT_VERSIONS_COUNT;
+
+    if (isRecent) {
+      return 1000;
     }
-    return slice;
+
+    if (!record) {
+      return 900;
+    }
+
+    let score = 0;
+
+    if (record.lastCheckedAt === null) {
+      score += 800;
+    } else {
+      const daysSinceCheck = (now - record.lastCheckedAt) / (24 * 60 * 60 * 1000);
+      if (daysSinceCheck > MAX_DAYS_WITHOUT_CHECK) {
+        score += 700;
+      } else {
+        score += Math.max(0, daysSinceCheck * 10);
+      }
+    }
+
+    if (record.imagesMissing > 0) {
+      if (record.lastDispatchAttemptAt === null) {
+        score += 300;
+      } else {
+        const daysSinceDispatch = (now - record.lastDispatchAttemptAt) / (24 * 60 * 60 * 1000);
+        if (daysSinceDispatch > MAX_DAYS_WITHOUT_RETRY) {
+          score += 300;
+        } else {
+          score += daysSinceDispatch * 50;
+        }
+      }
+
+      if (record.dispatchFailureCount > 0) {
+        score += record.dispatchFailureCount * 100;
+      }
+    }
+
+    return score;
   }
 
   private async fetchTags(repository: string, nameFilter: string): Promise<Set<string> | null> {

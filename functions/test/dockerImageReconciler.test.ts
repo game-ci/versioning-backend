@@ -17,7 +17,7 @@ vi.mock('../src/model/reconciliationState', () => ({
   ReconciliationState: {
     load: vi.fn(async () => {
       const fallback = {
-        cursorVersion: null,
+        versionHistory: {},
         recentDispatches: {},
         baseHubCheckedAt: null,
         cycleCount: 0,
@@ -26,6 +26,18 @@ vi.mock('../src/model/reconciliationState', () => ({
     }),
     save: vi.fn(async (next: any) => {
       stateStore.current = JSON.parse(JSON.stringify(next));
+    }),
+    getOrCreateVersionRecord: vi.fn((state: any, version: string) => {
+      if (!state.versionHistory[version]) {
+        state.versionHistory[version] = {
+          lastCheckedAt: null,
+          lastDispatchAttemptAt: null,
+          dispatchFailureCount: 0,
+          imagesExpected: 0,
+          imagesMissing: 0,
+        };
+      }
+      return state.versionHistory[version];
     }),
   },
 }));
@@ -102,7 +114,7 @@ beforeEach(() => {
   stateStore.current = null;
 });
 
-describe('DockerImageReconciler (incremental)', () => {
+describe('DockerImageReconciler (priority-based)', () => {
   it('returns early when no versions to reconcile', async () => {
     const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo);
     await reconciler.reconcileEditorImages([]);
@@ -124,19 +136,41 @@ describe('DockerImageReconciler (incremental)', () => {
     expect(Discord.sendDebug).toHaveBeenCalled();
   });
 
-  it('advances cursor and resumes from next version on subsequent cycle', async () => {
-    const versions = Array.from({ length: 12 }, (_, i) => buildVersion(`6000.4.${i}f1`));
+  it('prioritizes recent versions in first cycle', async () => {
+    const versions = Array.from({ length: 20 }, (_, i) => buildVersion(`6000.4.${i}f1`));
     allPresentMock(versions.map((v) => v.version));
 
     const r1 = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => 1_000_000 });
     await r1.reconcileEditorImages(versions);
-    const cursor1 = stateStore.current.cursorVersion;
-    expect(cursor1).toBe('6000.4.4f1');
 
-    const r2 = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => 2_000_000 });
+    const history = stateStore.current.versionHistory;
+    const checked = Object.keys(history).filter((v) => history[v].lastCheckedAt !== null);
+    expect(checked.length).toBe(5);
+
+    const recentVersions = checked.every((v) => {
+      const vNum = parseInt(v.split('.')[2]);
+      return vNum < 15;
+    });
+    expect(recentVersions).toBe(true);
+  });
+
+  it('continues checking versions across cycles', async () => {
+    const versions = Array.from({ length: 20 }, (_, i) => buildVersion(`6000.4.${i}f1`));
+    allPresentMock(versions.map((v) => v.version));
+
+    const r1 = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => 1_000_000 });
+    await r1.reconcileEditorImages(versions);
+    let history = stateStore.current.versionHistory;
+    const cycle1Checked = Object.keys(history).filter((v) => history[v].lastCheckedAt !== null);
+    expect(cycle1Checked.length).toBe(5);
+    expect(stateStore.current.cycleCount).toBe(1);
+
+    const r2 = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000 + 5 * 24 * 60 * 60 * 1000,
+    });
     await r2.reconcileEditorImages(versions);
-    const cursor2 = stateStore.current.cursorVersion;
-    expect(cursor2).toBe('6000.4.9f1');
+    history = stateStore.current.versionHistory;
+
     expect(stateStore.current.cycleCount).toBe(2);
   });
 
@@ -188,7 +222,7 @@ describe('DockerImageReconciler (incremental)', () => {
   it('skips base/hub if checked recently', async () => {
     allPresentMock(['6000.4.10f1']);
     stateStore.current = {
-      cursorVersion: null,
+      versionHistory: {},
       recentDispatches: {},
       baseHubCheckedAt: 1_000_000,
       cycleCount: 1,
@@ -215,20 +249,16 @@ describe('DockerImageReconciler (incremental)', () => {
     expect(Object.keys(stateStore.current.recentDispatches).length).toBeGreaterThan(0);
   });
 
-  it('wraps cursor around to beginning when reaching end of version list', async () => {
-    const versions = Array.from({ length: 8 }, (_, i) => buildVersion(`6000.4.${i}f1`));
-    allPresentMock(versions.map((v) => v.version));
-    stateStore.current = {
-      cursorVersion: '6000.4.7f1',
-      recentDispatches: {},
-      baseHubCheckedAt: 999_999_999_999,
-      cycleCount: 5,
-    };
+  it('tracks version history with missing image counts', async () => {
+    fetchMock.mockResolvedValue(tagsResponse([]));
+    const versions = Array.from({ length: 10 }, (_, i) => buildVersion(`6000.4.${i}f1`));
 
-    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
-      now: () => 2_000_000,
-    });
-    await reconciler.reconcileEditorImages(versions);
-    expect(stateStore.current.cursorVersion).toBe('6000.4.4f1');
+    const r1 = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => 1_000_000 });
+    await r1.reconcileEditorImages(versions);
+
+    const history = stateStore.current.versionHistory;
+    const checkedVersions = Object.keys(history).filter((v) => history[v].lastCheckedAt !== null);
+    expect(checkedVersions.length).toBeGreaterThan(0);
+    expect(history['6000.4.0f1']?.imagesMissing).toBeGreaterThan(0);
   });
 });
