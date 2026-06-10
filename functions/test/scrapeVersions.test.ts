@@ -432,10 +432,10 @@ describe('scrapeRecentOfficialUnityVersions', () => {
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
 
       <h2>Unity 6000.3.17f1</h2>
-      <!-- No changeset provided -->
+      <p>Changeset: abc123def456</p>
 
       <h2>Unity 6000.2.5f1</h2>
-      <p>Changeset: xyz789uvw123</p>
+      <!-- No changeset for this one -->
     `;
     mockedFetch.mockResolvedValue({
       ok: true,
@@ -447,7 +447,9 @@ describe('scrapeRecentOfficialUnityVersions', () => {
 
     // Only versions with valid changesets should be included
     expect(result).toHaveLength(2);
-    expect(result.map((v) => v.version)).not.toContain('6000.3.17f1');
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).toContain('6000.3.17f1');
+    expect(result.map((v) => v.version)).not.toContain('6000.2.5f1');
   });
 
   it('should deduplicate versions found multiple times on the page', async () => {
