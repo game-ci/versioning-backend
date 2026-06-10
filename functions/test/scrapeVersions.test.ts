@@ -507,30 +507,33 @@ describe('scrapeRecentOfficialUnityVersions', () => {
   });
 
   describe('integration test (live)', () => {
-    it.skipIf(process.env.CI === 'false')('should successfully scrape real Unity releases page', async () => {
-      // This test runs in CI only and validates the scraping logic against the real page
-      const realFetch = (await import('node-fetch')).default;
-      vi.mocked(fetch).mockImplementation(realFetch as any);
+    it.skipIf(process.env.CI === 'false')(
+      'should successfully scrape real Unity releases page',
+      async () => {
+        // This test runs in CI only and validates the scraping logic against the real page
+        const realFetch = (await import('node-fetch')).default;
+        vi.mocked(fetch).mockImplementation(realFetch as any);
 
-      const result = await scrapeRecentOfficialUnityVersions();
+        const result = await scrapeRecentOfficialUnityVersions();
 
-      // Should find at least some recent versions
-      expect(result.length).toBeGreaterThan(0);
+        // Should find at least some recent versions
+        expect(result.length).toBeGreaterThan(0);
 
-      // All versions should be valid
-      result.forEach((version) => {
-        expect(version.version).toMatch(/^\d+\.\d+\.\d+f\d+$/);
-        expect(version.changeSet).toMatch(/^[a-f0-9]{12}$/);
-        expect(version.major).toBeGreaterThanOrEqual(2017);
-      });
+        // All versions should be valid
+        result.forEach((version) => {
+          expect(version.version).toMatch(/^\d+\.\d+\.\d+f\d+$/);
+          expect(version.changeSet).toMatch(/^[a-f0-9]{12}$/);
+          expect(version.major).toBeGreaterThanOrEqual(2017);
+        });
 
-      console.log(`Found ${result.length} recent versions on Unity releases page`);
-      console.log(
-        `Latest versions: ${result
-          .slice(0, 5)
-          .map((v) => v.version)
-          .join(', ')}`,
-      );
-    });
+        console.log(`Found ${result.length} recent versions on Unity releases page`);
+        console.log(
+          `Latest versions: ${result
+            .slice(0, 5)
+            .map((v) => v.version)
+            .join(', ')}`,
+        );
+      },
+    );
   });
 });
