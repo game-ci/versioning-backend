@@ -1,30 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   scrapeLatestOfficialUnityVersion,
   scrapeVersions,
   scrapeRecentOfficialUnityVersions,
-} from "../src/logic/ingestUnityVersions/scrapeVersions";
-import { SearchMode } from "unity-changeset";
-import fetch from "node-fetch";
+} from '../src/logic/ingestUnityVersions/scrapeVersions';
+import { SearchMode } from 'unity-changeset';
+import fetch from 'node-fetch';
 
 // Mock the unity-changeset module
-vi.mock("unity-changeset", async () => {
-  const actual = await vi.importActual("unity-changeset");
+vi.mock('unity-changeset', async () => {
+  const actual = await vi.importActual('unity-changeset');
   return {
     ...actual,
     searchChangesets: vi.fn(),
   };
 });
 
-vi.mock("node-fetch", () => ({
+vi.mock('node-fetch', () => ({
   default: vi.fn(),
 }));
 
-const { searchChangesets } = await import("unity-changeset");
+const { searchChangesets } = await import('unity-changeset');
 const mockedFetch = fetch as unknown as vi.MockedFunction<typeof fetch>;
 
 const mockOfficialUnityRelease = (
-  html = "<h1>Unity 6000.4.10f1</h1><p>Changeset: feeafc12a938</p>"
+  html = '<h1>Unity 6000.4.10f1</h1><p>Changeset: feeafc12a938</p>',
 ) => {
   mockedFetch.mockResolvedValue({
     ok: true,
@@ -33,33 +33,33 @@ const mockOfficialUnityRelease = (
   } as any);
 };
 
-describe("scrapeVersions", () => {
+describe('scrapeVersions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockOfficialUnityRelease("");
+    mockOfficialUnityRelease('');
   });
 
-  it("should fetch both default and XLTS versions", async () => {
+  it('should fetch both default and XLTS versions', async () => {
     // Mock return values for both Default and XLTS search modes
     const mockDefaultVersions = [
       {
-        version: "2022.3.20f1",
-        changeset: "abc123def456",
+        version: '2022.3.20f1',
+        changeset: 'abc123def456',
       },
       {
-        version: "2023.2.10f1",
-        changeset: "234567ab8cd9",
+        version: '2023.2.10f1',
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
-        version: "2022.3.21f1", // XLTS versions might have same format as regular versions
-        changeset: "789abcdef012",
+        version: '2022.3.21f1', // XLTS versions might have same format as regular versions
+        changeset: '789abcdef012',
       },
       {
-        version: "2021.3.25f1",
-        changeset: "345cdef67890",
+        version: '2021.3.25f1',
+        changeset: '345cdef67890',
       },
     ];
 
@@ -84,52 +84,52 @@ describe("scrapeVersions", () => {
     // Check that the default versions are present
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2022.3.20f1",
-        changeSet: "abc123def456",
+        version: '2022.3.20f1',
+        changeSet: 'abc123def456',
         major: 2022,
         minor: 3,
-        patch: "20",
-      })
+        patch: '20',
+      }),
     );
 
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2023.2.10f1",
-        changeSet: "234567ab8cd9",
+        version: '2023.2.10f1',
+        changeSet: '234567ab8cd9',
         major: 2023,
         minor: 2,
-        patch: "10",
-      })
+        patch: '10',
+      }),
     );
 
     // Check that the XLTS versions are present
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2022.3.21f1",
-        changeSet: "789abcdef012",
+        version: '2022.3.21f1',
+        changeSet: '789abcdef012',
         major: 2022,
         minor: 3,
-        patch: "21",
-      })
+        patch: '21',
+      }),
     );
 
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2021.3.25f1",
-        changeSet: "345cdef67890",
+        version: '2021.3.25f1',
+        changeSet: '345cdef67890',
         major: 2021,
         minor: 3,
-        patch: "25",
-      })
+        patch: '25',
+      }),
     );
   });
 
-  it("should merge the latest official Unity release when unity-changeset is stale", async () => {
+  it('should merge the latest official Unity release when unity-changeset is stale', async () => {
     mockOfficialUnityRelease();
     const mockDefaultVersions = [
       {
-        version: "6000.4.7f1",
-        changeset: "f3c3c4248748",
+        version: '6000.4.7f1',
+        changeset: 'f3c3c4248748',
       },
     ];
 
@@ -144,59 +144,59 @@ describe("scrapeVersions", () => {
 
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "6000.4.10f1",
-        changeSet: "feeafc12a938",
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
         major: 6000,
         minor: 4,
-        patch: "10",
-      })
+        patch: '10',
+      }),
     );
   });
 
-  it("should parse the latest official Unity release page", async () => {
-    mockOfficialUnityRelease("<h1>Unity 6000.4.10f1</h1><div>Changeset: feeafc12a938</div>");
+  it('should parse the latest official Unity release page', async () => {
+    mockOfficialUnityRelease('<h1>Unity 6000.4.10f1</h1><div>Changeset: feeafc12a938</div>');
 
     await expect(scrapeLatestOfficialUnityVersion()).resolves.toEqual(
       expect.objectContaining({
-        version: "6000.4.10f1",
-        changeSet: "feeafc12a938",
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
         major: 6000,
         minor: 4,
-        patch: "10",
-      })
+        patch: '10',
+      }),
     );
   });
 
-  it("should parse the Unity Hub install URL from the official release page", async () => {
+  it('should parse the Unity Hub install URL from the official release page', async () => {
     mockOfficialUnityRelease(
-      '<h1>Unity 6000.4.10f1</h1><a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>'
+      '<h1>Unity 6000.4.10f1</h1><a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>',
     );
 
     await expect(scrapeLatestOfficialUnityVersion()).resolves.toEqual(
       expect.objectContaining({
-        version: "6000.4.10f1",
-        changeSet: "feeafc12a938",
-      })
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+      }),
     );
   });
 
-  it("should not duplicate versions when XLTS versions overlap with default versions", async () => {
+  it('should not duplicate versions when XLTS versions overlap with default versions', async () => {
     // Mock return values where one XLTS version is the same as a default version
     const mockDefaultVersions = [
       {
-        version: "2022.3.20f1",
-        changeset: "abc123def456",
+        version: '2022.3.20f1',
+        changeset: 'abc123def456',
       },
     ];
 
     const mockXltsVersions = [
       {
-        version: "2022.3.20f1", // Duplicate version
-        changeset: "abc123def456",
+        version: '2022.3.20f1', // Duplicate version
+        changeset: 'abc123def456',
       },
       {
-        version: "2022.3.21f1",
-        changeset: "789abcdef012",
+        version: '2022.3.21f1',
+        changeset: '789abcdef012',
       },
     ];
 
@@ -213,30 +213,30 @@ describe("scrapeVersions", () => {
 
     // Verify that duplicate was filtered out
     expect(result).toHaveLength(2); // Only 2 unique versions
-    expect(result.some((v) => v.version === "2022.3.20f1")).toBe(true);
-    expect(result.some((v) => v.version === "2022.3.21f1")).toBe(true);
+    expect(result.some((v) => v.version === '2022.3.20f1')).toBe(true);
+    expect(result.some((v) => v.version === '2022.3.21f1')).toBe(true);
   });
 
   it('should filter out non-final versions (not containing "f")', async () => {
     const mockDefaultVersions = [
       {
-        version: "2022.3.20f1", // Final version - should be included
-        changeset: "abc123def456",
+        version: '2022.3.20f1', // Final version - should be included
+        changeset: 'abc123def456',
       },
       {
-        version: "2022.3.20a1", // Alpha version - should be excluded
-        changeset: "234567ab8cd9",
+        version: '2022.3.20a1', // Alpha version - should be excluded
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
-        version: "2021.3.25f1", // Final version - should be included
-        changeset: "789abcdef012",
+        version: '2021.3.25f1', // Final version - should be included
+        changeset: '789abcdef012',
       },
       {
-        version: "2020.3.15a2", // Alpha version - should be excluded
-        changeset: "345cdef67890",
+        version: '2020.3.15a2', // Alpha version - should be excluded
+        changeset: '345cdef67890',
       },
     ];
 
@@ -255,43 +255,43 @@ describe("scrapeVersions", () => {
     expect(result).toHaveLength(2);
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2022.3.20f1",
-        changeSet: "abc123def456",
+        version: '2022.3.20f1',
+        changeSet: 'abc123def456',
         major: 2022,
         minor: 3,
-        patch: "20",
-      })
+        patch: '20',
+      }),
     );
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2021.3.25f1",
-        changeSet: "789abcdef012",
+        version: '2021.3.25f1',
+        changeSet: '789abcdef012',
         major: 2021,
         minor: 3,
-        patch: "25",
-      })
+        patch: '25',
+      }),
     );
     // Alpha versions should be excluded
-    expect(result.some((v) => v.version.includes("a1"))).toBe(false);
-    expect(result.some((v) => v.version.includes("a2"))).toBe(false);
+    expect(result.some((v) => v.version.includes('a1'))).toBe(false);
+    expect(result.some((v) => v.version.includes('a2'))).toBe(false);
   });
 
-  it("should filter out versions with major number less than 2017", async () => {
+  it('should filter out versions with major number less than 2017', async () => {
     const mockDefaultVersions = [
       {
-        version: "2022.3.20f1", // Should be included
-        changeset: "abc123def456",
+        version: '2022.3.20f1', // Should be included
+        changeset: 'abc123def456',
       },
       {
-        version: "5.6.7f1", // Should be excluded (major < 2017)
-        changeset: "234567ab8cd9",
+        version: '5.6.7f1', // Should be excluded (major < 2017)
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
-        version: "2021.3.25f1", // Should be included
-        changeset: "789abcdef012",
+        version: '2021.3.25f1', // Should be included
+        changeset: '789abcdef012',
       },
     ];
 
@@ -310,41 +310,41 @@ describe("scrapeVersions", () => {
     expect(result).toHaveLength(2);
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2022.3.20f1",
-        changeSet: "abc123def456",
+        version: '2022.3.20f1',
+        changeSet: 'abc123def456',
         major: 2022,
         minor: 3,
-        patch: "20",
-      })
+        patch: '20',
+      }),
     );
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "2021.3.25f1",
-        changeSet: "789abcdef012",
+        version: '2021.3.25f1',
+        changeSet: '789abcdef012',
         major: 2021,
         minor: 3,
-        patch: "25",
-      })
+        patch: '25',
+      }),
     );
     // Old version should be excluded
     expect(result.some((v) => v.major < 2017)).toBe(false);
   });
 
-  it("should throw an error when no Unity versions are found", async () => {
+  it('should throw an error when no Unity versions are found', async () => {
     (searchChangesets as vi.MockedFunction<any>).mockImplementation(async (_mode: SearchMode) => {
       return [];
     });
 
-    await expect(scrapeVersions()).rejects.toThrow("No Unity versions found!");
+    await expect(scrapeVersions()).rejects.toThrow('No Unity versions found!');
   });
 });
 
-describe("scrapeRecentOfficialUnityVersions", () => {
+describe('scrapeRecentOfficialUnityVersions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should discover multiple recent versions from the releases page", async () => {
+  it('should discover multiple recent versions from the releases page', async () => {
     const html = `
       <h1>Unity 6000.4.10f1</h1>
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
@@ -364,12 +364,12 @@ describe("scrapeRecentOfficialUnityVersions", () => {
     const result = await scrapeRecentOfficialUnityVersions();
 
     expect(result).toHaveLength(3);
-    expect(result.map((v) => v.version)).toContain("6000.4.10f1");
-    expect(result.map((v) => v.version)).toContain("6000.3.17f1");
-    expect(result.map((v) => v.version)).toContain("6000.2.5f1");
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).toContain('6000.3.17f1');
+    expect(result.map((v) => v.version)).toContain('6000.2.5f1');
   });
 
-  it("should extract changesets from unityhub:// URLs", async () => {
+  it('should extract changesets from unityhub:// URLs', async () => {
     const html = `
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
       <a href="unityhub://6000.3.17f1/abc123def456">Install</a>
@@ -384,19 +384,19 @@ describe("scrapeRecentOfficialUnityVersions", () => {
 
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "6000.4.10f1",
-        changeSet: "feeafc12a938",
-      })
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+      }),
     );
     expect(result).toContainEqual(
       expect.objectContaining({
-        version: "6000.3.17f1",
-        changeSet: "abc123def456",
-      })
+        version: '6000.3.17f1',
+        changeSet: 'abc123def456',
+      }),
     );
   });
 
-  it("should extract changesets from context near the version", async () => {
+  it('should extract changesets from context near the version', async () => {
     const html = `
       <h2>Unity 6000.4.10f1</h2>
       <p>Changeset: feeafc12a938</p>
@@ -414,11 +414,11 @@ describe("scrapeRecentOfficialUnityVersions", () => {
 
     // Both should be found - implementation uses context-window search
     expect(result.length).toBeGreaterThanOrEqual(2);
-    expect(result.some((v) => v.version === "6000.4.10f1")).toBe(true);
-    expect(result.some((v) => v.version === "6000.3.17f1")).toBe(true);
+    expect(result.some((v) => v.version === '6000.4.10f1')).toBe(true);
+    expect(result.some((v) => v.version === '6000.3.17f1')).toBe(true);
   });
 
-  it("should skip versions without valid changesets nearby", async () => {
+  it('should skip versions without valid changesets nearby', async () => {
     const html = `
       <h2>Unity 6000.4.10f1</h2>
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
@@ -436,11 +436,11 @@ describe("scrapeRecentOfficialUnityVersions", () => {
 
     // Only 6000.4.10f1 should be found with a valid changeset
     expect(result.length).toBeGreaterThanOrEqual(1);
-    expect(result.map((v) => v.version)).toContain("6000.4.10f1");
-    expect(result.map((v) => v.version)).not.toContain("6000.2.5f1");
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).not.toContain('6000.2.5f1');
   });
 
-  it("should deduplicate versions found multiple times on the page", async () => {
+  it('should deduplicate versions found multiple times on the page', async () => {
     const html = `
       <h2>Unity 6000.4.10f1</h2>
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
@@ -457,21 +457,21 @@ describe("scrapeRecentOfficialUnityVersions", () => {
     const result = await scrapeRecentOfficialUnityVersions();
 
     expect(result).toHaveLength(1);
-    expect(result[0].version).toBe("6000.4.10f1");
+    expect(result[0].version).toBe('6000.4.10f1');
   });
 
-  it("should return empty array if page returns error", async () => {
+  it('should return empty array if page returns error', async () => {
     mockedFetch.mockResolvedValue({
       ok: false,
       status: 404,
     } as any);
 
     await expect(scrapeRecentOfficialUnityVersions()).rejects.toThrow(
-      "Unity release page returned 404"
+      'Unity release page returned 404',
     );
   });
 
-  it("should filter out non-final versions", async () => {
+  it('should filter out non-final versions', async () => {
     const html = `
       <h2>Unity 6000.4.10f1</h2>
       <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
@@ -491,16 +491,16 @@ describe("scrapeRecentOfficialUnityVersions", () => {
     const result = await scrapeRecentOfficialUnityVersions();
 
     expect(result.length).toBeGreaterThanOrEqual(2);
-    expect(result.map((v) => v.version)).toContain("6000.4.10f1");
-    expect(result.map((v) => v.version)).toContain("6000.4.9f1");
-    expect(result.map((v) => v.version)).not.toContain("6000.4.10a1");
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).toContain('6000.4.9f1');
+    expect(result.map((v) => v.version)).not.toContain('6000.4.10a1');
   });
 
-  describe("integration test (live)", () => {
-    it.skipIf(!process.env.CI)("should successfully scrape real Unity releases page", async () => {
+  describe('integration test (live)', () => {
+    it.skipIf(!process.env.CI)('should successfully scrape real Unity releases page', async () => {
       // This test runs in CI only and validates the scraping logic against the real page
       // Import the actual fetch function from the installed package
-      const { default: realFetchImpl } = await import("node-fetch");
+      const { default: realFetchImpl } = await import('node-fetch');
 
       // Replace the mocked fetch with the real implementation
       mockedFetch.mockImplementation(realFetchImpl as any);
@@ -522,7 +522,7 @@ describe("scrapeRecentOfficialUnityVersions", () => {
         `Latest versions: ${result
           .slice(0, 5)
           .map((v) => v.version)
-          .join(", ")}`
+          .join(', ')}`,
       );
     });
   });
