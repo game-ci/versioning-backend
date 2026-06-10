@@ -55,15 +55,33 @@ export const scrapeRecentOfficialUnityVersions = async (): Promise<EditorVersion
     processedVersions.add(version);
 
     const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let changeset: string | undefined;
+
     const changesetMatch =
       new RegExp(`unityhub://${escapedVersion}/([a-f0-9]{12})`, 'i').exec(html) ||
-      new RegExp(`${escapedVersion}[^a-f0-9]*([a-f0-9]{12})`, 'i').exec(html) ||
-      /Changeset:\s*([a-f0-9]{12})/i.exec(html);
+      new RegExp(`${escapedVersion}[^a-f0-9]*([a-f0-9]{12})`, 'i').exec(html);
 
     if (changesetMatch?.[1]) {
+      changeset = changesetMatch[1];
+    } else {
+      // As a last resort, search for changeset within a context window near the version
+      // Extract ~500 chars around the version match for local context search
+      const versionIndex = html.indexOf(version);
+      if (versionIndex !== -1) {
+        const contextStart = Math.max(0, versionIndex - 200);
+        const contextEnd = Math.min(html.length, versionIndex + 300);
+        const context = html.substring(contextStart, contextEnd);
+        const contextChangesetMatch = /[Cc]hangeset:\s*([a-f0-9]{12})/i.exec(context);
+        if (contextChangesetMatch?.[1]) {
+          changeset = contextChangesetMatch[1];
+        }
+      }
+    }
+
+    if (changeset) {
       versions.push({
         version,
-        changeset: changesetMatch[1],
+        changeset,
       });
     }
   }
