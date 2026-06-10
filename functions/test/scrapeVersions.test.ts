@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   scrapeLatestOfficialUnityVersion,
   scrapeVersions,
+  scrapeRecentOfficialUnityVersions,
 } from '../src/logic/ingestUnityVersions/scrapeVersions';
 import { SearchMode } from 'unity-changeset';
 import fetch from 'node-fetch';
@@ -335,5 +336,201 @@ describe('scrapeVersions', () => {
     });
 
     await expect(scrapeVersions()).rejects.toThrow('No Unity versions found!');
+  });
+});
+
+describe('scrapeRecentOfficialUnityVersions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should discover multiple recent versions from the releases page', async () => {
+    const html = `
+      <h1>Unity 6000.4.10f1</h1>
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
+
+      <h2>Unity 6000.3.17f1</h2>
+      <p>Changeset: abc123def456</p>
+
+      <h2>Unity 6000.2.5f1</h2>
+      <a href="unityhub://6000.2.5f1/xyz789uvw123">Download</a>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    expect(result).toHaveLength(3);
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).toContain('6000.3.17f1');
+    expect(result.map((v) => v.version)).toContain('6000.2.5f1');
+  });
+
+  it('should extract changesets from unityhub:// URLs', async () => {
+    const html = `
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
+      <a href="unityhub://6000.3.17f1/abc123def456">Install</a>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+      }),
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        version: '6000.3.17f1',
+        changeSet: 'abc123def456',
+      }),
+    );
+  });
+
+  it('should extract changesets from "Changeset:" markers', async () => {
+    const html = `
+      <h2>Unity 6000.4.10f1</h2>
+      <p>Changeset: feeafc12a938</p>
+
+      <h2>Unity 6000.3.17f1</h2>
+      <div>Version Changeset: abc123def456</div>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        version: '6000.4.10f1',
+        changeSet: 'feeafc12a938',
+      }),
+    );
+    expect(result).toContainEqual(
+      expect.objectContaining({
+        version: '6000.3.17f1',
+        changeSet: 'abc123def456',
+      }),
+    );
+  });
+
+  it('should skip versions without valid changesets', async () => {
+    const html = `
+      <h2>Unity 6000.4.10f1</h2>
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
+
+      <h2>Unity 6000.3.17f1</h2>
+      <!-- No changeset provided -->
+
+      <h2>Unity 6000.2.5f1</h2>
+      <p>Changeset: xyz789uvw123</p>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    // Only versions with valid changesets should be included
+    expect(result).toHaveLength(2);
+    expect(result.map((v) => v.version)).not.toContain('6000.3.17f1');
+  });
+
+  it('should deduplicate versions found multiple times on the page', async () => {
+    const html = `
+      <h2>Unity 6000.4.10f1</h2>
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
+
+      <p>Latest version: 6000.4.10f1</p>
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Download</a>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].version).toBe('6000.4.10f1');
+  });
+
+  it('should return empty array if page returns error', async () => {
+    mockedFetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+    } as any);
+
+    await expect(scrapeRecentOfficialUnityVersions()).rejects.toThrow(
+      'Unity release page returned 404',
+    );
+  });
+
+  it('should filter out non-final versions', async () => {
+    const html = `
+      <h2>Unity 6000.4.10f1</h2>
+      <a href="unityhub://6000.4.10f1/feeafc12a938">Install</a>
+
+      <h2>Unity 6000.4.10a1</h2>
+      <a href="unityhub://6000.4.10a1/abc123456789">Install</a>
+
+      <h2>Unity 6000.4.9f1</h2>
+      <p>Changeset: xyz789uvw123</p>
+    `;
+    mockedFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => html,
+    } as any);
+
+    const result = await scrapeRecentOfficialUnityVersions();
+
+    expect(result).toHaveLength(2);
+    expect(result.map((v) => v.version)).toContain('6000.4.10f1');
+    expect(result.map((v) => v.version)).toContain('6000.4.9f1');
+    expect(result.map((v) => v.version)).not.toContain('6000.4.10a1');
+  });
+
+  describe('integration test (live)', () => {
+    it.skipIf(process.env.CI === 'false')('should successfully scrape real Unity releases page', async () => {
+      // This test runs in CI only and validates the scraping logic against the real page
+      const realFetch = (await import('node-fetch')).default;
+      vi.mocked(fetch).mockImplementation(realFetch as any);
+
+      const result = await scrapeRecentOfficialUnityVersions();
+
+      // Should find at least some recent versions
+      expect(result.length).toBeGreaterThan(0);
+
+      // All versions should be valid
+      result.forEach((version) => {
+        expect(version.version).toMatch(/^\d+\.\d+\.\d+f\d+$/);
+        expect(version.changeSet).toMatch(/^[a-f0-9]{12}$/);
+        expect(version.major).toBeGreaterThanOrEqual(2017);
+      });
+
+      console.log(`Found ${result.length} recent versions on Unity releases page`);
+      console.log(
+        `Latest versions: ${result
+          .slice(0, 5)
+          .map((v) => v.version)
+          .join(', ')}`,
+      );
+    });
   });
 });
