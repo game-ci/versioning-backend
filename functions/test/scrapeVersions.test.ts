@@ -48,18 +48,18 @@ describe('scrapeVersions', () => {
       },
       {
         version: '2023.2.10f1',
-        changeset: 'def456ghi789',
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
         version: '2022.3.21f1', // XLTS versions might have same format as regular versions
-        changeset: 'xyz789uvw123',
+        changeset: '789abcdef012',
       },
       {
         version: '2021.3.25f1',
-        changeset: 'uvw123rst456',
+        changeset: '345cdef67890',
       },
     ];
 
@@ -95,7 +95,7 @@ describe('scrapeVersions', () => {
     expect(result).toContainEqual(
       expect.objectContaining({
         version: '2023.2.10f1',
-        changeSet: 'def456ghi789',
+        changeSet: '234567ab8cd9',
         major: 2023,
         minor: 2,
         patch: '10',
@@ -106,7 +106,7 @@ describe('scrapeVersions', () => {
     expect(result).toContainEqual(
       expect.objectContaining({
         version: '2022.3.21f1',
-        changeSet: 'xyz789uvw123',
+        changeSet: '789abcdef012',
         major: 2022,
         minor: 3,
         patch: '21',
@@ -116,7 +116,7 @@ describe('scrapeVersions', () => {
     expect(result).toContainEqual(
       expect.objectContaining({
         version: '2021.3.25f1',
-        changeSet: 'uvw123rst456',
+        changeSet: '345cdef67890',
         major: 2021,
         minor: 3,
         patch: '25',
@@ -192,11 +192,11 @@ describe('scrapeVersions', () => {
     const mockXltsVersions = [
       {
         version: '2022.3.20f1', // Duplicate version
-        changeset: 'duplicate456',
+        changeset: 'abc123def456',
       },
       {
         version: '2022.3.21f1',
-        changeset: 'xyz789uvw123',
+        changeset: '789abcdef012',
       },
     ];
 
@@ -225,18 +225,18 @@ describe('scrapeVersions', () => {
       },
       {
         version: '2022.3.20a1', // Alpha version - should be excluded
-        changeset: 'def456ghi789',
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
         version: '2021.3.25f1', // Final version - should be included
-        changeset: 'xyz789uvw123',
+        changeset: '789abcdef012',
       },
       {
         version: '2020.3.15a2', // Alpha version - should be excluded
-        changeset: 'uvw123rst456',
+        changeset: '345cdef67890',
       },
     ];
 
@@ -265,7 +265,7 @@ describe('scrapeVersions', () => {
     expect(result).toContainEqual(
       expect.objectContaining({
         version: '2021.3.25f1',
-        changeSet: 'xyz789uvw123',
+        changeSet: '789abcdef012',
         major: 2021,
         minor: 3,
         patch: '25',
@@ -284,14 +284,14 @@ describe('scrapeVersions', () => {
       },
       {
         version: '5.6.7f1', // Should be excluded (major < 2017)
-        changeset: 'def456ghi789',
+        changeset: '234567ab8cd9',
       },
     ];
 
     const mockXltsVersions = [
       {
         version: '2021.3.25f1', // Should be included
-        changeset: 'xyz789uvw123',
+        changeset: '789abcdef012',
       },
     ];
 
@@ -320,7 +320,7 @@ describe('scrapeVersions', () => {
     expect(result).toContainEqual(
       expect.objectContaining({
         version: '2021.3.25f1',
-        changeSet: 'xyz789uvw123',
+        changeSet: '789abcdef012',
         major: 2021,
         minor: 3,
         patch: '25',
@@ -497,12 +497,15 @@ describe('scrapeRecentOfficialUnityVersions', () => {
   });
 
   describe('integration test (live)', () => {
-    it.skipIf(process.env.CI === 'false')(
+    it.skipIf(!process.env.CI)(
       'should successfully scrape real Unity releases page',
       async () => {
         // This test runs in CI only and validates the scraping logic against the real page
-        const realFetch = (await import('node-fetch')).default;
-        vi.mocked(fetch).mockImplementation(realFetch as any);
+        // Import the actual fetch function from the installed package
+        const { default: realFetchImpl } = await import('node-fetch');
+
+        // Replace the mocked fetch with the real implementation
+        mockedFetch.mockImplementation(realFetchImpl as any);
 
         const result = await scrapeRecentOfficialUnityVersions();
 
