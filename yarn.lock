@@ -1990,7 +1990,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/coverage-v8@npm:^4":
+"@vitest/coverage-v8@npm:^4.1.12":
   version: 4.1.12
   resolution: "@vitest/coverage-v8@npm:4.1.12"
   dependencies:
@@ -2085,7 +2085,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitest/ui@npm:^4":
+"@vitest/ui@npm:^4.1.12":
   version: 4.1.12
   resolution: "@vitest/ui@npm:4.1.12"
   dependencies:
@@ -2528,7 +2528,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"body-parser@npm:^1.18.3, body-parser@npm:^1.20.9, body-parser@npm:~1.20.3":
+"body-parser@npm:^1.18.3, body-parser@npm:^1.20.9, body-parser@npm:~1.20.5":
   version: 1.20.9
   resolution: "body-parser@npm:1.20.9"
   dependencies:
@@ -3968,12 +3968,12 @@ __metadata:
   linkType: hard
 
 "express@npm:^4.16.4, express@npm:^4.21.0":
-  version: 4.22.1
-  resolution: "express@npm:4.22.1"
+  version: 4.22.3
+  resolution: "express@npm:4.22.3"
   dependencies:
     accepts: "npm:~1.3.8"
     array-flatten: "npm:1.1.1"
-    body-parser: "npm:~1.20.3"
+    body-parser: "npm:~1.20.5"
     content-disposition: "npm:~0.5.4"
     content-type: "npm:~1.0.4"
     cookie: "npm:~0.7.1"
@@ -3990,9 +3990,9 @@ __metadata:
     methods: "npm:~1.1.2"
     on-finished: "npm:~2.4.1"
     parseurl: "npm:~1.3.3"
-    path-to-regexp: "npm:~0.1.12"
+    path-to-regexp: "npm:~0.1.13"
     proxy-addr: "npm:~2.0.7"
-    qs: "npm:~6.14.0"
+    qs: "npm:~6.16.0"
     range-parser: "npm:~1.2.1"
     safe-buffer: "npm:5.2.1"
     send: "npm:~0.19.0"
@@ -4002,7 +4002,7 @@ __metadata:
     type-is: "npm:~1.6.18"
     utils-merge: "npm:1.0.1"
     vary: "npm:~1.1.2"
-  checksum: 10c0/ea57f512ab1e05e26b53a14fd432f65a10ec735ece342b37d0b63a7bcb8d337ffbb830ecb8ca15bcdfe423fbff88cea09786277baff200e8cde3ab40faa665cd
+  checksum: 10c0/6345a6d460d94afbab42608ea7c13d633b9f4b08df7074869ee1ef493f6a46102437bd32290635f7040858f24de5f0992f541723478d5f3fbc6428e9446cb8ea
   languageName: node
   linkType: hard
 
@@ -4156,9 +4156,9 @@ __metadata:
   linkType: hard
 
 "fflate@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "fflate@npm:0.8.2"
-  checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
+  version: 0.8.3
+  resolution: "fflate@npm:0.8.3"
+  checksum: 10c0/eab181ca37f5348ae76d4b6f840e0026e30220e33153289ac942222d8b9638237d486507dbcc09878d724095bd354993a2ee48bbee99c8f2c6440d4448719aa7
   languageName: node
   linkType: hard
 
@@ -7206,7 +7206,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"path-to-regexp@npm:~0.1.12":
+"path-to-regexp@npm:~0.1.13":
   version: 0.1.13
   resolution: "path-to-regexp@npm:0.1.13"
   checksum: 10c0/1cae3921739c154a8926e136185a10c916f79a249b9072a5001b266d96e193860ca03867e8e8cc808b786862d750f427ed93686bc259355442c3407a62deab1a
@@ -7546,15 +7546,6 @@ __metadata:
     es-define-property: "npm:^1.0.1"
     side-channel: "npm:^1.1.1"
   checksum: 10c0/55f09dd0282fda70ce9475719158f910f2214477b95aa7284675fb9977c9cdae89fb495423399227331de76766703aaa71372e96cded05046e21713c033e885d
-  languageName: node
-  linkType: hard
-
-"qs@npm:~6.14.0":
-  version: 6.14.3
-  resolution: "qs@npm:6.14.3"
-  dependencies:
-    side-channel: "npm:^1.1.1"
-  checksum: 10c0/5d302b97d9f53f82e634c59b9f7c94dcb52a0a6e8a7ddae90d5365bf295a5aca4ea6d66ce3d664cf125bf5eef81567777825dc2eae01a6b10e67c0c88d2e4e70
   languageName: node
   linkType: hard
 
@@ -9020,8 +9011,8 @@ __metadata:
   dependencies:
     "@google-cloud/firestore": "npm:^7.8.0"
     "@typescript/native-preview": "npm:^7.0.0-dev.20260505.1"
-    "@vitest/coverage-v8": "npm:^4"
-    "@vitest/ui": "npm:^4"
+    "@vitest/coverage-v8": "npm:^4.1.12"
+    "@vitest/ui": "npm:^4.1.12"
     eslint: "npm:^10.3.0"
     eslint-plugin-unicorn: "npm:^64.0.0"
     firebase-tools: "npm:^15.36.0"
@@ -9031,7 +9022,7 @@ __metadata:
     oxfmt: "npm:^0.78.0"
     oxlint: "npm:^1.32.0"
     typescript: "npm:^5.9.3"
-    vitest: "npm:^4"
+    vitest: "npm:^4.1.12"
   dependenciesMeta:
     esbuild:
       built: true
@@ -9099,7 +9090,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^4":
+"vitest@npm:^4.1.12":
   version: 4.1.12
   resolution: "vitest@npm:4.1.12"
   dependencies:

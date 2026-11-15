@@ -168,14 +168,14 @@ jobs:
           yarn install --immutable
 
       - name: Deploy test to Firebase
-        uses: w9jds/firebase-action@v14.19.0
+        uses: w9jds/firebase-action@v15.36.0
         with:
           args: help ; corepack enable ; corepack install ; firebase deploy --only functions:testFunction --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v14.19.0
+        uses: w9jds/firebase-action@v15.36.0
         if: always()
         with:
           args: help ; corepack enable ; corepack install ; firebase functions:delete testFunction --force
@@ -231,14 +231,14 @@ jobs:
           yarn install --immutable
 
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v14.19.0
+        uses: w9jds/firebase-action@v15.36.0
         with:
           args: help ; corepack enable ; corepack install ; firebase deploy
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_UNITY_CI_VERSIONS }}'
 
       - name: Cleanup Firebase Test
-        uses: w9jds/firebase-action@v14.19.0
+        uses: w9jds/firebase-action@v15.36.0
         if: always()
         with:
           args: help ; corepack enable ; corepack install ; firebase functions:delete testFunction --force

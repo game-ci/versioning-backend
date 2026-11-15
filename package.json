@@ -52,8 +52,8 @@
   },
   "devDependencies": {
     "@typescript/native-preview": "^7.0.0-dev.20260505.1",
-    "@vitest/coverage-v8": "^4",
-    "@vitest/ui": "^4",
+    "@vitest/coverage-v8": "^4.1.12",
+    "@vitest/ui": "^4.1.12",
     "eslint": "^10.3.0",
     "eslint-plugin-unicorn": "^64.0.0",
     "husky": "^9.1.7",
@@ -61,7 +61,7 @@
     "oxfmt": "^0.78.0",
     "oxlint": "^1.32.0",
     "typescript": "^5.9.3",
-    "vitest": "^4"
+    "vitest": "^4.1.12"
   },
   "packageManager": "yarn@4.14.1",
   "dependenciesMeta": {

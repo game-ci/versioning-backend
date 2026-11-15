@@ -1,5 +1,5 @@
 import { defineProject } from 'vitest/config';
-import { baseConfig } from '../vitest.config.base';
+import { baseConfig } from '../vitest.config.base.mts';
 
 export default defineProject({
   ...baseConfig,
