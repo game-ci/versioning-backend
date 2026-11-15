@@ -36,6 +36,7 @@ interface MetaData {
   failureCount: number;
   lastBuildFailure: Timestamp | null;
   publishedDate: Timestamp | null;
+  recoveryCount?: number;
 }
 
 export interface CiBuild {
@@ -66,6 +67,15 @@ export class CiBuilds {
 
   public static getAll = async (): Promise<CiBuild[]> => {
     const snapshot = await db.collection(CiBuilds.collection).get();
+
+    return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
+  };
+
+  public static getAllForRepoVersion = async (repoVersion: string): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
 
     return snapshot.docs.map((doc) => doc.data()) as CiBuild[];
   };
@@ -106,12 +116,38 @@ export class CiBuilds {
     }));
   };
 
+  public static hasAnyBuildsForJob = async (jobId: string): Promise<boolean> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('relatedJobId', '==', jobId)
+      .limit(1)
+      .get();
+
+    return snapshot.docs.length > 0;
+  };
+
+  public static hasAnyStartedBuildsForJob = async (jobId: string): Promise<boolean> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('relatedJobId', '==', jobId)
+      .where('status', '==', 'started')
+      .limit(1)
+      .get();
+
+    return snapshot.docs.length > 0;
+  };
+
+  /**
+   * Registers a new build or handles duplicate dispatches gracefully.
+   * Returns the existing status if the build is already in progress or published,
+   * so the caller can respond appropriately without causing errors.
+   */
   public static registerNewBuild = async (
     buildId: string,
     relatedJobId: string,
     imageType: ImageType,
     buildInfo: BuildInfo,
-  ) => {
+  ): Promise<{ alreadyExists: boolean; existingStatus?: BuildStatus }> => {
     const data: CiBuild = {
       status: 'started',
       buildId,
@@ -135,20 +171,27 @@ export class CiBuilds {
 
     let result;
     if (snapshot.exists) {
+      const existingStatus = snapshot.data()?.status as BuildStatus;
+
       // Builds can be retried after a failure.
-      if (snapshot.data()?.status === 'failed') {
+      if (existingStatus === 'failed') {
         // In case or reporting a new build during retry step, only overwrite these fields
         result = await ref.set(data, {
           mergeFields: ['status', 'meta.lastBuildStart', 'modifiedDate'],
         });
       } else {
-        throw new Error(`A build with "${buildId}" as identifier already exists`);
+        // Build is already in progress or published — duplicate dispatch, not an error.
+        logger.info(
+          `Build "${buildId}" already exists with status "${existingStatus}". Ignoring duplicate dispatch.`,
+        );
+        return { alreadyExists: true, existingStatus };
       }
     } else {
       result = await ref.create(data);
     }
 
     logger.debug('Build created', result);
+    return { alreadyExists: false };
   };
 
   public static async removeDryRunBuild(buildId: string) {
@@ -163,8 +206,18 @@ export class CiBuilds {
     await ref.delete();
   }
 
-  public static markBuildAsFailed = async (buildId: string, failure: BuildFailure) => {
-    const build = await db.collection(CiBuilds.collection).doc(buildId);
+  public static markBuildAsFailed = async (
+    buildId: string,
+    failure: BuildFailure,
+  ): Promise<boolean> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    const snapshot = await build.get();
+
+    // Never overwrite a published build — it was already successfully uploaded.
+    if (snapshot.exists && snapshot.data()?.status === 'published') {
+      logger.warn(`Ignoring failure report for "${buildId}" because it is already published.`);
+      return false;
+    }
 
     await build.update({
       status: 'failed',
@@ -173,6 +226,8 @@ export class CiBuilds {
       'meta.failureCount': FieldValue.increment(1),
       'meta.lastBuildFailure': Timestamp.now(),
     });
+
+    return true;
   };
 
   public static markBuildAsPublished = async (
@@ -195,6 +250,69 @@ export class CiBuilds {
     }
 
     return parentJobIsNowCompleted;
+  };
+
+  public static resetFailureCount = async (buildId: string): Promise<void> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    // Use an epoch sentinel rather than null so the Ingeminator's backoff math
+    // (lastBuildFailure.toMillis() + backoffMs) never reads null at runtime.
+    await build.update({
+      'meta.failureCount': 0,
+      'meta.lastBuildFailure': Timestamp.fromMillis(0),
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  public static incrementRecoveryCount = async (buildId: string): Promise<void> => {
+    const build = db.collection(CiBuilds.collection).doc(buildId);
+    await build.update({
+      'meta.recoveryCount': FieldValue.increment(1),
+      modifiedDate: Timestamp.now(),
+    });
+  };
+
+  public static getFailedBuilds = async (limit: number): Promise<CiBuild[]> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .limit(limit)
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data() as CiBuild);
+  };
+
+  public static getMaxedOutFailedBuilds = async (): Promise<CiBuildQueue> => {
+    const snapshot = await db.collection(CiBuilds.collection).where('status', '==', 'failed').get();
+
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as CiBuild;
+        return (data.meta?.failureCount ?? 0) >= settings.maxFailuresPerBuild;
+      })
+      .map((doc) => ({
+        id: doc.id,
+        data: doc.data() as CiBuild,
+      }));
+  };
+
+  public static getMaxedOutFailedBuildsForRepoVersion = async (
+    repoVersion: string,
+  ): Promise<CiBuildQueue> => {
+    const snapshot = await db
+      .collection(CiBuilds.collection)
+      .where('status', '==', 'failed')
+      .where('buildInfo.repoVersion', '==', repoVersion)
+      .get();
+
+    return snapshot.docs
+      .filter((doc) => {
+        const data = doc.data() as CiBuild;
+        return (data.meta?.failureCount ?? 0) >= settings.maxFailuresPerBuild;
+      })
+      .map((doc) => ({
+        id: doc.id,
+        data: doc.data() as CiBuild,
+      }));
   };
 
   public static haveAllBuildsForJobBeenPublished = async (jobId: string): Promise<boolean> => {

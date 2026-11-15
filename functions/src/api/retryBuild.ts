@@ -5,7 +5,6 @@ import { CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Ingeminator } from '../logic/buildQueue/ingeminator';
 import { GitHub } from '../service/github';
-import { RepoVersionInfo } from '../model/repoVersionInfo';
 import { Discord } from '../service/discord';
 import { defineSecret } from 'firebase-functions/params';
 
@@ -16,7 +15,7 @@ const githubClientSecret = defineSecret('GITHUB_CLIENT_SECRET');
 export const retryBuild = onRequest(
   { secrets: [discordToken, githubClientSecret, githubPrivateKey] },
   async (request: Request, response: Response) => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     try {
       response.set('Content-Type', 'application/json');
@@ -79,8 +78,7 @@ export const retryBuild = onRequest(
 
       // Schedule new build
       const gitHubClient = await GitHub.init(githubPrivateKey.value(), githubClientSecret.value());
-      const repoVersionInfo = await RepoVersionInfo.getLatest();
-      const scheduler = new Ingeminator(1, gitHubClient, repoVersionInfo);
+      const scheduler = new Ingeminator(1, gitHubClient);
       const scheduledSuccessfully = await scheduler.rescheduleBuild(jobId, job, buildId, build);
 
       // Report result

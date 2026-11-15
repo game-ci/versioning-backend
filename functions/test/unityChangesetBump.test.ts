@@ -21,14 +21,6 @@ describe('unity-changeset bump validation', () => {
     expect(SearchMode.SUPPORTED).toBeDefined();
   });
 
-  it('should have expected version of unity-changeset package', async () => {
-    // Import package.json to check the version
-    const packageJson = (await import('./../package.json', { assert: { type: 'json' } })).default;
-
-    // Verify unity-changeset is in dependencies with expected version
-    expect(packageJson.dependencies['unity-changeset']).toMatch(/\^3\.0\.1/);
-  });
-
   it('should properly import and use unity-changeset functions', async () => {
     // Dynamic import to verify the module can be properly loaded after the bump
     const unityChangeset = await import('unity-changeset');

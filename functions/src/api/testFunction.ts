@@ -27,7 +27,7 @@ export const testFunction = onRequest(
     let code = 200;
 
     try {
-      await Discord.init(discordToken.value());
+      await Discord.initSafely(discordToken.value());
 
       const versions = await scrapeVersions(
         githubPrivateKeyConfigSecret.value(),

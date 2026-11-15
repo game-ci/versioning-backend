@@ -16,7 +16,7 @@ const internalToken = defineSecret('INTERNAL_TOKEN');
 export const reportNewBuild = onRequest(
   { secrets: [discordToken, internalToken] },
   async (req: Request, res: Response) => {
-    await Discord.init(discordToken.value());
+    await Discord.initSafely(discordToken.value());
 
     try {
       if (!Token.isValid(req.header('authorization'), internalToken.value())) {
@@ -42,7 +42,19 @@ export const reportNewBuild = onRequest(
       }
 
       await CiJobs.markJobAsInProgress(jobId);
-      await CiBuilds.registerNewBuild(buildId, jobId, imageType, buildInfo);
+      const { alreadyExists, existingStatus } = await CiBuilds.registerNewBuild(
+        buildId,
+        jobId,
+        imageType,
+        buildInfo,
+      );
+
+      if (alreadyExists) {
+        const message = `Build "${buildId}" already exists with status "${existingStatus}". Duplicate dispatch ignored.`;
+        logger.info(message, body);
+        res.status(409).send(message);
+        return;
+      }
 
       logger.info('new build reported', body);
       res.status(200).send('OK');

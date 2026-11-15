@@ -3,7 +3,6 @@ import { CiBuild, CiBuilds } from '../../model/ciBuilds';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { Discord } from '../../service/discord';
 import { Octokit } from '@octokit/rest';
-import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { Scheduler } from './scheduler';
 import admin from 'firebase-admin';
 import Timestamp = admin.firestore.Timestamp;
@@ -15,15 +14,14 @@ import { logger } from 'firebase-functions/v2';
 export class Ingeminator {
   numberToSchedule: number;
   gitHubClient: Octokit;
-  repoVersionInfo: RepoVersionInfo;
+  private scheduledBuilds = 0;
 
-  constructor(numberToSchedule: number, gitHubClient: Octokit, repoVersionInfo: RepoVersionInfo) {
+  constructor(numberToSchedule: number, gitHubClient: Octokit) {
     this.numberToSchedule = numberToSchedule;
     this.gitHubClient = gitHubClient;
-    this.repoVersionInfo = repoVersionInfo;
   }
 
-  async rescheduleFailedJobs(jobs: CiJobQueue) {
+  async rescheduleFailedJobs(jobs: CiJobQueue): Promise<number> {
     if (jobs.length <= 0) {
       throw new Error(
         '[Ingeminator] Expected ingeminator to be called with jobs to retry, none were given.',
@@ -39,6 +37,8 @@ export class Ingeminator {
 
       await this.rescheduleFailedBuildsForJob(job);
     }
+
+    return this.scheduledBuilds;
   }
 
   private async rescheduleFailedBuildsForJob(job: CiJobQueueItem) {
@@ -65,7 +65,10 @@ export class Ingeminator {
       // Max retries check
       const { maxFailuresPerBuild } = settings;
       const { lastBuildFailure, failureCount } = build.data.meta;
-      const lastFailure = lastBuildFailure as Timestamp;
+      // `lastBuildFailure` can be null after Cleaner.recoverMaxedOutFailedBuilds
+      // or the admin reset endpoint clears it. Fall back to the epoch so the
+      // backoff window is always considered elapsed.
+      const lastFailure = lastBuildFailure ?? Timestamp.fromMillis(0);
       if (failureCount >= maxFailuresPerBuild) {
         // Log warning
         const retries: number = maxFailuresPerBuild - 1;
@@ -83,7 +86,7 @@ export class Ingeminator {
           await Discord.sendDebug(maxRetriesReachedMessage);
         }
 
-        return;
+        continue;
       }
 
       // Incremental backoff
@@ -101,6 +104,7 @@ export class Ingeminator {
       if (!(await this.rescheduleBuild(jobId, jobData, buildId, BuildData))) {
         return;
       }
+      this.scheduledBuilds += 1;
     }
 
     await CiJobs.markJobAsScheduled(jobId);
@@ -117,7 +121,7 @@ export class Ingeminator {
     const { baseOs, targetPlatform } = buildInfo;
 
     // Info from repo
-    const repoVersions = Scheduler.parseRepoVersions(this.repoVersionInfo);
+    const repoVersions = Scheduler.parseRepoVersions(jobData.repoVersionInfo);
     const { repoVersionFull, repoVersionMinor, repoVersionMajor } = repoVersions;
 
     // Send the retry request

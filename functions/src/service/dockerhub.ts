@@ -2,6 +2,16 @@ import fetch from 'node-fetch';
 import { settings } from '../config/settings';
 import { Image, ImageType } from '../model/image';
 
+export interface DockerHubTagResponse {
+  name: string;
+  digest: string;
+  images: Array<{
+    digest: string;
+    architecture: string;
+    os: string;
+  }>;
+}
+
 export class Dockerhub {
   private static get host() {
     return settings.dockerhub.host;
@@ -29,13 +39,16 @@ export class Dockerhub {
     return `${this.getRepositoryBaseName()}/${this.getImageName(imageType)}`;
   }
 
-  public static async fetchImageData(imageType: ImageType, tag: string) {
+  public static async fetchImageData(
+    imageType: ImageType,
+    tag: string,
+  ): Promise<DockerHubTagResponse | null> {
     const { host } = this;
     const repository = this.getFullRepositoryName(imageType);
     const response = await fetch(`${host}/repositories/${repository}/tags/${tag}`);
 
     if (!response.ok) return null;
 
-    return response.json();
+    return response.json() as Promise<DockerHubTagResponse>;
   }
 }

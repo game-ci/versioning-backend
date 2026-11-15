@@ -4,6 +4,7 @@ export const settings = {
     'lebreton.gabriel@gmail.com',
     'davidmfinol@gmail.com',
     'andrewk010110@gmail.com',
+    'mark.drmc798@gmail.com',
   ],
   minutesBetweenScans: 15,
   maxConcurrentJobs: 9,
@@ -26,7 +27,7 @@ export const settings = {
     },
   },
   dockerhub: {
-    host: 'https://index.docker.io/v1',
+    host: 'https://hub.docker.com/v2',
     repositoryBaseName: 'unityci',
     baseImageName: 'base',
     hubImageName: 'hub',

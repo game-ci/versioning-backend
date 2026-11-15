@@ -9,7 +9,7 @@ This guide helps you set up the development environment for the GameCI Versionin
 - [Firebase CLI](https://firebase.google.com/docs/cli) for local development and deployment
 - [Java Runtime Environment](https://www.java.com/) for Firebase emulators
 
-> **Tip:** Use [nvm](https://github.com/nvm-sh/nvm), [n](https://github.com/tj/n), or [volta](https://volta.sh/) to manage Node.js versions.
+> **Tip:** This repo uses [mise](https://mise.jdx.dev/) (`mise.toml`) to pin the Node version. Run `mise install` in the repo root.
 
 ## Setup
 
@@ -52,7 +52,6 @@ This will compile the TypeScript code into JavaScript in the `lib` directory, wh
 To use Firebase Admin SDK locally:
 
 1. Download a service account key from your Firebase project settings:
-
    - Go to [Firebase Console](https://console.firebase.google.com/)
    - Select your project
    - Go to Project Settings > Service accounts
@@ -210,13 +209,11 @@ export INTERNAL_TOKEN="your_internal_token"
 Update environment variables in Firebase (useful when rotating tokens or migrating environments):
 
 ```bash
-firebase functions:config:set discord.token="your_discord_token"
-firebase functions:config:set github.client-secret="your_github_app_client_secret"
-firebase functions:config:set github.private-key="your_github_app_private_key"
-firebase functions:config:set internal.token="your_internal_token"
+firebase functions:secrets:set DISCORD_TOKEN
+firebase functions:secrets:set GITHUB_CLIENT_SECRET
+firebase functions:secrets:set GITHUB_PRIVATE_KEY
+firebase functions:secrets:set INTERNAL_TOKEN
 ```
-
-> Note: Firebase Functions configuration uses dot notation (e.g., `internal.token`) when setting with the CLI, but when using environment variables locally, use uppercase without dots (e.g., `INTERNAL_TOKEN`). This is due to how Firebase handles different configuration methods.
 
 ## Development Workflow
 
