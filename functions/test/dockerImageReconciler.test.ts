@@ -5,6 +5,11 @@ vi.mock('firebase-functions/v2', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock('../src/service/firebase', () => ({
+  db: {},
+  admin: { firestore: { FieldValue: {}, DocumentSnapshot: {}, Timestamp: { now: () => 'now' } } },
+}));
+
 vi.mock('../src/service/discord', () => ({
   Discord: {
     sendDebug: vi.fn().mockResolvedValue(undefined),
@@ -48,7 +53,7 @@ vi.stubGlobal('fetch', fetchMock);
 const { Discord } = await import('../src/service/discord');
 const { ReconciliationState } = await import('../src/model/reconciliationState');
 
-const repoVersionInfo = { major: 3, minor: 2, patch: 2 } as any;
+const repoVersionInfo = { version: '3.2.2', major: 3, minor: 2, patch: 2 } as any;
 
 const UBUNTU_PLATFORMS = [
   'base',
@@ -260,5 +265,65 @@ describe('DockerImageReconciler (priority-based)', () => {
     const checkedVersions = Object.keys(history).filter((v) => history[v].lastCheckedAt !== null);
     expect(checkedVersions.length).toBeGreaterThan(0);
     expect(history['6000.4.0f1']?.imagesMissing).toBeGreaterThan(0);
+  });
+});
+
+describe('DockerImageReconciler (correctness)', () => {
+  const missingEverythingMock = (nextPage: string | null) =>
+    fetchMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      if (u.includes('unityci/base') || u.includes('unityci/hub')) {
+        return tagsResponse(['ubuntu-3.2.2', 'windows-3.2.2']);
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ results: [{ name: 'unrelated-tag' }], next: nextPage }),
+      };
+    });
+
+  it('treats a tag list cut off by the page limit as unknown, not missing', async () => {
+    missingEverythingMock('https://hub.docker.com/v2/repositories/unityci/editor/tags?page=next');
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000,
+    });
+    await reconciler.reconcileEditorImages([buildVersion('6000.4.10f1')]);
+
+    expect(createDispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it('dispatches rebuilds under the existing CI job of that editor version', async () => {
+    missingEverythingMock(null);
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000,
+    });
+    await reconciler.reconcileEditorImages([buildVersion('6000.4.10f1')]);
+
+    expect(createDispatchEvent).toHaveBeenCalled();
+    const jobIds = new Set(
+      createDispatchEvent.mock.calls.map(([request]) => request.client_payload.jobId),
+    );
+    expect([...jobIds]).toEqual(['editor-6000.4.10f1-3.2.2']);
+  });
+
+  it('eventually checks every version, not only the most recent ones', async () => {
+    const versions = Array.from({ length: 20 }, (_, i) => buildVersion(`6000.4.${19 - i}f1`));
+    allPresentMock(versions.map((v) => v.version));
+
+    const day = 24 * 60 * 60 * 1000;
+    for (let cycle = 0; cycle < 8; cycle += 1) {
+      const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+        now: () => 1_000_000 + cycle * day,
+      });
+      await reconciler.reconcileEditorImages(versions);
+    }
+
+    const history = stateStore.current.versionHistory;
+    const neverChecked = versions
+      .map((v) => v.version)
+      .filter((v) => !history[v] || history[v].lastCheckedAt === null);
+    expect(neverChecked).toEqual([]);
   });
 });

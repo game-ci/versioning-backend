@@ -2,6 +2,7 @@ import { Octokit } from '@octokit/rest';
 import { logger } from 'firebase-functions/v2';
 import { Discord } from '../../service/discord';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
+import { CiJobs } from '../../model/ciJobs';
 import { EditorVersionInfo } from '../../model/editorVersionInfo';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import {
@@ -20,6 +21,8 @@ const BASE_HUB_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const COOLDOWN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const RECENT_VERSIONS_COUNT = 15;
+// Recent versions are preferred, but not so much that older versions never get their turn.
+const RECENT_VERSION_BONUS = 200;
 const MAX_DAYS_WITHOUT_CHECK = 30;
 const MAX_DAYS_WITHOUT_RETRY = 2;
 
@@ -67,6 +70,7 @@ interface ReconcilerOptions {
 
 export class DockerImageReconciler {
   private gitHubClient: Octokit;
+  private repoVersion: string;
   private repoVersionFull: string;
   private repoVersionMinor: string;
   private repoVersionMajor: string;
@@ -79,7 +83,8 @@ export class DockerImageReconciler {
     options: ReconcilerOptions = {},
   ) {
     this.gitHubClient = gitHubClient;
-    const { major, minor, patch } = repoVersionInfo;
+    const { version, major, minor, patch } = repoVersionInfo;
+    this.repoVersion = version;
     this.repoVersionFull = `${major}.${minor}.${patch}`;
     this.repoVersionMinor = `${major}.${minor}`;
     this.repoVersionMajor = String(major);
@@ -295,14 +300,10 @@ export class DockerImageReconciler {
     now: number,
   ): number {
     const versionIndex = allVersions.findIndex((v) => v.version === version);
-    const isRecent = versionIndex < RECENT_VERSIONS_COUNT;
-
-    if (isRecent) {
-      return 1000;
-    }
+    const recentBonus = versionIndex < RECENT_VERSIONS_COUNT ? RECENT_VERSION_BONUS : 0;
 
     if (!record) {
-      return 900;
+      return 900 + recentBonus;
     }
 
     let score = 0;
@@ -335,7 +336,7 @@ export class DockerImageReconciler {
       }
     }
 
-    return score;
+    return score + recentBonus;
   }
 
   private async fetchTags(repository: string, nameFilter: string): Promise<Set<string> | null> {
@@ -379,6 +380,14 @@ export class DockerImageReconciler {
       }
     }
 
+    if (nextUrl) {
+      // Tags beyond the page limit are unknown, so an absent tag may still exist: do not report it missing
+      logger.warn(
+        `DockerHub tag list for ${repository} (${nameFilter}) exceeds ${MAX_TAG_PAGES_PER_QUERY} pages; skipping`,
+      );
+      return null;
+    }
+
     return tags;
   }
 
@@ -395,7 +404,8 @@ export class DockerImageReconciler {
     try {
       const eventType = this.getEventType(image);
       const payload: Record<string, unknown> = {
-        jobId: `reconciliation-${image.imageType}-${image.tag}`,
+        // Report under the CI job that owns this image, so the backend can register the build
+        jobId: CiJobs.parseJobId(image.imageType, this.repoVersion, image.editorVersion ?? null),
         repoVersionFull: this.repoVersionFull,
         repoVersionMinor: this.repoVersionMinor,
         repoVersionMajor: this.repoVersionMajor,
