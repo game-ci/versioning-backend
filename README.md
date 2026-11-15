@@ -22,12 +22,12 @@ graph TD
 The backend regularly scrapes Unity version information:
 
 1. Uses the [`unity-changeset` package](https://github.com/mob-sakai/unity-changeset) from [mob-sakai](https://github.com/mob-sakai) to detect new Unity versions
-2. Filters versions (only stable versions 2017+)
+2. Ingests stable versions from 2017 onwards
 3. Stores version details in Firestore
 4. Notifies maintainers via Discord
-5. Schedules build jobs for new/non-deprecated versions (2022+)
+5. Creates a CI job for each new version, but schedules builds only for 2022 onwards
 
-Editors older than 2022 are end-of-life. Their published images stay available, but no new images are built for them: their jobs are created as `deprecated`, and the DockerHub reconciler skips them. The cut-off is defined once, in `functions/src/model/supportedEditorVersions.ts`.
+Ingest and scheduling have different cut-offs. Every stable editor from 2017 onwards is ingested and stored, so the version list stays complete. Editors older than 2022 are end-of-life: their published images stay available, but no new images are built for them. Their jobs are created as `deprecated`, a data migration deprecates any of their jobs that were still waiting to be built or retried, and the DockerHub reconciler skips them. The cut-off is defined once, in `functions/src/model/supportedEditorVersions.ts`.
 
 ## CI Job Workflow
 
