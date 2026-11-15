@@ -27,6 +27,8 @@ The backend regularly scrapes Unity version information:
 4. Notifies maintainers via Discord
 5. Schedules build jobs for new/non-deprecated versions (2022+)
 
+Editors older than 2022 are end-of-life. Their published images stay available, but no new images are built for them: their jobs are created as `deprecated`, and the DockerHub reconciler skips them. The cut-off is defined once, in `functions/src/model/supportedEditorVersions.ts`.
+
 ## CI Job Workflow
 
 Each Unity version generates CI jobs and builds with the following relationships:

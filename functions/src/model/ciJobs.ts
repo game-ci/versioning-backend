@@ -8,6 +8,7 @@ import { chunk } from 'lodash';
 import { settings } from '../config/settings';
 import { Image, ImageType } from './image';
 import { logger } from 'firebase-functions/v2';
+import { isSupportedEditorVersion } from './supportedEditorVersions';
 
 export type JobStatus =
   | 'created'
@@ -156,7 +157,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ): CiJob => {
     let status: JobStatus = 'deprecated';
-    if (editorVersionInfo === null || editorVersionInfo.major >= 2022) {
+    if (editorVersionInfo === null || isSupportedEditorVersion(editorVersionInfo)) {
       status = 'created';
     }
 
