@@ -7,8 +7,32 @@ vi.mock('firebase-functions/v2', () => ({
 type StoredJob = { data: Record<string, any>; updateTime: number };
 
 const store = new Map<string, StoredJob>();
-const queriedFilters: Array<[string, string, unknown]> = [];
+type Filter = [string, '==' | '<', unknown];
+type Query = { filters: Filter[]; orderBy: Array<[string, string]> };
+const queries: Query[] = [];
 const committedBatchSizes: number[] = [];
+
+const fieldOf = (data: Record<string, any>, path: string) =>
+  path.split('.').reduce<any>((value, key) => value?.[key], data);
+
+// Like Firestore, a filter or ordering on a field leaves out documents without that field.
+const matches = (data: Record<string, any>, { filters, orderBy }: Query) =>
+  filters.every(([field, operator, value]) => {
+    const actual = fieldOf(data, field);
+    return operator === '==' ? actual === value : actual != null && actual < (value as number);
+  }) && orderBy.every(([field]) => fieldOf(data, field) != null);
+
+const queryBuilder = (query: Query) => ({
+  where: (field: string, operator: '==' | '<', value: unknown) =>
+    queryBuilder({ ...query, filters: [...query.filters, [field, operator, value]] }),
+  orderBy: (field: string, direction: string) =>
+    queryBuilder({ ...query, orderBy: [...query.orderBy, [field, direction]] }),
+  get: async () => {
+    queries.push(query);
+    const ids = [...store.keys()].filter((id) => matches(store.get(id)!.data, query));
+    return { docs: ids.map(snapshotOf) };
+  },
+});
 
 const snapshotOf = (id: string) => {
   const { data, updateTime } = store.get(id)!;
@@ -18,18 +42,7 @@ const snapshotOf = (id: string) => {
 const fakeDb = {
   collection: (name: string) => {
     expect(name).toBe('ciJobs');
-    return {
-      where: (field: string, operator: string, value: unknown) => {
-        queriedFilters.push([field, operator, value]);
-        expect([field, operator]).toEqual(['status', '==']);
-        return {
-          get: async () => {
-            const ids = [...store.keys()].filter((id) => store.get(id)!.data.status === value);
-            return { docs: ids.map(snapshotOf) };
-          },
-        };
-      },
-    };
+    return queryBuilder({ filters: [], orderBy: [] });
   },
   batch: () => {
     const writes: Array<{ id: string; data: Record<string, any>; lastUpdateTime: number }> = [];
@@ -94,7 +107,7 @@ const statusOf = (id: string) => store.get(id)!.data.status;
 
 beforeEach(() => {
   store.clear();
-  queriedFilters.length = 0;
+  queries.length = 0;
   committedBatchSizes.length = 0;
   vi.mocked(logger.info).mockClear();
   vi.mocked(logger.debug).mockClear();
@@ -126,15 +139,23 @@ describe('migrateEndOfLifeEditorJobsToDeprecated', () => {
     },
   );
 
-  it('only queries statuses the scheduler can still dispatch', async () => {
+  it('queries only dispatchable end-of-life jobs, through the build queue index', async () => {
     await migrateEndOfLifeEditorJobsToDeprecated();
 
-    expect(queriedFilters.map(([, , status]) => status).toSorted()).toEqual([
-      'created',
-      'failed',
-      'inProgress',
-      'scheduled',
-    ]);
+    const buildQueueOrder = [
+      ['editorVersionInfo.major', 'desc'],
+      ['editorVersionInfo.minor', 'desc'],
+      ['editorVersionInfo.patch', 'desc'],
+    ];
+    expect(queries).toEqual(
+      ['created', 'failed', 'scheduled', 'inProgress'].map((status) => ({
+        filters: [
+          ['status', '==', status],
+          ['editorVersionInfo.major', '<', 2022],
+        ],
+        orderBy: buildQueueOrder,
+      })),
+    );
   });
 
   it('leaves supported editors and base or hub jobs schedulable', async () => {

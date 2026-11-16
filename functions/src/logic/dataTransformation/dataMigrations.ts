@@ -2,7 +2,7 @@ import { chunk, countBy } from 'lodash';
 import { logger } from 'firebase-functions/v2';
 import { admin, db } from '../../service/firebase';
 import { CiJob, CiJobs, JobStatus } from '../../model/ciJobs';
-import { isSupportedEditorVersion } from '../../model/supportedEditorVersions';
+import { OLDEST_SUPPORTED_EDITOR_MAJOR } from '../../model/supportedEditorVersions';
 import Timestamp = admin.firestore.Timestamp;
 import QueryDocumentSnapshot = admin.firestore.QueryDocumentSnapshot;
 
@@ -21,8 +21,17 @@ export type DeprecationSummary = {
   byEditorVersion: Record<string, number>;
 };
 
-const isEndOfLifeEditorJob = (job: CiJob) =>
-  job.editorVersionInfo !== null && !isSupportedEditorVersion(job.editorVersionInfo);
+// Ordered like the build queue, so the query uses the index that serves `getPrioritisedQueue`.
+// Base and hub jobs have no editor version, so the filter leaves them out.
+const getEndOfLifeEditorJobs = async (status: JobStatus) =>
+  db
+    .collection(CiJobs.collection)
+    .where('status', '==', status)
+    .where('editorVersionInfo.major', '<', OLDEST_SUPPORTED_EDITOR_MAJOR)
+    .orderBy('editorVersionInfo.major', 'desc')
+    .orderBy('editorVersionInfo.minor', 'desc')
+    .orderBy('editorVersionInfo.patch', 'desc')
+    .get();
 
 /**
  * Deprecates every job for an end-of-life editor that could still be dispatched, so builds for
@@ -32,10 +41,8 @@ const isEndOfLifeEditorJob = (job: CiJob) =>
 export const migrateEndOfLifeEditorJobsToDeprecated = async (): Promise<DeprecationSummary> => {
   const jobsToDeprecate: QueryDocumentSnapshot[] = [];
   for (const status of schedulableStatuses) {
-    const snapshot = await db.collection(CiJobs.collection).where('status', '==', status).get();
-    jobsToDeprecate.push(
-      ...snapshot.docs.filter((doc) => isEndOfLifeEditorJob(doc.data() as CiJob)),
-    );
+    const snapshot = await getEndOfLifeEditorJobs(status);
+    jobsToDeprecate.push(...snapshot.docs);
   }
 
   if (jobsToDeprecate.length === 0) {
