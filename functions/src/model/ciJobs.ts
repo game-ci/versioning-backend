@@ -8,6 +8,7 @@ import { chunk } from 'lodash';
 import { settings } from '../config/settings';
 import { Image, ImageType } from './image';
 import { logger } from 'firebase-functions/v2';
+import { isSupportedEditorVersion } from './supportedEditorVersions';
 
 export type JobStatus =
   | 'created'
@@ -164,11 +165,7 @@ export class CiJobs {
     editorVersionInfo: EditorVersionInfo | null = null,
   ): CiJob => {
     let status: JobStatus = 'deprecated';
-    if (
-      editorVersionInfo === null ||
-      editorVersionInfo.major >= 2019 ||
-      (editorVersionInfo.major === 2018 && editorVersionInfo.minor >= 2)
-    ) {
+    if (editorVersionInfo === null || isSupportedEditorVersion(editorVersionInfo)) {
       status = 'created';
     }
 
@@ -237,14 +234,27 @@ export class CiJobs {
     });
   };
 
+  /**
+   * A deprecated job keeps its status, so a late failure report never brings it back into the
+   * Ingeminator's retry queue.
+   */
   static markFailureForJob = async (jobId: string) => {
-    const job = await db.collection(CiJobs.collection).doc(jobId);
+    const ref = db.collection(CiJobs.collection).doc(jobId);
 
-    await job.update({
-      status: 'failed',
-      'meta.failureCount': FieldValue.increment(1),
-      'meta.lastBuildFailure': Timestamp.now(),
-      modifiedDate: Timestamp.now(),
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      if (!snapshot.exists) {
+        throw new Error(`Trying to mark job '${jobId}' as failed. But it does not exist.`);
+      }
+
+      const { status: currentStatus } = snapshot.data() as CiJob;
+      const status: JobStatus = currentStatus === 'deprecated' ? 'deprecated' : 'failed';
+      transaction.update(ref, {
+        status,
+        'meta.failureCount': FieldValue.increment(1),
+        'meta.lastBuildFailure': Timestamp.now(),
+        modifiedDate: Timestamp.now(),
+      });
     });
   };
 

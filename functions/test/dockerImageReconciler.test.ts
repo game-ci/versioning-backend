@@ -475,3 +475,37 @@ describe('DockerImageReconciler (rotation with unknown tag lists)', () => {
     expect(olderNeverChecked).toEqual([]);
   });
 });
+
+describe('DockerImageReconciler (support policy)', () => {
+  it('never checks or dispatches end-of-life editors', async () => {
+    allPresentMock([]);
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000,
+    });
+    await reconciler.reconcileEditorImages([
+      buildVersion('2021.3.45f2'),
+      buildVersion('2020.3.49f1'),
+      buildVersion('2022.3.62f3'),
+    ]);
+
+    const queriedUrls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(queriedUrls.some((url) => url.includes('2021.3.45f2'))).toBe(false);
+    expect(queriedUrls.some((url) => url.includes('2020.3.49f1'))).toBe(false);
+    expect(queriedUrls.some((url) => url.includes('2022.3.62f3'))).toBe(true);
+
+    const dispatchedVersions = createDispatchEvent.mock.calls.map(
+      ([request]) => request.client_payload?.editorVersion,
+    );
+    expect(dispatchedVersions).not.toContain('2021.3.45f2');
+    expect(dispatchedVersions).not.toContain('2020.3.49f1');
+  });
+
+  it('skips the cycle when only end-of-life editors are known', async () => {
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo);
+    await reconciler.reconcileEditorImages([buildVersion('2021.3.45f2')]);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(createDispatchEvent).not.toHaveBeenCalled();
+  });
+});

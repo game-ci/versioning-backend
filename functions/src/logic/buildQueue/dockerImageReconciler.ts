@@ -10,6 +10,7 @@ import {
   ReconciliationStateData,
   VersionCheckRecord,
 } from '../../model/reconciliationState';
+import { isSupportedEditorVersion } from '../../model/supportedEditorVersions';
 
 const DOCKERHUB_API = 'https://hub.docker.com/v2/repositories';
 
@@ -99,7 +100,8 @@ export class DockerImageReconciler {
     this.authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async reconcileEditorImages(versions: EditorVersionInfo[]): Promise<void> {
+  async reconcileEditorImages(knownVersions: EditorVersionInfo[]): Promise<void> {
+    const versions = knownVersions.filter(isSupportedEditorVersion);
     if (versions.length === 0) {
       return;
     }

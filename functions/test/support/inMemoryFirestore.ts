@@ -111,6 +111,16 @@ export const createInMemoryFirestore = () => {
   });
 
   const db = {
+    runTransaction: async <T>(work: (transaction: any) => Promise<T>): Promise<T> => {
+      const writes: (() => Promise<void>)[] = [];
+      const result = await work({
+        get: (ref: any) => ref.get(),
+        update: (ref: any, fields: Data) => writes.push(() => ref.update(fields)),
+        set: (ref: any, data: Data, options?: any) => writes.push(() => ref.set(data, options)),
+      });
+      for (const write of writes) await write();
+      return result;
+    },
     doc: (path: string) => {
       const [collectionName, id] = path.split('/');
       return docRef(collectionName, id);
