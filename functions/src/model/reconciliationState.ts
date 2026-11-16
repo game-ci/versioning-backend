@@ -10,6 +10,8 @@ export interface VersionCheckRecord {
   dispatchFailureCount: number;
   imagesExpected: number;
   imagesMissing: number;
+  // Images whose tag list could not be fetched in the last scan; the version stays unchecked.
+  imagesUnknown?: number;
 }
 
 export interface ReconciliationStateData {

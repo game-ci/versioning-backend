@@ -25,6 +25,8 @@ const RECENT_VERSIONS_COUNT = 15;
 const RECENT_VERSION_BONUS = 200;
 const MAX_DAYS_WITHOUT_CHECK = 30;
 const MAX_DAYS_WITHOUT_RETRY = 2;
+// Failure history raises a version's priority, but never above a newly released version.
+const MAX_COUNTED_DISPATCH_FAILURES = 3;
 
 const UBUNTU_PLATFORMS = [
   'base',
@@ -49,14 +51,18 @@ interface DockerImage {
   baseOs: 'ubuntu' | 'windows';
   imageType: 'base' | 'hub' | 'editor';
   targetPlatform?: string;
-  editorVersion?: string;
-  changeset?: string;
+  editorVersionInfo?: EditorVersionInfo;
 }
 
-interface CycleSummary {
-  versionsScanned: number;
+interface VersionSummary {
   imagesExpected: number;
   imagesMissing: number;
+  // Images whose tag list could not be fetched (rate limit or page limit): neither present nor missing.
+  imagesUnknown: number;
+}
+
+interface CycleSummary extends VersionSummary {
+  versionsScanned: number;
   dispatchesAttempted: number;
   dispatchesSucceeded: number;
   cooldownSkipped: number;
@@ -70,7 +76,7 @@ interface ReconcilerOptions {
 
 export class DockerImageReconciler {
   private gitHubClient: Octokit;
-  private repoVersion: string;
+  private repoVersionInfo: RepoVersionInfo;
   private repoVersionFull: string;
   private repoVersionMinor: string;
   private repoVersionMajor: string;
@@ -83,8 +89,8 @@ export class DockerImageReconciler {
     options: ReconcilerOptions = {},
   ) {
     this.gitHubClient = gitHubClient;
-    const { version, major, minor, patch } = repoVersionInfo;
-    this.repoVersion = version;
+    this.repoVersionInfo = repoVersionInfo;
+    const { major, minor, patch } = repoVersionInfo;
     this.repoVersionFull = `${major}.${minor}.${patch}`;
     this.repoVersionMinor = `${major}.${minor}`;
     this.repoVersionMajor = String(major);
@@ -103,6 +109,7 @@ export class DockerImageReconciler {
       versionsScanned: 0,
       imagesExpected: 0,
       imagesMissing: 0,
+      imagesUnknown: 0,
       dispatchesAttempted: 0,
       dispatchesSucceeded: 0,
       cooldownSkipped: 0,
@@ -121,13 +128,25 @@ export class DockerImageReconciler {
         break;
       }
 
-      const versionSummary = { imagesExpected: 0, imagesMissing: 0 };
+      const versionSummary: VersionSummary = {
+        imagesExpected: 0,
+        imagesMissing: 0,
+        imagesUnknown: 0,
+      };
       await this.processVersion(version, state, summary, versionSummary);
       summary.versionsScanned += 1;
 
       const record = ReconciliationState.getOrCreateVersionRecord(state, version.version);
-      record.lastCheckedAt = this.now();
       record.imagesExpected = versionSummary.imagesExpected;
+      record.imagesUnknown = versionSummary.imagesUnknown;
+      if (versionSummary.imagesUnknown > 0) {
+        logger.warn(
+          `[DockerImageReconciler] ${version.version}: ${versionSummary.imagesUnknown} image(s) unknown, ` +
+            'leaving the version unchecked so it is tried again',
+        );
+        continue;
+      }
+      record.lastCheckedAt = this.now();
       record.imagesMissing = versionSummary.imagesMissing;
     }
 
@@ -180,7 +199,11 @@ export class DockerImageReconciler {
       'unityci/hub': hubTags,
     };
 
-    const baseHubSummary = { imagesExpected: 0, imagesMissing: 0 };
+    const baseHubSummary: VersionSummary = {
+      imagesExpected: 0,
+      imagesMissing: 0,
+      imagesUnknown: 0,
+    };
     for (const image of checks) {
       await this.evaluateExpected(image, tagSet[image.repository], state, summary, baseHubSummary);
     }
@@ -190,7 +213,7 @@ export class DockerImageReconciler {
     version: EditorVersionInfo,
     state: ReconciliationStateData,
     summary: CycleSummary,
-    versionSummary: { imagesExpected: number; imagesMissing: number },
+    versionSummary: VersionSummary,
   ): Promise<void> {
     const ubuntuExisting = await this.fetchTags('unityci/editor', `ubuntu-${version.version}`);
     const windowsExisting = await this.fetchTags('unityci/editor', `windows-${version.version}`);
@@ -202,8 +225,7 @@ export class DockerImageReconciler {
         baseOs: 'ubuntu',
         imageType: 'editor',
         targetPlatform: platform,
-        editorVersion: version.version,
-        changeset: version.changeSet,
+        editorVersionInfo: version,
       };
       await this.evaluateExpected(image, ubuntuExisting, state, summary, versionSummary);
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
@@ -216,8 +238,7 @@ export class DockerImageReconciler {
         baseOs: 'windows',
         imageType: 'editor',
         targetPlatform: platform,
-        editorVersion: version.version,
-        changeset: version.changeSet,
+        editorVersionInfo: version,
       };
       await this.evaluateExpected(image, windowsExisting, state, summary, versionSummary);
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
@@ -229,13 +250,15 @@ export class DockerImageReconciler {
     existing: Set<string> | null,
     state: ReconciliationStateData,
     summary: CycleSummary,
-    versionSummary: { imagesExpected: number; imagesMissing: number },
+    versionSummary: VersionSummary,
   ): Promise<void> {
     summary.imagesExpected += 1;
     versionSummary.imagesExpected += 1;
 
     if (existing === null) {
-      logger.debug(`Skipping ${image.tag}: existing-tag fetch failed, assuming present`);
+      logger.debug(`Skipping ${image.tag}: existing-tag fetch failed, so its presence is unknown`);
+      summary.imagesUnknown += 1;
+      versionSummary.imagesUnknown += 1;
       return;
     }
 
@@ -263,13 +286,20 @@ export class DockerImageReconciler {
       summary.dispatchesSucceeded += 1;
       state.recentDispatches[cooldownKey] = this.now();
 
-      if (image.editorVersion) {
-        const record = ReconciliationState.getOrCreateVersionRecord(state, image.editorVersion);
+      if (image.editorVersionInfo) {
+        const record = ReconciliationState.getOrCreateVersionRecord(
+          state,
+          image.editorVersionInfo.version,
+        );
         record.lastDispatchAttemptAt = this.now();
+        record.dispatchFailureCount = 0;
       }
     } else {
-      if (image.editorVersion) {
-        const record = ReconciliationState.getOrCreateVersionRecord(state, image.editorVersion);
+      if (image.editorVersionInfo) {
+        const record = ReconciliationState.getOrCreateVersionRecord(
+          state,
+          image.editorVersionInfo.version,
+        );
         record.lastDispatchAttemptAt = this.now();
         record.dispatchFailureCount += 1;
       }
@@ -332,7 +362,7 @@ export class DockerImageReconciler {
       }
 
       if (record.dispatchFailureCount > 0) {
-        score += record.dispatchFailureCount * 100;
+        score += Math.min(record.dispatchFailureCount, MAX_COUNTED_DISPATCH_FAILURES) * 100;
       }
     }
 
@@ -405,14 +435,22 @@ export class DockerImageReconciler {
       const eventType = this.getEventType(image);
       const payload: Record<string, unknown> = {
         // Report under the CI job that owns this image, so the backend can register the build
-        jobId: CiJobs.parseJobId(image.imageType, this.repoVersion, image.editorVersion ?? null),
+        jobId: CiJobs.generateJobId(
+          image.imageType,
+          this.repoVersionInfo,
+          image.editorVersionInfo ?? null,
+        ),
+        // Reconciliation failures are recorded, but never hold back the build queue
+        reconciliation: true,
         repoVersionFull: this.repoVersionFull,
         repoVersionMinor: this.repoVersionMinor,
         repoVersionMajor: this.repoVersionMajor,
         baseOs: image.baseOs,
       };
-      if (image.editorVersion) payload.editorVersion = image.editorVersion;
-      if (image.changeset) payload.changeSet = image.changeset;
+      if (image.editorVersionInfo) {
+        payload.editorVersion = image.editorVersionInfo.version;
+        payload.changeSet = image.editorVersionInfo.changeSet;
+      }
       if (image.targetPlatform) payload.targetPlatform = image.targetPlatform;
 
       const response = await this.gitHubClient.repos.createDispatchEvent({
@@ -446,16 +484,23 @@ export class DockerImageReconciler {
   }
 
   private async reportSummary(summary: CycleSummary, totalVersions: number): Promise<void> {
+    const unknown =
+      summary.imagesUnknown > 0
+        ? `, ${summary.imagesUnknown} unknown (tag list unavailable, retried next cycle)`
+        : '';
+
     if (summary.imagesMissing === 0) {
+      const verified = summary.imagesExpected - summary.imagesUnknown;
       await Discord.sendDebug(
         `[DockerImageReconciler] Scanned ${summary.versionsScanned}/${totalVersions} versions, ` +
-          `${summary.imagesExpected} images verified, all present`,
+          `${verified} images verified` +
+          (unknown ? unknown : ', all present'),
       );
       return;
     }
 
     await Discord.sendAlert(
-      `DockerHub Reconciliation: ${summary.imagesMissing} missing across ` +
+      `DockerHub Reconciliation: ${summary.imagesMissing} missing${unknown} across ` +
         `${summary.versionsScanned} versions; dispatched ${summary.dispatchesSucceeded}/${summary.dispatchesAttempted}, ` +
         `${summary.cooldownSkipped} in cooldown` +
         (summary.cappedAtLimit ? `, capped at ${MAX_DISPATCHES_PER_CYCLE} dispatches/cycle` : ''),

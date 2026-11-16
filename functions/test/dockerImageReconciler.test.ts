@@ -327,3 +327,114 @@ describe('DockerImageReconciler (correctness)', () => {
     expect(neverChecked).toEqual([]);
   });
 });
+
+const versionRecord = (overrides: Record<string, unknown>) => ({
+  lastCheckedAt: null,
+  lastDispatchAttemptAt: null,
+  dispatchFailureCount: 0,
+  imagesExpected: 12,
+  imagesMissing: 0,
+  ...overrides,
+});
+
+describe('DockerImageReconciler (failure history and unknown tags)', () => {
+  const day = 24 * 60 * 60 * 1000;
+
+  it('checks a newly released version ahead of versions with a long dispatch failure history', async () => {
+    const now = 100 * day;
+    const failing = Array.from({ length: 5 }, (_, i) => buildVersion(`6000.4.${i + 1}f1`));
+    const released = buildVersion('6000.4.99f1');
+    stateStore.current = {
+      versionHistory: Object.fromEntries(
+        failing.map((v) => [
+          v.version,
+          versionRecord({
+            lastCheckedAt: now - day,
+            lastDispatchAttemptAt: now - day,
+            dispatchFailureCount: 10,
+            imagesMissing: 1,
+          }),
+        ]),
+      ),
+      recentDispatches: {},
+      baseHubCheckedAt: now,
+      cycleCount: 1,
+    };
+    allPresentMock([...failing, released].map((v) => v.version));
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => now });
+    await reconciler.reconcileEditorImages([...failing, released]);
+
+    expect(stateStore.current.versionHistory[released.version]?.lastCheckedAt).toBe(now);
+  });
+
+  it('clears the dispatch failure count once a dispatch succeeds', async () => {
+    const now = 100 * day;
+    const version = buildVersion('6000.4.1f1');
+    stateStore.current = {
+      versionHistory: {
+        [version.version]: versionRecord({ dispatchFailureCount: 4, imagesMissing: 1 }),
+      },
+      recentDispatches: {},
+      baseHubCheckedAt: now,
+      cycleCount: 1,
+    };
+    fetchMock.mockResolvedValue(tagsResponse([]));
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => now });
+    await reconciler.reconcileEditorImages([version]);
+
+    expect(createDispatchEvent).toHaveBeenCalled();
+    expect(stateStore.current.versionHistory[version.version].dispatchFailureCount).toBe(0);
+  });
+
+  it('leaves a version unchecked while its tag list is unknown', async () => {
+    const now = 100 * day;
+    const version = buildVersion('6000.4.1f1');
+    const previous = versionRecord({ lastCheckedAt: now - 3 * day, imagesMissing: 2 });
+    stateStore.current = {
+      versionHistory: { [version.version]: previous },
+      recentDispatches: {},
+      baseHubCheckedAt: now,
+      cycleCount: 1,
+    };
+    fetchMock.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, { now: () => now });
+    await reconciler.reconcileEditorImages([version]);
+
+    const record = stateStore.current.versionHistory[version.version];
+    expect(record.lastCheckedAt).toBe(previous.lastCheckedAt);
+    expect(record.imagesMissing).toBe(2);
+    expect(record.imagesUnknown).toBe(12);
+  });
+
+  it('reports images whose tags could not be listed', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000,
+    });
+    await reconciler.reconcileEditorImages([buildVersion('6000.4.1f1')]);
+
+    const messages = [
+      ...(Discord.sendDebug as any).mock.calls,
+      ...(Discord.sendAlert as any).mock.calls,
+    ].map(([message]) => message);
+    expect(messages.join('\n')).toMatch(/16 unknown/);
+  });
+
+  it('marks rebuild dispatches as reconciliation', async () => {
+    fetchMock.mockResolvedValue(tagsResponse([]));
+
+    const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+      now: () => 1_000_000,
+    });
+    await reconciler.reconcileEditorImages([buildVersion('6000.4.1f1')]);
+
+    expect(createDispatchEvent).toHaveBeenCalled();
+    for (const [request] of createDispatchEvent.mock.calls) {
+      expect(request.client_payload.reconciliation).toBe(true);
+    }
+  });
+});
