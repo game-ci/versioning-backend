@@ -67,6 +67,7 @@ interface CycleSummary extends VersionSummary {
   dispatchesAttempted: number;
   dispatchesSucceeded: number;
   cooldownSkipped: number;
+  coveredByBuildQueue: number;
   cappedAtLimit: boolean;
 }
 
@@ -100,7 +101,10 @@ export class DockerImageReconciler {
     this.authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async reconcileEditorImages(knownVersions: EditorVersionInfo[]): Promise<void> {
+  async reconcileEditorImages(
+    knownVersions: EditorVersionInfo[],
+    queuedJobIds: Set<string> = new Set(),
+  ): Promise<void> {
     const versions = knownVersions.filter(isSupportedEditorVersion);
     if (versions.length === 0) {
       return;
@@ -115,6 +119,7 @@ export class DockerImageReconciler {
       dispatchesAttempted: 0,
       dispatchesSucceeded: 0,
       cooldownSkipped: 0,
+      coveredByBuildQueue: 0,
       cappedAtLimit: false,
     };
 
@@ -135,7 +140,7 @@ export class DockerImageReconciler {
         imagesMissing: 0,
         imagesUnknown: 0,
       };
-      await this.processVersion(version, state, summary, versionSummary);
+      await this.processVersion(version, state, summary, versionSummary, queuedJobIds);
       summary.versionsScanned += 1;
 
       const record = ReconciliationState.getOrCreateVersionRecord(state, version.version);
@@ -217,6 +222,7 @@ export class DockerImageReconciler {
     state: ReconciliationStateData,
     summary: CycleSummary,
     versionSummary: VersionSummary,
+    queuedJobIds: Set<string>,
   ): Promise<void> {
     const ubuntuExisting = await this.fetchTags('unityci/editor', `ubuntu-${version.version}`);
     const windowsExisting = await this.fetchTags('unityci/editor', `windows-${version.version}`);
@@ -230,7 +236,14 @@ export class DockerImageReconciler {
         targetPlatform: platform,
         editorVersionInfo: version,
       };
-      await this.evaluateExpected(image, ubuntuExisting, state, summary, versionSummary);
+      await this.evaluateExpected(
+        image,
+        ubuntuExisting,
+        state,
+        summary,
+        versionSummary,
+        queuedJobIds,
+      );
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
     }
 
@@ -243,7 +256,14 @@ export class DockerImageReconciler {
         targetPlatform: platform,
         editorVersionInfo: version,
       };
-      await this.evaluateExpected(image, windowsExisting, state, summary, versionSummary);
+      await this.evaluateExpected(
+        image,
+        windowsExisting,
+        state,
+        summary,
+        versionSummary,
+        queuedJobIds,
+      );
       if (summary.dispatchesAttempted >= MAX_DISPATCHES_PER_CYCLE) return;
     }
   }
@@ -254,6 +274,7 @@ export class DockerImageReconciler {
     state: ReconciliationStateData,
     summary: CycleSummary,
     versionSummary: VersionSummary,
+    queuedJobIds: Set<string> = new Set(),
   ): Promise<void> {
     summary.imagesExpected += 1;
     versionSummary.imagesExpected += 1;
@@ -271,6 +292,16 @@ export class DockerImageReconciler {
 
     summary.imagesMissing += 1;
     versionSummary.imagesMissing += 1;
+    if (
+      image.editorVersionInfo &&
+      queuedJobIds.has(
+        CiJobs.generateJobId('editor', this.repoVersionInfo, image.editorVersionInfo),
+      )
+    ) {
+      summary.coveredByBuildQueue += 1;
+      return;
+    }
+
     const cooldownKey = `${image.repository}:${image.tag}`;
     const lastDispatchedAt = state.recentDispatches[cooldownKey];
     if (lastDispatchedAt && this.now() - lastDispatchedAt < DISPATCH_COOLDOWN_MS) {
@@ -490,25 +521,32 @@ export class DockerImageReconciler {
   }
 
   private async reportSummary(summary: CycleSummary, totalVersions: number): Promise<void> {
-    const unknown =
-      summary.imagesUnknown > 0
-        ? `, ${summary.imagesUnknown} unknown (tag list unavailable, retried next cycle)`
-        : '';
-
-    if (summary.imagesMissing === 0) {
+    const actionableMissing = summary.imagesMissing - summary.coveredByBuildQueue;
+    if (actionableMissing === 0) {
       const verified = summary.imagesExpected - summary.imagesUnknown;
       await Discord.sendDebug(
         `[DockerImageReconciler] Scanned ${summary.versionsScanned}/${totalVersions} versions, ` +
           `${verified} images verified` +
-          (unknown ? unknown : ', all present'),
+          (summary.coveredByBuildQueue > 0
+            ? `, ${summary.coveredByBuildQueue} missing image(s) covered by the build queue`
+            : '') +
+          (summary.imagesUnknown > 0
+            ? `, ${summary.imagesUnknown} unknown (tag list unavailable, retried next cycle)`
+            : summary.coveredByBuildQueue === 0
+              ? ', all present'
+              : ''),
       );
       return;
     }
 
+    const unknown =
+      summary.imagesUnknown > 0
+        ? `, ${summary.imagesUnknown} unknown (tag list unavailable, retried next cycle)`
+        : '';
     await Discord.sendAlert(
-      `DockerHub Reconciliation: ${summary.imagesMissing} missing${unknown} across ` +
+      `DockerHub Reconciliation: ${actionableMissing} missing${unknown} across ` +
         `${summary.versionsScanned} versions; dispatched ${summary.dispatchesSucceeded}/${summary.dispatchesAttempted}, ` +
-        `${summary.cooldownSkipped} in cooldown` +
+          `${summary.cooldownSkipped} in cooldown; ${summary.coveredByBuildQueue} covered by the build queue` +
         (summary.cappedAtLimit ? `, capped at ${MAX_DISPATCHES_PER_CYCLE} dispatches/cycle` : ''),
     );
   }

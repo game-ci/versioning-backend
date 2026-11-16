@@ -51,19 +51,28 @@ export const scheduleBuildsFromTheQueue = async (
     return;
   }
 
-  if (!(await scheduler.buildLatestEditorImages())) {
-    await Discord.sendDebug('[Build queue] Editor images are building.');
-    return;
-  }
+  const editorQueueIsIdle = await scheduler.buildLatestEditorImages();
 
-  // Reconcile DockerHub images with expected versions
+  // Run reconciliation even while editor builds are queued or running. Otherwise
+  // a missed publication can stay invisible until the entire image queue drains.
+  // Exclude jobs already handled by the normal queue to avoid duplicate builds.
   try {
     const gitHub = (scheduler as any).gitHub;
     const versions = await EditorVersionInfo.getAll();
+    const [activeJobs, queuedJobs] = await Promise.all([
+      CiJobs.getActiveJobs(),
+      CiJobs.getPrioritisedQueue(),
+    ]);
+    const coveredJobIds = new Set([...activeJobs, ...queuedJobs].map(({ id }) => id));
     const reconciler = new DockerImageReconciler(gitHub, repoVersionInfo);
-    await reconciler.reconcileEditorImages(versions);
+    await reconciler.reconcileEditorImages(versions, coveredJobIds);
   } catch (error) {
     await Discord.sendDebug(`[Build queue] DockerHub reconciliation error: ${error}`);
+  }
+
+  if (!editorQueueIsIdle) {
+    await Discord.sendDebug('[Build queue] Editor images are building.');
+    return;
   }
 
   await Discord.sendDebug('[Build queue] Idle 🎈');
