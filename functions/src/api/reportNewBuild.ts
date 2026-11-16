@@ -9,6 +9,7 @@ import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 import { Image, ImageType } from '../model/image';
 import { defineSecret } from 'firebase-functions/params';
+import { isReconciliationReport } from '../model/reconciliationReport';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
 const internalToken = defineSecret('INTERNAL_TOKEN');
@@ -41,12 +42,19 @@ export const reportNewBuild = onRequest(
         await createDryRunJob(jobId, imageType, editorVersion);
       }
 
-      await CiJobs.markJobAsInProgress(jobId);
+      // A reconciliation build is not the job's own progress, so it leaves the job status alone
+      const isReconciliation = isReconciliationReport(body);
+      if (isReconciliation) {
+        await CiJobs.ensureExists(jobId);
+      } else {
+        await CiJobs.markJobAsInProgress(jobId);
+      }
       const { alreadyExists, existingStatus } = await CiBuilds.registerNewBuild(
         buildId,
         jobId,
         imageType,
         buildInfo,
+        isReconciliation,
       );
 
       if (alreadyExists) {

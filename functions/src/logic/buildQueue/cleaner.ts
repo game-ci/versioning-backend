@@ -50,13 +50,13 @@ export class Cleaner {
       const ageMs = Date.now() - lastTouchedSeconds * 1000;
       if (ageMs < staleThresholdMs) continue;
 
-      const hasBuilds = await CiBuilds.hasAnyBuildsForJob(jobId);
-      if (hasBuilds) continue;
+      const queueBuilds = await CiBuilds.getQueueBuildsForJob(jobId);
+      if (queueBuilds.length > 0) continue;
 
       this.buildsProcessed += 1;
       await CiJobs.resetJobToCreated(jobId);
       await Discord.sendAlert(
-        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
+        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records from the queue after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
       );
     }
   }
@@ -81,10 +81,10 @@ export class Cleaner {
       const ageMs = Date.now() - lastTouchedSeconds * 1000;
       if (ageMs < staleThresholdMs) continue;
 
-      const hasBuilds = await CiBuilds.hasAnyBuildsForJob(jobId);
-      if (!hasBuilds) continue; // no builds at all — handled by requeueActiveJobsWithoutBuilds
+      const queueBuilds = await CiBuilds.getQueueBuildsForJob(jobId);
+      if (queueBuilds.length === 0) continue; // handled by requeueActiveJobsWithoutBuilds
 
-      const hasStartedBuilds = await CiBuilds.hasAnyStartedBuildsForJob(jobId);
+      const hasStartedBuilds = queueBuilds.some((build) => build.status === 'started');
       if (hasStartedBuilds) continue; // at least one build is still running
 
       this.buildsProcessed += 1;
@@ -179,7 +179,7 @@ export class Cleaner {
     results.push(`Found ${startedBuilds.length} build(s) with status "started".`);
 
     for (const startedBuild of startedBuilds) {
-      const { buildId, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
+      const { buildId, relatedJobId: jobId, imageType, buildInfo, reconciliation } = startedBuild;
       const { baseOs, repoVersion } = buildInfo;
 
       const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
@@ -196,7 +196,7 @@ export class Cleaner {
         await CiBuilds.markBuildAsFailed(buildId, {
           reason: `[ManualCleanup] Build never reported back and image not found on DockerHub.`,
         });
-        await CiJobs.markFailureForJob(jobId);
+        await CiJobs.recordBuildFailure(jobId, reconciliation);
         continue;
       }
 
@@ -306,7 +306,14 @@ export class Cleaner {
     for (const startedBuild of startedBuilds) {
       if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
 
-      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
+      const {
+        buildId,
+        meta,
+        relatedJobId: jobId,
+        imageType,
+        buildInfo,
+        reconciliation,
+      } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
       const { baseOs, repoVersion } = buildInfo;
 
@@ -351,7 +358,7 @@ export class Cleaner {
           await CiBuilds.markBuildAsFailed(buildId, {
             reason: markAsFailedMessage,
           });
-          await CiJobs.markFailureForJob(jobId);
+          await CiJobs.recordBuildFailure(jobId, reconciliation);
 
           continue;
         }

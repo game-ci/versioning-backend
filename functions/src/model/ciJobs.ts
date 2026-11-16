@@ -23,6 +23,8 @@ interface MetaData {
   lastBuildStart: Timestamp | null;
   failureCount: number;
   lastBuildFailure: Timestamp | null;
+  reconciliationFailureCount?: number;
+  lastReconciliationFailure?: Timestamp;
 }
 
 export interface CiJob {
@@ -58,6 +60,12 @@ export class CiJobs {
 
   static exists = async (jobId: string): Promise<boolean> => {
     return (await CiJobs.get(jobId)) !== null;
+  };
+
+  static ensureExists = async (jobId: string): Promise<void> => {
+    if (!(await CiJobs.exists(jobId))) {
+      throw new Error(`Job '${jobId}' does not exist.`);
+    }
   };
 
   static getAll = async (): Promise<CiJob[]> => {
@@ -247,6 +255,32 @@ export class CiJobs {
         'meta.lastBuildFailure': Timestamp.now(),
         modifiedDate: Timestamp.now(),
       });
+    });
+  };
+
+  /**
+   * Records a failed build on its job. A failed reconciliation build is only counted: failed
+   * jobs hold back fresh builds (see Scheduler.ensureThereAreNoFailedJobs), and the reconciler
+   * retries the images it rebuilds on its own schedule.
+   */
+  static recordBuildFailure = async (jobId: string, reconciliation: boolean | undefined) => {
+    if (!reconciliation) {
+      await CiJobs.markFailureForJob(jobId);
+      return;
+    }
+
+    await CiJobs.markReconciliationFailureForJob(jobId);
+    logger.warn(
+      `Reconciliation build for job "${jobId}" failed. Counted without failing the job, so the build queue is not held back.`,
+    );
+  };
+
+  private static markReconciliationFailureForJob = async (jobId: string) => {
+    const job = await db.collection(CiJobs.collection).doc(jobId);
+
+    await job.update({
+      'meta.reconciliationFailureCount': FieldValue.increment(1),
+      'meta.lastReconciliationFailure': Timestamp.now(),
     });
   };
 
