@@ -546,7 +546,7 @@ export class DockerImageReconciler {
     await Discord.sendAlert(
       `DockerHub Reconciliation: ${actionableMissing} missing${unknown} across ` +
         `${summary.versionsScanned} versions; dispatched ${summary.dispatchesSucceeded}/${summary.dispatchesAttempted}, ` +
-          `${summary.cooldownSkipped} in cooldown; ${summary.coveredByBuildQueue} covered by the build queue` +
+        `${summary.cooldownSkipped} in cooldown; ${summary.coveredByBuildQueue} covered by the build queue` +
         (summary.cappedAtLimit ? `, capped at ${MAX_DISPATCHES_PER_CYCLE} dispatches/cycle` : ''),
     );
   }
