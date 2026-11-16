@@ -9,6 +9,7 @@ import { EditorVersionInfo } from '../model/editorVersionInfo';
 import { RepoVersionInfo } from '../model/repoVersionInfo';
 import { Image, ImageType } from '../model/image';
 import { defineSecret } from 'firebase-functions/params';
+import { isReconciliationReport } from '../model/reconciliationReport';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
 const internalToken = defineSecret('INTERNAL_TOKEN');
@@ -47,6 +48,7 @@ export const reportNewBuild = onRequest(
         jobId,
         imageType,
         buildInfo,
+        isReconciliationReport(body),
       );
 
       if (alreadyExists) {

@@ -179,7 +179,7 @@ export class Cleaner {
     results.push(`Found ${startedBuilds.length} build(s) with status "started".`);
 
     for (const startedBuild of startedBuilds) {
-      const { buildId, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
+      const { buildId, relatedJobId: jobId, imageType, buildInfo, reconciliation } = startedBuild;
       const { baseOs, repoVersion } = buildInfo;
 
       const tag = buildId.replace(new RegExp(`^${imageType}-`), '');
@@ -196,7 +196,7 @@ export class Cleaner {
         await CiBuilds.markBuildAsFailed(buildId, {
           reason: `[ManualCleanup] Build never reported back and image not found on DockerHub.`,
         });
-        await CiJobs.markFailureForJob(jobId);
+        await CiJobs.recordBuildFailure(jobId, reconciliation);
         continue;
       }
 
@@ -306,7 +306,14 @@ export class Cleaner {
     for (const startedBuild of startedBuilds) {
       if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
 
-      const { buildId, meta, relatedJobId: jobId, imageType, buildInfo } = startedBuild;
+      const {
+        buildId,
+        meta,
+        relatedJobId: jobId,
+        imageType,
+        buildInfo,
+        reconciliation,
+      } = startedBuild;
       const { publishedDate, lastBuildStart } = meta;
       const { baseOs, repoVersion } = buildInfo;
 
@@ -351,7 +358,7 @@ export class Cleaner {
           await CiBuilds.markBuildAsFailed(buildId, {
             reason: markAsFailedMessage,
           });
-          await CiJobs.markFailureForJob(jobId);
+          await CiJobs.recordBuildFailure(jobId, reconciliation);
 
           continue;
         }

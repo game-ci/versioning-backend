@@ -5,6 +5,7 @@ import { Token } from '../config/token';
 import { BuildFailure, CiBuilds } from '../model/ciBuilds';
 import { CiJobs } from '../model/ciJobs';
 import { Discord } from '../service/discord';
+import { isReconciliationReport } from '../model/reconciliationReport';
 import { defineSecret } from 'firebase-functions/params';
 
 const discordToken = defineSecret('DISCORD_TOKEN');
@@ -28,9 +29,13 @@ export const reportBuildFailure = onRequest(
       const { jobId, buildId, reason } = body;
       const failure: BuildFailure = { reason };
 
+      // The build also keeps the flag from its start report, in case this report lacks it
+      const isReconciliation =
+        isReconciliationReport(body) || (await CiBuilds.isReconciliationBuild(buildId));
+
       const wasMarkedAsFailed = await CiBuilds.markBuildAsFailed(buildId, failure);
       if (wasMarkedAsFailed) {
-        await CiJobs.markFailureForJob(jobId);
+        await CiJobs.recordBuildFailure(jobId, isReconciliation);
       } else {
         logger.info(
           `Skipping job-level failure for "${jobId}" because build "${buildId}" was not marked as failed.`,
