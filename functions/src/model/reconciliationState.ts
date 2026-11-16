@@ -5,7 +5,10 @@ export const RECONCILIATION_COLLECTION = 'reconciliationState';
 export const DOCKER_HUB_DOC = 'dockerHub';
 
 export interface VersionCheckRecord {
+  // Last scan that verified every image of the version
   lastCheckedAt: number | null;
+  // Last scan of any outcome, used to rotate through versions
+  lastScannedAt?: number;
   lastDispatchAttemptAt: number | null;
   dispatchFailureCount: number;
   imagesExpected: number;

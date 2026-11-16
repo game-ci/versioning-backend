@@ -124,25 +124,20 @@ export class CiBuilds {
     }));
   };
 
-  public static hasAnyBuildsForJob = async (jobId: string): Promise<boolean> => {
+  /**
+   * Builds the build queue dispatched for a job, leaving out reconciliation builds: those run
+   * on the reconciler's schedule and say nothing about the job's own progress.
+   * Filtered in memory, because builds from before the flag existed have no reconciliation field.
+   */
+  public static getQueueBuildsForJob = async (jobId: string): Promise<CiBuild[]> => {
     const snapshot = await db
       .collection(CiBuilds.collection)
       .where('relatedJobId', '==', jobId)
-      .limit(1)
       .get();
 
-    return snapshot.docs.length > 0;
-  };
-
-  public static hasAnyStartedBuildsForJob = async (jobId: string): Promise<boolean> => {
-    const snapshot = await db
-      .collection(CiBuilds.collection)
-      .where('relatedJobId', '==', jobId)
-      .where('status', '==', 'started')
-      .limit(1)
-      .get();
-
-    return snapshot.docs.length > 0;
+    return snapshot.docs
+      .map((doc) => doc.data() as CiBuild)
+      .filter((build) => build.reconciliation !== true);
   };
 
   /**

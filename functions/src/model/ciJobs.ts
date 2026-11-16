@@ -61,6 +61,12 @@ export class CiJobs {
     return (await CiJobs.get(jobId)) !== null;
   };
 
+  static ensureExists = async (jobId: string): Promise<void> => {
+    if (!(await CiJobs.exists(jobId))) {
+      throw new Error(`Job '${jobId}' does not exist.`);
+    }
+  };
+
   static getAll = async (): Promise<CiJob[]> => {
     const snapshot = await db.collection(CiJobs.collection).get();
 

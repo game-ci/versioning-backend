@@ -137,12 +137,13 @@ export class DockerImageReconciler {
       summary.versionsScanned += 1;
 
       const record = ReconciliationState.getOrCreateVersionRecord(state, version.version);
+      record.lastScannedAt = this.now();
       record.imagesExpected = versionSummary.imagesExpected;
       record.imagesUnknown = versionSummary.imagesUnknown;
       if (versionSummary.imagesUnknown > 0) {
         logger.warn(
           `[DockerImageReconciler] ${version.version}: ${versionSummary.imagesUnknown} image(s) unknown, ` +
-            'leaving the version unchecked so it is tried again',
+            'leaving the version unchecked until a later scan can list its tags',
         );
         continue;
       }
@@ -338,14 +339,17 @@ export class DockerImageReconciler {
 
     let score = 0;
 
-    if (record.lastCheckedAt === null) {
+    // Rotate on the last scan, even one that could not verify the version, so versions with
+    // unknown tag lists take their turn instead of crowding out the rest.
+    const lastScannedAt = record.lastScannedAt ?? record.lastCheckedAt;
+    if (lastScannedAt === null) {
       score += 800;
     } else {
-      const daysSinceCheck = (now - record.lastCheckedAt) / (24 * 60 * 60 * 1000);
-      if (daysSinceCheck > MAX_DAYS_WITHOUT_CHECK) {
+      const daysSinceScan = (now - lastScannedAt) / (24 * 60 * 60 * 1000);
+      if (daysSinceScan > MAX_DAYS_WITHOUT_CHECK) {
         score += 700;
       } else {
-        score += Math.max(0, daysSinceCheck * 10);
+        score += Math.max(0, daysSinceScan * 10);
       }
     }
 

@@ -42,13 +42,19 @@ export const reportNewBuild = onRequest(
         await createDryRunJob(jobId, imageType, editorVersion);
       }
 
-      await CiJobs.markJobAsInProgress(jobId);
+      // A reconciliation build is not the job's own progress, so it leaves the job status alone
+      const isReconciliation = isReconciliationReport(body);
+      if (isReconciliation) {
+        await CiJobs.ensureExists(jobId);
+      } else {
+        await CiJobs.markJobAsInProgress(jobId);
+      }
       const { alreadyExists, existingStatus } = await CiBuilds.registerNewBuild(
         buildId,
         jobId,
         imageType,
         buildInfo,
-        isReconciliationReport(body),
+        isReconciliation,
       );
 
       if (alreadyExists) {

@@ -173,3 +173,45 @@ describe('reconciliation build failures', () => {
     expect(job(editorVersion).meta.reconciliationFailureCount).toBe(1);
   });
 });
+
+describe('stale jobs and reconciliation builds', () => {
+  const twoHoursAgo = () => FakeTimestamp.fromMillis(Date.now() - 2 * 60 * 60 * 1000);
+  const makeStale = (editorVersion: string, status: string) => {
+    const stored = firestore.read('ciJobs', jobIdFor(editorVersion));
+    stored.status = status;
+    stored.modifiedDate = twoHoursAgo();
+  };
+
+  it('requeues a scheduled job whose only builds are failed reconciliation builds', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+    await startBuild(editorVersion, { reconciliation: true });
+    await failBuild(editorVersion, { reconciliation: true });
+    makeStale(editorVersion, 'scheduled');
+
+    await Cleaner.cleanUp('3.2.2');
+
+    expect(job(editorVersion).status).toBe('created');
+  });
+
+  it('leaves the job status alone when a reconciliation build starts', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+
+    await startBuild(editorVersion, { reconciliation: true });
+
+    expect(job(editorVersion).status).toBe('scheduled');
+  });
+
+  it('still fails a stale job whose queue builds all failed', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+    await startBuild(editorVersion);
+    firestore.read('ciBuilds', buildIdFor(editorVersion)).status = 'failed';
+    makeStale(editorVersion, 'inProgress');
+
+    await Cleaner.cleanUp('3.2.2');
+
+    expect(job(editorVersion).status).toBe('failed');
+  });
+});

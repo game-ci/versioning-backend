@@ -438,3 +438,40 @@ describe('DockerImageReconciler (failure history and unknown tags)', () => {
     }
   });
 });
+
+describe('DockerImageReconciler (rotation with unknown tag lists)', () => {
+  it('still reaches older versions while recent versions keep returning unknown tag lists', async () => {
+    const versions = Array.from({ length: 20 }, (_, i) => buildVersion(`6000.4.${19 - i}f1`));
+    const unknownVersions = new Set(versions.slice(0, 15).map((v) => v.version));
+    fetchMock.mockImplementation(async (url: string) => {
+      const u = String(url);
+      const match = u.match(/name=(ubuntu|windows)-([^&]+)/);
+      const version = match ? decodeURIComponent(match[2]) : '';
+      if (unknownVersions.has(version)) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ results: [], next: `${u}&page=2` }),
+        };
+      }
+      if (!match) return tagsResponse(['ubuntu-3.2.2', 'windows-3.2.2']);
+      const platforms = match[1] === 'ubuntu' ? UBUNTU_PLATFORMS : WINDOWS_PLATFORMS;
+      return tagsResponse(platforms.map((p) => `${match[1]}-${version}-${p}-3.2.2`));
+    });
+
+    const day = 24 * 60 * 60 * 1000;
+    for (let cycle = 0; cycle < 8; cycle += 1) {
+      const reconciler = new DockerImageReconciler(gitHubClient, repoVersionInfo, {
+        now: () => 1_000_000 + cycle * day,
+      });
+      await reconciler.reconcileEditorImages(versions);
+    }
+
+    const history = stateStore.current.versionHistory;
+    const olderNeverChecked = versions
+      .slice(15)
+      .map((v) => v.version)
+      .filter((v) => !history[v] || history[v].lastCheckedAt === null);
+    expect(olderNeverChecked).toEqual([]);
+  });
+});
