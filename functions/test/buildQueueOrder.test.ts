@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { compareEditorVersions, orderBuildQueue } from '../src/model/buildQueueOrder';
+import {
+  compareEditorVersions,
+  latestVersionOfEachMinor,
+  orderBuildQueue,
+} from '../src/model/buildQueueOrder';
 
 const job = (version: string) => {
   const [major, minor, patch] = version.split('.');
@@ -20,25 +24,43 @@ describe('compareEditorVersions', () => {
     expect(compareEditorVersions('2022.3.62f1', '2022.3.62b5')).toBeGreaterThan(0);
   });
 
+  it('parses a hyphenated build number', () => {
+    expect(compareEditorVersions('6000.0.85f-1', '6000.0.84f1')).toBeGreaterThan(0);
+  });
+
   it('orders by major, then minor', () => {
     expect(compareEditorVersions('6000.0.1f1', '2023.2.22f1')).toBeGreaterThan(0);
     expect(compareEditorVersions('2022.3.1f1', '2022.2.23f1')).toBeGreaterThan(0);
   });
 });
 
+describe('latestVersionOfEachMinor', () => {
+  it('picks the newest patch of every minor version', () => {
+    const latest = latestVersionOfEachMinor([
+      '6000.6.8f1',
+      '6000.6.9f1',
+      '2022.3.62f3',
+      '2022.3.9f1',
+    ]);
+
+    expect([...latest].toSorted()).toEqual(['2022.3.62f3', '6000.6.9f1']);
+  });
+});
+
 describe('orderBuildQueue', () => {
+  const known = [
+    '6000.6.9f1',
+    '6000.6.8f1',
+    '6000.5.11f1',
+    '6000.5.10f1',
+    '2023.2.22f1',
+    '2022.3.62f3',
+    '2022.3.61f1',
+  ];
+  const latest = latestVersionOfEachMinor(known);
+
   it('builds the latest patch of every minor version first, newest minor first', () => {
-    const queue = orderBuildQueue(
-      [
-        '6000.6.8f1',
-        '2022.3.61f1',
-        '6000.6.9f1',
-        '2022.3.62f3',
-        '2023.2.22f1',
-        '6000.5.11f1',
-        '6000.5.10f1',
-      ].map(job),
-    );
+    const queue = orderBuildQueue(known.map(job), latest);
 
     expect(versionsOf(queue).slice(0, 4)).toEqual([
       '6000.6.9f1',
@@ -48,32 +70,37 @@ describe('orderBuildQueue', () => {
     ]);
   });
 
-  it('then builds the remaining versions newest first', () => {
+  it('then builds the remaining versions newest first, comparing patches numerically', () => {
+    const versions = ['2022.3.61f1', '6000.0.9f1', '6000.0.85f2', '6000.6.8f1'];
     const queue = orderBuildQueue(
-      ['2022.3.61f1', '6000.6.8f1', '6000.0.9f1', '6000.0.85f2', '6000.6.9f1', '2022.3.62f3'].map(
-        job,
-      ),
+      versions.map(job),
+      latestVersionOfEachMinor(['6000.0.85f2', '6000.6.9f1', '2022.3.62f3']),
     );
 
-    expect(versionsOf(queue)).toEqual([
-      '6000.6.9f1',
-      '6000.0.85f2',
-      '2022.3.62f3',
-      '6000.6.8f1',
-      '6000.0.9f1',
-      '2022.3.61f1',
-    ]);
+    expect(versionsOf(queue)).toEqual(['6000.0.85f2', '6000.6.8f1', '6000.0.9f1', '2022.3.61f1']);
+  });
+
+  it('keeps every minor version ahead of a second patch, across scheduler runs', () => {
+    const queued = new Set(known);
+    const dispatched: string[] = [];
+    for (let run = 0; run < 4; run += 1) {
+      const [next] = versionsOf(orderBuildQueue([...queued].map(job), latest));
+      dispatched.push(next);
+      queued.delete(next);
+    }
+
+    expect(dispatched).toEqual(['6000.6.9f1', '6000.5.11f1', '2023.2.22f1', '2022.3.62f3']);
   });
 
   it('keeps jobs without an editor version out of the editor queue', () => {
     const base = { id: 'base-4.0.0', data: { editorVersionInfo: null } } as any;
 
-    expect(orderBuildQueue([base, job('6000.6.9f1')]).map(({ id }) => id)).toEqual([
+    expect(orderBuildQueue([base, job('6000.6.9f1')], latest).map(({ id }) => id)).toEqual([
       'editor-6000.6.9f1-4.0.0',
     ]);
   });
 
   it('returns an empty queue unchanged', () => {
-    expect(orderBuildQueue([])).toEqual([]);
+    expect(orderBuildQueue([], latest)).toEqual([]);
   });
 });

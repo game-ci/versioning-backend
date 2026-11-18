@@ -1,7 +1,7 @@
 import type { CiJobQueueItem } from './ciJobs';
 
-// Unity patches look like "85f2": a number, a release stage and a build number.
-const PATCH_PATTERN = /^(\d+)([a-z]*)(\d*)$/;
+// Unity patches look like "85f2" (or "85f-1"): a number, a release stage and a build number.
+const PATCH_PATTERN = /^(\d+)([a-z]*)(-?\d*)$/;
 
 const parsePatch = (patch: string): [number, string, number] => {
   const match = PATCH_PATTERN.exec(patch);
@@ -33,34 +33,45 @@ export const compareEditorVersions = (a: string, b: string): number => {
   return buildA - buildB;
 };
 
-const editorVersionOf = (item: CiJobQueueItem): string => item.data.editorVersionInfo!.version;
-const minorLineOf = (item: CiJobQueueItem): string => {
-  const { major, minor } = item.data.editorVersionInfo!;
-  return `${major}.${minor}`;
-};
+const minorLineOf = (version: string): string => version.split('.').slice(0, 2).join('.');
 
 /**
- * Orders queued editor jobs so that every Unity minor version (2022.3, 6000.0, ...) gets its
- * latest patch built first, newest minor first. The remaining patches follow, newest first.
- * This way developers on any supported version get an up-to-date image early in a rollout.
+ * The newest known patch of every Unity minor version (2022.3, 6000.0, ...).
+ * Pass every known editor version, not only queued ones: once a minor version's newest patch
+ * has been dispatched, that minor version must not get a second build ahead of the others.
  */
-export const orderBuildQueue = (items: CiJobQueueItem[]): CiJobQueueItem[] => {
+export const latestVersionOfEachMinor = (versions: string[]): Set<string> => {
+  const latestByMinor = new Map<string, string>();
+  for (const version of versions) {
+    const minorLine = minorLineOf(version);
+    const current = latestByMinor.get(minorLine);
+    if (!current || compareEditorVersions(version, current) > 0) {
+      latestByMinor.set(minorLine, version);
+    }
+  }
+
+  return new Set(latestByMinor.values());
+};
+
+const editorVersionOf = (item: CiJobQueueItem): string => item.data.editorVersionInfo!.version;
+
+/**
+ * Orders queued editor jobs so that every Unity minor version gets its latest patch built first,
+ * newest minor first. The remaining patches follow, newest first. This way developers on any
+ * supported version get an up-to-date image early in a rollout.
+ */
+export const orderBuildQueue = (
+  items: CiJobQueueItem[],
+  latestVersions: Set<string>,
+): CiJobQueueItem[] => {
   const newestFirst = items
     .filter((item) => item.data.editorVersionInfo !== null)
     .toSorted((a, b) => compareEditorVersions(editorVersionOf(b), editorVersionOf(a)));
 
-  const seenMinorLines = new Set<string>();
-  const latestOfEachMinor: CiJobQueueItem[] = [];
-  const remaining: CiJobQueueItem[] = [];
-  for (const item of newestFirst) {
-    const minorLine = minorLineOf(item);
-    if (seenMinorLines.has(minorLine)) {
-      remaining.push(item);
-    } else {
-      seenMinorLines.add(minorLine);
-      latestOfEachMinor.push(item);
-    }
-  }
+  const isLatestOfItsMinor = (item: CiJobQueueItem) => latestVersions.has(editorVersionOf(item));
 
-  return [...latestOfEachMinor, ...remaining];
+  return [
+    ...newestFirst.filter(isLatestOfItsMinor),
+    ...newestFirst.filter((item) => !isLatestOfItsMinor(item)),
+  ];
 };

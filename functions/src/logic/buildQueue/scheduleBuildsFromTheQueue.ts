@@ -51,17 +51,18 @@ export const scheduleBuildsFromTheQueue = async (
     return;
   }
 
-  const editorQueueIsIdle = await scheduler.buildLatestEditorImages();
+  const versions = await EditorVersionInfo.getAll();
+  const knownEditorVersions = versions.map(({ version }) => version);
+  const editorQueueIsIdle = await scheduler.buildLatestEditorImages(knownEditorVersions);
 
   // Run reconciliation even while editor builds are queued or running. Otherwise
   // a missed publication can stay invisible until the entire image queue drains.
   // Exclude jobs already handled by the normal queue to avoid duplicate builds.
   try {
     const gitHub = (scheduler as any).gitHub;
-    const versions = await EditorVersionInfo.getAll();
     const [activeJobs, queuedJobs] = await Promise.all([
       CiJobs.getActiveJobs(),
-      CiJobs.getPrioritisedQueue(),
+      CiJobs.getPrioritisedQueue(knownEditorVersions),
     ]);
     const coveredJobIds = new Set([...activeJobs, ...queuedJobs].map(({ id }) => id));
     const reconciler = new DockerImageReconciler(gitHub, repoVersionInfo);

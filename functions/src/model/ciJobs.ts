@@ -9,7 +9,7 @@ import { settings } from '../config/settings';
 import { Image, ImageType } from './image';
 import { logger } from 'firebase-functions/v2';
 import { isSupportedEditorVersion } from './supportedEditorVersions';
-import { orderBuildQueue } from './buildQueueOrder';
+import { latestVersionOfEachMinor, orderBuildQueue } from './buildQueueOrder';
 
 export type JobStatus =
   | 'created'
@@ -83,11 +83,13 @@ export class CiJobs {
 
   // Every queued editor job, ordered by `orderBuildQueue`: the latest patch of each minor version
   // first, then the rest newest first. Firestore can't express that order, so it is applied here.
-  static getPrioritisedQueue = async (): Promise<CiJobQueue> => {
+  // `knownEditorVersions` decides which patch is the latest of its minor version.
+  static getPrioritisedQueue = async (knownEditorVersions: string[]): Promise<CiJobQueue> => {
     const snapshot = await db.collection(CiJobs.collection).where('status', '==', 'created').get();
 
     const queue = orderBuildQueue(
       snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiJob })),
+      latestVersionOfEachMinor(knownEditorVersions),
     );
 
     logger.debug(`BuildQueue size: ${queue.length}`, {

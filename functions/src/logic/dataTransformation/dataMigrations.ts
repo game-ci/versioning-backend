@@ -21,7 +21,7 @@ export type DeprecationSummary = {
   byEditorVersion: Record<string, number>;
 };
 
-// Ordered like the build queue, so the query uses the index that serves `getPrioritisedQueue`.
+// Ordered like `getFailingJobsQueue`, so the query uses the status and editor version index (firestore.indexes.json).
 // Base and hub jobs have no editor version, so the filter leaves them out.
 const getEndOfLifeEditorJobs = async (status: JobStatus) =>
   db

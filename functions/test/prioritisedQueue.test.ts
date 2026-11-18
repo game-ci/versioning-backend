@@ -34,7 +34,12 @@ const { CiJobs } = await import('../src/model/ciJobs');
 
 describe('CiJobs.getPrioritisedQueue', () => {
   it('returns every queued editor job, latest of each minor version first', async () => {
-    const queue = await CiJobs.getPrioritisedQueue();
+    const queue = await CiJobs.getPrioritisedQueue([
+      '6000.6.9f1',
+      '6000.6.8f1',
+      '2022.3.62f3',
+      '2022.3.61f1',
+    ]);
 
     expect(queryLog).toEqual([['where', 'status', '==', 'created']]);
     expect(queue.map(({ id }) => id)).toEqual([
