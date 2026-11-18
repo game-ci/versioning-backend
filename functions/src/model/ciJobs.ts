@@ -9,6 +9,7 @@ import { settings } from '../config/settings';
 import { Image, ImageType } from './image';
 import { logger } from 'firebase-functions/v2';
 import { isSupportedEditorVersion } from './supportedEditorVersions';
+import { latestVersionOfEachMinor, orderBuildQueue } from './buildQueueOrder';
 
 export type JobStatus =
   | 'created'
@@ -80,25 +81,25 @@ export class CiJobs {
     return snapshot.docs.map(({ id }) => id);
   };
 
-  static getPrioritisedQueue = async (): Promise<CiJobQueue> => {
-    // Note: we can't simply do select distinct major, max(minor), max(patch) in nosql
-    const snapshot = await db
-      .collection(CiJobs.collection)
-      .orderBy('editorVersionInfo.major', 'desc')
-      .orderBy('editorVersionInfo.minor', 'desc')
-      .orderBy('editorVersionInfo.patch', 'desc')
-      .where('status', '==', 'created')
-      .limit(settings.maxConcurrentJobs)
-      .get();
+  // Every queued editor job, ordered by `orderBuildQueue`: the latest patch of each minor version
+  // first, then the rest newest first. Firestore can't express that order, so it is applied here.
+  // `knownEditorVersions` decides which patch is the latest of its minor version.
+  static getPrioritisedQueue = async (knownEditorVersions: string[]): Promise<CiJobQueue> => {
+    const snapshot = await db.collection(CiJobs.collection).where('status', '==', 'created').get();
 
-    logger.debug(`BuildQueue size: ${snapshot.docs.length}`);
+    const queuedJobs = snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiJob }));
+    // Include queued versions too: one ingested after `knownEditorVersions` was read is still the latest.
+    const queuedVersions = queuedJobs.flatMap(({ data }) =>
+      data.editorVersionInfo ? [data.editorVersionInfo.version] : [],
+    );
+    const queue = orderBuildQueue(
+      queuedJobs,
+      latestVersionOfEachMinor([...knownEditorVersions, ...queuedVersions]),
+    );
 
-    const queue: CiJobQueue = [];
-    snapshot.docs.forEach((doc) => {
-      queue.push({ id: doc.id, data: doc.data() as CiJob });
+    logger.debug(`BuildQueue size: ${queue.length}`, {
+      next: queue.slice(0, settings.maxConcurrentJobs).map(({ id }) => id),
     });
-
-    logger.debug(`BuildQueue`, queue);
 
     return queue;
   };

@@ -194,7 +194,7 @@ export class Scheduler {
     return failingJobs.length <= maxToleratedFailures || openSpotsAfterRetries > 0;
   }
 
-  async buildLatestEditorImages(): Promise<boolean> {
+  async buildLatestEditorImages(knownEditorVersions: string[]): Promise<boolean> {
     const openSpots = await this.determineOpenSpotsForFreshJobs();
     if (openSpots <= 0) {
       await Discord.sendDebug('[Scheduler] Not scheduling any new jobs, as the queue is full');
@@ -205,7 +205,7 @@ export class Scheduler {
     const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
 
     // Get highest priority builds
-    const queue = await CiJobs.getPrioritisedQueue();
+    const queue = await CiJobs.getPrioritisedQueue(knownEditorVersions);
 
     // If the queue has nothing to build, we're happy
     if (queue.length <= 0) return true;

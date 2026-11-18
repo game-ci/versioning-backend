@@ -51,17 +51,22 @@ export const scheduleBuildsFromTheQueue = async (
     return;
   }
 
-  const editorQueueIsIdle = await scheduler.buildLatestEditorImages();
+  // The build order needs every known editor version to tell which patch is the latest of its minor
+  // version. If this read fails, the run stops here: the error reaches the maintainers' Discord alerts
+  // and the next run, minutes later, tries again. Ordering from queued jobs alone would let a minor
+  // version's older patch jump ahead once its latest was dispatched.
+  const versions = await EditorVersionInfo.getAll();
+  const knownEditorVersions = versions.map(({ version }) => version);
+  const editorQueueIsIdle = await scheduler.buildLatestEditorImages(knownEditorVersions);
 
   // Run reconciliation even while editor builds are queued or running. Otherwise
   // a missed publication can stay invisible until the entire image queue drains.
   // Exclude jobs already handled by the normal queue to avoid duplicate builds.
   try {
     const gitHub = (scheduler as any).gitHub;
-    const versions = await EditorVersionInfo.getAll();
     const [activeJobs, queuedJobs] = await Promise.all([
       CiJobs.getActiveJobs(),
-      CiJobs.getPrioritisedQueue(),
+      CiJobs.getPrioritisedQueue(knownEditorVersions),
     ]);
     const coveredJobIds = new Set([...activeJobs, ...queuedJobs].map(({ id }) => id));
     const reconciler = new DockerImageReconciler(gitHub, repoVersionInfo);
