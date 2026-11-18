@@ -92,6 +92,17 @@ describe('orderBuildQueue', () => {
     expect(dispatched).toEqual(['6000.6.9f1', '6000.5.11f1', '2023.2.22f1', '2022.3.62f3']);
   });
 
+  it('promotes one job per minor version, preferring the rollout job over a dry run', () => {
+    const dryRun = { ...job('6000.6.9f1'), id: 'dryRun-1-editor-6000.6.9f1-0.1' };
+    const queue = orderBuildQueue([dryRun, job('6000.6.9f1'), job('2022.3.62f3')], latest);
+
+    expect(queue.map(({ id }) => id)).toEqual([
+      'editor-6000.6.9f1-4.0.0',
+      'editor-2022.3.62f3-4.0.0',
+      'dryRun-1-editor-6000.6.9f1-0.1',
+    ]);
+  });
+
   it('keeps jobs without an editor version out of the editor queue', () => {
     const base = { id: 'base-4.0.0', data: { editorVersionInfo: null } } as any;
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const queryLog: unknown[][] = [];
 const queuedDocs = ['6000.6.8f1', '2022.3.62f3', '6000.6.9f1', '2022.3.61f1'].map((version) => {
@@ -33,6 +33,17 @@ vi.mock('../src/service/firebase', () => {
 const { CiJobs } = await import('../src/model/ciJobs');
 
 describe('CiJobs.getPrioritisedQueue', () => {
+  beforeEach(() => {
+    queryLog.length = 0;
+  });
+
+  it('treats a queued patch newer than every known version as the latest of its minor version', async () => {
+    const queue = await CiJobs.getPrioritisedQueue(['6000.6.8f1', '2022.3.62f3', '2022.3.61f1']);
+
+    expect(queue[0].id).toBe('editor-6000.6.9f1-4.0.0');
+    expect(queue[1].id).toBe('editor-2022.3.62f3-4.0.0');
+  });
+
   it('returns every queued editor job, latest of each minor version first', async () => {
     const queue = await CiJobs.getPrioritisedQueue([
       '6000.6.9f1',

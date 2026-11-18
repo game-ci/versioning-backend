@@ -51,6 +51,10 @@ export const scheduleBuildsFromTheQueue = async (
     return;
   }
 
+  // The build order needs every known editor version to tell which patch is the latest of its minor
+  // version. If this read fails, the run stops here: the error reaches the maintainers' Discord alerts
+  // and the next run, minutes later, tries again. Ordering from queued jobs alone would let a minor
+  // version's older patch jump ahead once its latest was dispatched.
   const versions = await EditorVersionInfo.getAll();
   const knownEditorVersions = versions.map(({ version }) => version);
   const editorQueueIsIdle = await scheduler.buildLatestEditorImages(knownEditorVersions);

@@ -87,9 +87,14 @@ export class CiJobs {
   static getPrioritisedQueue = async (knownEditorVersions: string[]): Promise<CiJobQueue> => {
     const snapshot = await db.collection(CiJobs.collection).where('status', '==', 'created').get();
 
+    const queuedJobs = snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiJob }));
+    // Include queued versions too: one ingested after `knownEditorVersions` was read is still the latest.
+    const queuedVersions = queuedJobs.flatMap(({ data }) =>
+      data.editorVersionInfo ? [data.editorVersionInfo.version] : [],
+    );
     const queue = orderBuildQueue(
-      snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as CiJob })),
-      latestVersionOfEachMinor(knownEditorVersions),
+      queuedJobs,
+      latestVersionOfEachMinor([...knownEditorVersions, ...queuedVersions]),
     );
 
     logger.debug(`BuildQueue size: ${queue.length}`, {
