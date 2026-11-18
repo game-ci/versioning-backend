@@ -103,6 +103,16 @@ describe('orderBuildQueue', () => {
     ]);
   });
 
+  it('never promotes a dry run, even after its rollout job was dispatched', () => {
+    const dryRun = { ...job('6000.6.9f1'), id: 'dryRun-1-editor-6000.6.9f1-0.1' };
+    const queue = orderBuildQueue([dryRun, job('2022.3.62f3')], latest);
+
+    expect(queue.map(({ id }) => id)).toEqual([
+      'editor-2022.3.62f3-4.0.0',
+      'dryRun-1-editor-6000.6.9f1-0.1',
+    ]);
+  });
+
   it('keeps jobs without an editor version out of the editor queue', () => {
     const base = { id: 'base-4.0.0', data: { editorVersionInfo: null } } as any;
 

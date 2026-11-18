@@ -55,8 +55,6 @@ export const latestVersionOfEachMinor = (versions: string[]): Set<string> => {
 
 const editorVersionOf = (item: CiJobQueueItem): string => item.data.editorVersionInfo!.version;
 const isDryRun = (item: CiJobQueueItem) => item.id.startsWith('dryRun');
-const rolloutJobsFirst = (a: CiJobQueueItem, b: CiJobQueueItem) =>
-  Number(isDryRun(a)) - Number(isDryRun(b));
 
 /**
  * Orders queued editor jobs so that every Unity minor version gets its latest patch built first,
@@ -71,15 +69,15 @@ export const orderBuildQueue = (
     .filter((item) => item.data.editorVersionInfo !== null)
     .toSorted((a, b) => compareEditorVersions(editorVersionOf(b), editorVersionOf(a)));
 
-  // One job per minor version goes first. When jobs share a version (a dry run beside the rollout
-  // job), the rollout job wins and the rest waits with the remaining patches.
+  // One rollout job per minor version goes first. Dry runs never do: they wait with the remaining
+  // patches, also once the rollout job for their version has been dispatched.
   const promotedMinorLines = new Set<string>();
   const first: CiJobQueueItem[] = [];
   const remaining: CiJobQueueItem[] = [];
-  for (const item of newestFirst.toSorted(rolloutJobsFirst)) {
+  for (const item of newestFirst) {
     const version = editorVersionOf(item);
     const minorLine = minorLineOf(version);
-    if (latestVersions.has(version) && !promotedMinorLines.has(minorLine)) {
+    if (latestVersions.has(version) && !isDryRun(item) && !promotedMinorLines.has(minorLine)) {
       promotedMinorLines.add(minorLine);
       first.push(item);
     } else {
