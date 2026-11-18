@@ -29,6 +29,8 @@ The backend regularly scrapes Unity version information:
 
 Ingest and scheduling have different cut-offs. Every stable editor from 2017 onwards is ingested and stored, so the version list stays complete. Editors older than 2022 are end-of-life: their published images stay available, but no new images are built for them. Their jobs are created as `deprecated`, a data migration deprecates any of their jobs that were still waiting to be built or retried, and the DockerHub reconciler skips them. The cut-off is defined once, in `functions/src/model/supportedEditorVersions.ts`.
 
+Editor images are built in this order: first the latest patch of every minor version (2022.1, 2022.2, ..., 6000.6), newest minor first, then the remaining patches, newest first. During a full rollout, developers on any supported version get an up-to-date image early. See `functions/src/model/buildQueueOrder.ts`.
+
 ## CI Job Workflow
 
 Each Unity version generates CI jobs and builds with the following relationships:

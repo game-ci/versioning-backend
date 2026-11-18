@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "esModuleInterop": true,
+    "lib": ["ES2023"],
     "module": "CommonJS",
     "noImplicitReturns": true,
     "outDir": "lib",
