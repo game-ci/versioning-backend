@@ -123,6 +123,14 @@ jobs:
   testDeploy:
     name: Test Deploy
     needs: [test, build]
+    # Test Deploy and Deploy both create and delete the shared `testFunction` in the one Firebase
+    # project, so overlapping runs broke each other. One runs at a time; a running job is never
+    # cancelled. GitHub keeps one pending job per group, so a newer one replaces an older pending one,
+    # which then shows as cancelled and can be re-run. (`queue: max` would queue them all, but
+    # actionlint does not accept it yet: https://github.com/rhysd/actionlint/issues/654.)
+    concurrency:
+      group: firebase-unity-ci-versions
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -185,6 +193,9 @@ jobs:
   deploy:
     name: ✨ Deploy
     needs: [test, build, testDeploy]
+    concurrency:
+      group: firebase-unity-ci-versions
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
