@@ -27,7 +27,7 @@ export const testFunction = onRequest(
     let code = 200;
 
     try {
-      await Discord.initSafely(discordToken.value());
+      Discord.init(discordToken.value());
 
       const versions = await scrapeVersions(
         githubPrivateKeyConfigSecret.value(),
@@ -51,8 +51,6 @@ export const testFunction = onRequest(
     } catch (error: any) {
       info = error.message;
       code = 500;
-    } finally {
-      await Discord.disconnect();
     }
 
     response.status(code).send(info);

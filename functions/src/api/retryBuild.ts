@@ -15,7 +15,7 @@ const githubClientSecret = defineSecret('GITHUB_CLIENT_SECRET');
 export const retryBuild = onRequest(
   { secrets: [discordToken, githubClientSecret, githubPrivateKey] },
   async (request: Request, response: Response) => {
-    await Discord.initSafely(discordToken.value());
+    Discord.init(discordToken.value());
 
     try {
       response.set('Content-Type', 'application/json');
@@ -99,7 +99,5 @@ export const retryBuild = onRequest(
       console.log('error', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       response.status(401).send({ message: 'Unauthorized' });
     }
-
-    Discord.disconnect();
   },
 );

@@ -25,7 +25,7 @@ const internalToken = defineSecret('INTERNAL_TOKEN');
 export const cleanUpStuckBuilds = onRequest(
   { secrets: [discordToken, internalToken] },
   async (request: Request, response: Response) => {
-    await Discord.initSafely(discordToken.value());
+    Discord.init(discordToken.value());
 
     try {
       response.set('Content-Type', 'application/json');
@@ -76,7 +76,5 @@ export const cleanUpStuckBuilds = onRequest(
         error: error.message,
       });
     }
-
-    Discord.disconnect();
   },
 );

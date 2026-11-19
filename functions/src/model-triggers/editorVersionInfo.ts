@@ -19,7 +19,7 @@ export const onCreate = onDocumentCreated(
     secrets: [discordToken],
   },
   async (snapshot: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
-    await Discord.initSafely(discordToken.value());
+    Discord.init(discordToken.value());
 
     const editorVersionInfo = snapshot.data?.data() as EditorVersionInfo;
     const repoVersionInfo = await RepoVersionInfo.getLatest();
@@ -29,12 +29,10 @@ export const onCreate = onDocumentCreated(
       const message = `Skipped creating CiJob for new editorVersion (${editorVersionInfo.version}).`;
       logger.warn(message);
       await Discord.sendAlert(message);
-      Discord.disconnect();
       return;
     }
 
     await CiJobs.create(jobId, Image.types.editor, repoVersionInfo, editorVersionInfo);
     logger.info(`CiJob created: ${jobId}`);
-    Discord.disconnect();
   },
 );

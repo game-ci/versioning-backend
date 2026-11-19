@@ -19,8 +19,7 @@ vi.mock('firebase-functions/params', () => ({
 
 vi.mock('../src/service/discord', () => ({
   Discord: {
-    initSafely: vi.fn(),
-    disconnect: vi.fn(),
+    init: vi.fn(),
     sendDebug: vi.fn(),
     sendAlert: vi.fn(),
     sendNews: vi.fn(),

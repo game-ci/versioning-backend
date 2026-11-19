@@ -26,7 +26,7 @@ export const trigger = onSchedule(
     secrets: [discordToken, githubPrivateKeyConfigSecret, githubClientSecretConfigSecret],
   },
   async () => {
-    await Discord.initSafely(discordToken.value());
+    Discord.init(discordToken.value());
 
     try {
       await routineTasks(
@@ -43,8 +43,6 @@ export const trigger = onSchedule(
       logger.error(routineTasksFailedMessage);
       await Discord.sendAlert(routineTasksFailedMessage);
     }
-
-    Discord.disconnect();
   },
 );
 

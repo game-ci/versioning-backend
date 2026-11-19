@@ -1,45 +1,16 @@
-import { Client as ErisClient, FileContent, Message, MessageContent } from 'eris';
+import { Client as ErisClient, FileContent, MessageContent } from 'eris';
 import { logger } from 'firebase-functions/v2';
 import { settings } from '../config/settings';
 
 let instance: ErisClient | null = null;
-let instanceCount = 0;
+
 export class Discord {
-  public static async initSafely(token: string) {
-    try {
-      await this.init(token);
-    } catch (err) {
-      logger.error('Failed to initialize Discord client safely:', err);
-    }
-  }
-
-  public static async init(token: string) {
-    if (instance) {
-      instanceCount += 1;
-      return;
-    }
-
-    instance = new ErisClient(token);
-    instance.on('messageCreate', async (message: Message) => {
-      if (message.content === '!ping') {
-        logger.info('[discord] pong!');
-        await message.channel.createMessage('Pong!');
-      }
-    });
-
-    await instance.connect();
-
-    let secondsWaited = 0;
-    while (!instance?.startTime) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      secondsWaited += 1;
-
-      if (secondsWaited >= 15) {
-        throw new Error('Bot never became ready');
-      }
-    }
-
-    instanceCount += 1;
+  /**
+   * Messages go over the REST API only. Every gateway login is an IDENTIFY, and Discord
+   * resets the token after ~1000 of them a day; one per function invocation spends that fast.
+   */
+  public static init(token: string) {
+    instance ??= new ErisClient(`Bot ${token}`, { restMode: true, intents: 0 });
   }
 
   public static async sendDebugLine(message: 'begin' | 'end') {
@@ -114,25 +85,6 @@ export class Discord {
     }
 
     return isSent;
-  }
-
-  public static disconnect() {
-    try {
-      if (!instance) return;
-      instanceCount -= 1;
-
-      if (instanceCount > 0) return;
-
-      instance.disconnect({ reconnect: false });
-      instance = null;
-
-      if (instanceCount < 0) {
-        logger.error('Discord instance count is negative! This should not happen');
-        instanceCount = 0;
-      }
-    } catch (err) {
-      logger.error('An error occurred while trying to disconnect from discord.', err);
-    }
   }
 
   // Max message size must account for ellipsis and level parts that are added to the message.
