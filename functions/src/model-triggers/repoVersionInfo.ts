@@ -23,7 +23,7 @@ export const onCreate = onDocumentCreated(
     secrets: [discordToken],
   },
   async (snapshot: FirestoreEvent<QueryDocumentSnapshot | undefined>) => {
-    await Discord.initSafely(discordToken.value());
+    Discord.init(discordToken.value());
 
     const repoVersionInfo = snapshot.data?.data() as RepoVersionInfo;
     const currentRepoVersion = repoVersionInfo.version;
@@ -36,7 +36,6 @@ export const onCreate = onDocumentCreated(
         as it does not seem to be the newest version.`;
       logger.warn(semverMessage);
       await Discord.sendAlert(semverMessage);
-      Discord.disconnect();
       return;
     }
 
@@ -121,7 +120,5 @@ export const onCreate = onDocumentCreated(
     } else {
       logger.debug('no versions were superseded, as expected.');
     }
-
-    await Discord.disconnect();
   },
 );
