@@ -123,6 +123,16 @@ jobs:
   testDeploy:
     name: Test Deploy
     needs: [test, build]
+    # Test Deploy and Deploy both create and delete the shared `testFunction` in the one Firebase
+    # project, so overlapping runs broke each other. Both run only for pushes to main, one at a time;
+    # a running job is never cancelled. GitHub keeps one pending job per group, so a newer main run
+    # can replace an older run's pending Deploy, which is harmless: the newer run deploys everything
+    # the older one would have. On pull requests it doesn't run, so they can never displace a Deploy;
+    # Test, Build and the predeploy lint and tests still cover them.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: firebase-unity-ci-versions
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -185,6 +195,9 @@ jobs:
   deploy:
     name: ✨ Deploy
     needs: [test, build, testDeploy]
+    concurrency:
+      group: firebase-unity-ci-versions
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
