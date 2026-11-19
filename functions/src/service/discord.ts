@@ -10,7 +10,10 @@ export class Discord {
    * resets the token after ~1000 of them a day; one per function invocation spends that fast.
    */
   public static init(token: string) {
-    instance ??= new ErisClient(`Bot ${token}`, { restMode: true, intents: 0 });
+    instance ??= new ErisClient(`Bot ${token.replace(/^Bot /, '')}`, {
+      restMode: true,
+      intents: 0,
+    });
   }
 
   public static async sendDebugLine(message: 'begin' | 'end') {

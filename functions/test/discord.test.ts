@@ -50,6 +50,14 @@ describe('Discord', () => {
     );
   });
 
+  it('accepts a token that already carries the Bot prefix', async () => {
+    const Discord = await loadDiscord();
+
+    Discord.init('Bot secret-token');
+
+    expect(eris.constructed[0]?.token).toBe('Bot secret-token');
+  });
+
   it('reuses one client across invocations of a warm instance', async () => {
     const Discord = await loadDiscord();
 
