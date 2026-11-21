@@ -35,25 +35,41 @@ describe('ActiveDockerRuns.fromRunTitles', () => {
 });
 
 describe('ActiveDockerRuns.fetch', () => {
-  it('collects titles from every unfinished run status', async () => {
-    const titlesByStatus: Record<string, string[]> = {
-      queued: ['editor-2022.3.26f1-4.0.0 · New Ubuntu Editor Version 🗔'],
-      in_progress: ['editor-2022.3.30f1-4.0.0 · New Windows Editor Version 🗔'],
-    };
+  const now = Date.UTC(2026, 10, 21, 12, 0, 0);
+  const gitHubWith = (runs: Array<{ status: string; display_title: string }>) => {
     const listWorkflowRunsForRepo = vi.fn();
-    const gitHub = {
+    return {
       actions: { listWorkflowRunsForRepo },
-      paginate: vi.fn(async (_endpoint: unknown, { status }: { status: string }) =>
-        (titlesByStatus[status] ?? []).map((display_title) => ({ display_title })),
-      ),
+      paginate: vi.fn(async () => runs),
     };
+  };
 
-    const runs = await ActiveDockerRuns.fetch(gitHub as any);
+  it('keeps every unfinished run, whatever its status', async () => {
+    const gitHub = gitHubWith([
+      { status: 'pending', display_title: 'editor-a-4.0.0 · New Ubuntu Editor Version 🗔' },
+      { status: 'queued', display_title: 'editor-b-4.0.0 · New Ubuntu Editor Version 🗔' },
+      { status: 'in_progress', display_title: 'editor-c-4.0.0 · New Windows Editor Version 🗔' },
+      { status: 'completed', display_title: 'editor-d-4.0.0 · New Ubuntu Editor Version 🗔' },
+    ]);
 
-    expect(ActiveDockerRuns.has(runs, 'editor-2022.3.26f1-4.0.0')).toBe(true);
-    expect(ActiveDockerRuns.has(runs, 'editor-2022.3.30f1-4.0.0')).toBe(true);
-    const statuses = gitHub.paginate.mock.calls.map(([, params]) => (params as any).status);
-    expect(statuses).toEqual(['queued', 'in_progress', 'waiting', 'pending', 'requested']);
-    expect(gitHub.paginate.mock.calls[0][0]).toBe(listWorkflowRunsForRepo);
+    const runs = await ActiveDockerRuns.fetch(gitHub as any, now);
+
+    expect([...runs.jobIds].toSorted()).toEqual([
+      'editor-a-4.0.0',
+      'editor-b-4.0.0',
+      'editor-c-4.0.0',
+    ]);
+  });
+
+  it('lists runs by creation time, so a status change mid-sweep cannot hide one', async () => {
+    const gitHub = gitHubWith([]);
+
+    await ActiveDockerRuns.fetch(gitHub as any, now);
+
+    expect(gitHub.paginate).toHaveBeenCalledTimes(1);
+    const [endpoint, params] = gitHub.paginate.mock.calls[0] as unknown as [unknown, any];
+    expect(endpoint).toBe(gitHub.actions.listWorkflowRunsForRepo);
+    expect(params.created).toBe('>=2026-11-19T12:00:00.000Z');
+    expect(params).not.toHaveProperty('status');
   });
 });

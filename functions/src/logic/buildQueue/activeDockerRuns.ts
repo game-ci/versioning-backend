@@ -12,7 +12,8 @@ export type ActiveDockerRuns = {
 };
 
 const TITLE_SEPARATOR = ' · ';
-const UNFINISHED_STATUSES = ['queued', 'in_progress', 'waiting', 'pending', 'requested'] as const;
+// GitHub drops jobs queued for 24 hours and stops jobs after 6, so every unfinished run is younger.
+const UNFINISHED_RUN_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
 const jobIdFromTitle = (title: string): string | null => {
   const separatorAt = title.indexOf(TITLE_SEPARATOR);
@@ -29,17 +30,20 @@ export const ActiveDockerRuns = {
 
   has: (runs: ActiveDockerRuns, jobId: string): boolean => runs.jobIds.has(jobId),
 
-  fetch: async (gitHub: Octokit): Promise<ActiveDockerRuns> => {
-    const titles: string[] = [];
-    for (const status of UNFINISHED_STATUSES) {
-      const runs = await gitHub.paginate(gitHub.actions.listWorkflowRunsForRepo, {
-        owner: 'unity-ci',
-        repo: 'docker',
-        status,
-        per_page: 100,
-      });
-      titles.push(...runs.map((run) => run.display_title));
-    }
-    return ActiveDockerRuns.fromRunTitles(titles);
+  /**
+   * Lists runs by creation time, which never changes, rather than by status, which can change
+   * between queries; a run that moves from pending to queued mid-sweep stays visible.
+   */
+  fetch: async (gitHub: Octokit, now: number = Date.now()): Promise<ActiveDockerRuns> => {
+    const since = new Date(now - UNFINISHED_RUN_MAX_AGE_MS).toISOString();
+    const runs = await gitHub.paginate(gitHub.actions.listWorkflowRunsForRepo, {
+      owner: 'unity-ci',
+      repo: 'docker',
+      created: `>=${since}`,
+      per_page: 100,
+    });
+    return ActiveDockerRuns.fromRunTitles(
+      runs.filter((run) => run.status !== 'completed').map((run) => run.display_title),
+    );
   },
 } as const;
