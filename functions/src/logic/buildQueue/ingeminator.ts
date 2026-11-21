@@ -126,8 +126,7 @@ export class Ingeminator {
 
     // Send the retry request
     const response = await this.gitHubClient.repos.createDispatchEvent({
-      owner: 'unity-ci',
-      repo: 'docker',
+      ...settings.github.dockerRepository,
       event_type: GitHubWorkflow.getEventTypeForRetryingEditorCiBuild(baseOs),
       client_payload: {
         jobId,

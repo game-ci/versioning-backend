@@ -88,8 +88,7 @@ export class Scheduler {
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: 'unity-ci',
-        repo: 'docker',
+        ...settings.github.dockerRepository,
         event_type: GitHubWorkflow.eventTypes.newBaseImages,
         client_payload: {
           jobId,
@@ -129,8 +128,7 @@ export class Scheduler {
     if (['created', 'failed'].includes(job.status)) {
       const { repoVersionFull, repoVersionMinor, repoVersionMajor } = this;
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: 'unity-ci',
-        repo: 'docker',
+        ...settings.github.dockerRepository,
         event_type: GitHubWorkflow.eventTypes.newHubImages,
         client_payload: {
           jobId,
@@ -222,8 +220,7 @@ export class Scheduler {
       const eventType = GitHubWorkflow.getEventTypeForEditorCiJob(editorVersionInfo);
 
       const response = await this.gitHub.repos.createDispatchEvent({
-        owner: 'unity-ci',
-        repo: 'docker',
+        ...settings.github.dockerRepository,
         event_type: eventType,
         client_payload: {
           jobId,

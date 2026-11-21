@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import { settings } from '../../config/settings';
 import { logger } from 'firebase-functions/v2';
 import { Discord } from '../../service/discord';
 import { GitHubWorkflow } from '../../model/gitHubWorkflow';
@@ -491,8 +492,7 @@ export class DockerImageReconciler {
       if (image.targetPlatform) payload.targetPlatform = image.targetPlatform;
 
       const response = await this.gitHubClient.repos.createDispatchEvent({
-        owner: 'unity-ci',
-        repo: 'docker',
+        ...settings.github.dockerRepository,
         event_type: eventType,
         client_payload: payload,
       });

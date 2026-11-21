@@ -52,7 +52,7 @@ const routineTasks = async (githubPrivateKey: string, githubClientSecret: string
     await dataMigrations();
     await ingestRepoVersions(githubPrivateKey, githubClientSecret);
     await ingestUnityVersions();
-    await cleanUpBuilds();
+    await cleanUpBuilds(githubPrivateKey, githubClientSecret);
     await scheduleBuildsFromTheQueue(githubPrivateKey, githubClientSecret);
   } catch (error: any) {
     logger.error(error);
