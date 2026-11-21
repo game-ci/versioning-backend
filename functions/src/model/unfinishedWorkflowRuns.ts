@@ -13,17 +13,22 @@ const unfinishedStatuses = ['requested', 'queued', 'pending', 'waiting', 'in_pro
  */
 const jobIdInRunName = /\[([^\]\s]+)\]$/;
 
+/** The workflow runs in the docker repository that GitHub has not finished. */
+export type UnfinishedWorkflowRuns = {
+  /** Jobs that have at least one queued, waiting or running workflow run. */
+  readonly jobIds: ReadonlySet<string>;
+  /** Dispatched runs whose name does not say which job they build. */
+  readonly unidentifiedDispatches: number;
+};
+
 export const UnfinishedWorkflowRuns = {
   jobIdFromRunName: (runName: string): string | null => {
     return runName.trim().match(jobIdInRunName)?.[1] ?? null;
   },
 
-  /**
-   * The ids of the jobs that have a workflow run GitHub has not finished
-   * (queued, waiting for a runner or running) in the docker repository.
-   */
-  fetchJobIds: async (gitHub: Octokit): Promise<Set<string>> => {
+  fetch: async (gitHub: Octokit): Promise<UnfinishedWorkflowRuns> => {
     const jobIds = new Set<string>();
+    let unidentifiedDispatches = 0;
 
     for (const status of unfinishedStatuses) {
       const runs = await gitHub.paginate(gitHub.actions.listWorkflowRunsForRepo, {
@@ -35,9 +40,10 @@ export const UnfinishedWorkflowRuns = {
       for (const run of runs) {
         const jobId = UnfinishedWorkflowRuns.jobIdFromRunName(run.display_title);
         if (jobId) jobIds.add(jobId);
+        else if (run.event === 'repository_dispatch') unidentifiedDispatches += 1;
       }
     }
 
-    return jobIds;
+    return { jobIds, unidentifiedDispatches };
   },
 } as const;

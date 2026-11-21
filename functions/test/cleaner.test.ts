@@ -41,6 +41,11 @@ const { CiBuilds } = await import('../src/model/ciBuilds');
 
 const minutesAgo = (minutes: number) => ({ seconds: Math.floor(Date.now() / 1000) - minutes * 60 });
 
+const runs = (jobIds: string[], unidentifiedDispatches = 0) => ({
+  jobIds: new Set(jobIds),
+  unidentifiedDispatches,
+});
+
 const scheduledJob = (id: string, minutesSinceScheduled: number) => ({
   id,
   data: { status: 'scheduled', modifiedDate: minutesAgo(minutesSinceScheduled) },
@@ -55,9 +60,9 @@ describe('Cleaner, for active jobs without build records', () => {
     vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
     ] as any);
-    const unfinishedRunJobIds = vi.fn(async () => new Set(['editor-2022.3.42f1-4.0.0']));
+    const fetchUnfinishedRuns = vi.fn(async () => runs(['editor-2022.3.42f1-4.0.0']));
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
     expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
     expect(Discord.sendAlert).not.toHaveBeenCalled();
@@ -67,9 +72,9 @@ describe('Cleaner, for active jobs without build records', () => {
     vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
     ] as any);
-    const unfinishedRunJobIds = vi.fn(async () => new Set(['editor-6000.0.3f1-4.0.0']));
+    const fetchUnfinishedRuns = vi.fn(async () => runs(['editor-6000.0.3f1-4.0.0']));
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
     expect(CiJobs.resetJobToCreated).toHaveBeenCalledWith('editor-2022.3.42f1-4.0.0');
     expect(Discord.sendAlert).toHaveBeenCalledWith(
@@ -82,24 +87,36 @@ describe('Cleaner, for active jobs without build records', () => {
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
       scheduledJob('editor-2022.3.36f1-4.0.0', 60),
     ] as any);
-    const unfinishedRunJobIds = vi.fn(async () => new Set(['editor-2022.3.36f1-4.0.0']));
+    const fetchUnfinishedRuns = vi.fn(async () => runs(['editor-2022.3.36f1-4.0.0']));
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
-    expect(unfinishedRunJobIds).toHaveBeenCalledTimes(1);
+    expect(fetchUnfinishedRuns).toHaveBeenCalledTimes(1);
     expect(CiJobs.resetJobToCreated).toHaveBeenCalledTimes(1);
     expect(CiJobs.resetJobToCreated).toHaveBeenCalledWith('editor-2022.3.42f1-4.0.0');
+  });
+
+  it('resets no job while a dispatched run cannot be matched to its job', async () => {
+    vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
+      scheduledJob('editor-2022.3.42f1-4.0.0', 90),
+    ] as any);
+    const fetchUnfinishedRuns = vi.fn(async () => runs([], 1));
+
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
+
+    expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
+    expect(Discord.sendDebug).toHaveBeenCalledWith(expect.stringContaining('cannot be matched'));
   });
 
   it('does not ask GitHub while no job is stale', async () => {
     vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
       scheduledJob('editor-2022.3.42f1-4.0.0', 10),
     ] as any);
-    const unfinishedRunJobIds = vi.fn(async () => new Set<string>());
+    const fetchUnfinishedRuns = vi.fn(async () => runs([]));
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
-    expect(unfinishedRunJobIds).not.toHaveBeenCalled();
+    expect(fetchUnfinishedRuns).not.toHaveBeenCalled();
     expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
   });
 
@@ -108,11 +125,11 @@ describe('Cleaner, for active jobs without build records', () => {
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
     ] as any);
     vi.mocked(CiBuilds.getQueueBuildsForJob).mockResolvedValueOnce([{ status: 'started' }] as any);
-    const unfinishedRunJobIds = vi.fn(async () => new Set<string>());
+    const fetchUnfinishedRuns = vi.fn(async () => runs([]));
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
-    expect(unfinishedRunJobIds).not.toHaveBeenCalled();
+    expect(fetchUnfinishedRuns).not.toHaveBeenCalled();
     expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
   });
 
@@ -120,11 +137,11 @@ describe('Cleaner, for active jobs without build records', () => {
     vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
     ] as any);
-    const unfinishedRunJobIds = vi.fn(async () => {
+    const fetchUnfinishedRuns = vi.fn(async () => {
       throw new Error('Bad credentials');
     });
 
-    await Cleaner.cleanUp('4.0.0', unfinishedRunJobIds);
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
     expect(Discord.sendAlert).toHaveBeenCalledWith(expect.stringContaining('Bad credentials'));
     expect(CiJobs.resetJobToCreated).toHaveBeenCalledWith('editor-2022.3.42f1-4.0.0');

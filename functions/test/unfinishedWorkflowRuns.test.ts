@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UnfinishedWorkflowRuns } from '../src/model/unfinishedWorkflowRuns';
 
 describe('UnfinishedWorkflowRuns.jobIdFromRunName', () => {
@@ -18,17 +18,15 @@ describe('UnfinishedWorkflowRuns.jobIdFromRunName', () => {
   });
 });
 
-describe('UnfinishedWorkflowRuns.fetchJobIds', () => {
-  const runsByStatus: Record<string, { display_title: string }[]> = {
-    queued: [
-      { display_title: 'New Ubuntu Editor Version 🗔 [editor-2022.3.42f1-4.0.0]' },
-      { display_title: 'New Windows Editor Version 🗔 [editor-2022.3.42f1-4.0.0]' },
-    ],
-    in_progress: [
-      { display_title: 'Retry Building Windows Editor Version 🗔 [editor-6000.0.3f1-4.0.0]' },
-      { display_title: 'Test' },
-    ],
-  };
+type Run = { display_title: string; event: string };
+
+const dispatched = (display_title: string): Run => ({
+  display_title,
+  event: 'repository_dispatch',
+});
+
+describe('UnfinishedWorkflowRuns.fetch', () => {
+  let runsByStatus: Record<string, Run[]> = {};
 
   const listWorkflowRunsForRepo = vi.fn();
   const paginate = vi.fn(async (_route: unknown, { status }: { status: string }) => {
@@ -36,16 +34,42 @@ describe('UnfinishedWorkflowRuns.fetchJobIds', () => {
   });
   const gitHub = { paginate, actions: { listWorkflowRunsForRepo } } as any;
 
+  beforeEach(() => {
+    paginate.mockClear();
+    runsByStatus = {
+      queued: [
+        dispatched('New Ubuntu Editor Version 🗔 [editor-2022.3.42f1-4.0.0]'),
+        dispatched('New Windows Editor Version 🗔 [editor-2022.3.42f1-4.0.0]'),
+      ],
+      in_progress: [
+        dispatched('Retry Building Windows Editor Version 🗔 [editor-6000.0.3f1-4.0.0]'),
+        { display_title: 'Test', event: 'pull_request' },
+      ],
+    };
+  });
+
   it('collects the job ids of every run GitHub has not finished', async () => {
-    const jobIds = await UnfinishedWorkflowRuns.fetchJobIds(gitHub);
+    const { jobIds } = await UnfinishedWorkflowRuns.fetch(gitHub);
 
     expect([...jobIds].toSorted()).toEqual(['editor-2022.3.42f1-4.0.0', 'editor-6000.0.3f1-4.0.0']);
   });
 
-  it('asks the docker repository for each unfinished status', async () => {
-    paginate.mockClear();
+  it('counts no unidentified dispatches when every dispatched run names its job', async () => {
+    const { unidentifiedDispatches } = await UnfinishedWorkflowRuns.fetch(gitHub);
 
-    await UnfinishedWorkflowRuns.fetchJobIds(gitHub);
+    expect(unidentifiedDispatches).toBe(0);
+  });
+
+  it('counts dispatched runs that do not name their job', async () => {
+    runsByStatus.queued.push(dispatched('new_post_2019_2_editor_image_requested'));
+
+    const { unidentifiedDispatches } = await UnfinishedWorkflowRuns.fetch(gitHub);
+
+    expect(unidentifiedDispatches).toBe(1);
+  });
+
+  it('asks the docker repository for each unfinished status', async () => {
+    await UnfinishedWorkflowRuns.fetch(gitHub);
 
     const statuses = paginate.mock.calls.map(([, params]) => params.status);
     expect(statuses.toSorted()).toEqual([
