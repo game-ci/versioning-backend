@@ -52,6 +52,7 @@ const { reportNewBuild } = await import('../src/api/reportNewBuild');
 const { reportBuildFailure } = await import('../src/api/reportBuildFailure');
 const { Scheduler } = await import('../src/logic/buildQueue/scheduler');
 const { Cleaner } = await import('../src/logic/buildQueue/cleaner');
+const { ActiveDockerRuns } = await import('../src/logic/buildQueue/activeDockerRuns');
 const { FakeTimestamp } = await import('./support/inMemoryFirestore');
 
 const repoVersionInfo = { version: '3.2.2', major: 3, minor: 2, patch: 2 } as any;
@@ -165,7 +166,7 @@ describe('reconciliation build failures', () => {
     firestore.read('ciBuilds', buildIdFor(editorVersion)).meta.lastBuildStart =
       FakeTimestamp.fromMillis(Date.now() - 7 * 60 * 60 * 1000);
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', ActiveDockerRuns.none());
 
     expect(build(editorVersion).status).toBe('failed');
     expect(job(editorVersion).status).toBe('completed');
@@ -188,7 +189,7 @@ describe('stale jobs and reconciliation builds', () => {
     await failBuild(editorVersion, { reconciliation: true });
     makeStale(editorVersion, 'scheduled');
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', ActiveDockerRuns.none());
 
     expect(job(editorVersion).status).toBe('created');
   });
@@ -209,8 +210,60 @@ describe('stale jobs and reconciliation builds', () => {
     firestore.read('ciBuilds', buildIdFor(editorVersion)).status = 'failed';
     makeStale(editorVersion, 'inProgress');
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', ActiveDockerRuns.none());
 
     expect(job(editorVersion).status).toBe('failed');
+  });
+});
+
+describe('stale jobs still waiting for a GitHub runner', () => {
+  const twoHoursAgo = () => FakeTimestamp.fromMillis(Date.now() - 2 * 60 * 60 * 1000);
+  const makeStale = (editorVersion: string, status: string) => {
+    const stored = firestore.read('ciJobs', jobIdFor(editorVersion));
+    stored.status = status;
+    stored.modifiedDate = twoHoursAgo();
+  };
+  const runsFor = (...editorVersions: string[]) =>
+    ActiveDockerRuns.fromRunTitles(
+      editorVersions.map((version) => `${jobIdFor(version)} · New Ubuntu Editor Version 🗔`),
+    );
+
+  it('leaves a scheduled job alone while its run waits in the GitHub queue', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+
+    await Cleaner.cleanUp('3.2.2', runsFor(editorVersion));
+
+    expect(job(editorVersion).status).toBe('scheduled');
+  });
+
+  it('still requeues a scheduled job that has no run on GitHub', async () => {
+    const [editorVersion, otherVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+
+    await Cleaner.cleanUp('3.2.2', runsFor(otherVersion));
+
+    expect(job(editorVersion).status).toBe('created');
+  });
+
+  it('does not fail a job whose other platforms are still waiting for runners', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+    await startBuild(editorVersion);
+    firestore.read('ciBuilds', buildIdFor(editorVersion)).status = 'failed';
+    makeStale(editorVersion, 'inProgress');
+
+    await Cleaner.cleanUp('3.2.2', runsFor(editorVersion));
+
+    expect(job(editorVersion).status).toBe('inProgress');
+  });
+
+  it('resets no job when GitHub could not be asked about its runs', async () => {
+    const [editorVersion] = editorVersions;
+    makeStale(editorVersion, 'scheduled');
+
+    await Cleaner.cleanUp('3.2.2', null);
+
+    expect(job(editorVersion).status).toBe('scheduled');
   });
 });

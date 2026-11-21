@@ -2,6 +2,8 @@ import { CiBuilds } from '../../model/ciBuilds';
 import { CiJobs } from '../../model/ciJobs';
 import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
+import { logger } from 'firebase-functions/v2';
+import { ActiveDockerRuns } from './activeDockerRuns';
 
 export class Cleaner {
   // Cronjob intentionally has a limited runtime, but it still needs enough
@@ -13,10 +15,18 @@ export class Cleaner {
 
   static buildsProcessed: number;
 
-  public static async cleanUp(latestRepoVersion: string) {
+  /**
+   * @param activeRuns the docker runs still queued or running, or null when GitHub could not
+   * be asked; jobs are then left alone, since a run may still be waiting for a runner.
+   */
+  public static async cleanUp(latestRepoVersion: string, activeRuns: ActiveDockerRuns | null) {
     this.buildsProcessed = 0;
-    await this.requeueActiveJobsWithoutBuilds();
-    await this.transitionStaleInProgressJobsToFailed();
+    if (activeRuns) {
+      await this.requeueActiveJobsWithoutBuilds(activeRuns);
+      await this.transitionStaleInProgressJobsToFailed(activeRuns);
+    } else {
+      logger.warn('[Cleaner] Skipped resetting stale jobs: their GitHub runs could not be listed.');
+    }
     await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
     await this.reconcileStartedBuildsThatMayHavePublished();
     await this.cleanUpBuildsThatDidntReportBack();
@@ -36,7 +46,7 @@ export class Cleaner {
    * build record when the dispatch path flakes before reportNewBuild. Reset
    * those jobs back to created so the scheduler can dispatch them again.
    */
-  private static async requeueActiveJobsWithoutBuilds() {
+  private static async requeueActiveJobsWithoutBuilds(activeRuns: ActiveDockerRuns) {
     const activeJobs = await CiJobs.getActiveJobs();
     const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
 
@@ -49,6 +59,7 @@ export class Cleaner {
 
       const ageMs = Date.now() - lastTouchedSeconds * 1000;
       if (ageMs < staleThresholdMs) continue;
+      if (ActiveDockerRuns.has(activeRuns, jobId)) continue; // its run is still queued or running
 
       const queueBuilds = await CiBuilds.getQueueBuildsForJob(jobId);
       if (queueBuilds.length > 0) continue;
@@ -67,7 +78,7 @@ export class Cleaner {
    * path calls markFailureForJob. Move these to "failed" so the Ingeminator
    * can schedule retries and free up queue capacity for fresh jobs.
    */
-  private static async transitionStaleInProgressJobsToFailed() {
+  private static async transitionStaleInProgressJobsToFailed(activeRuns: ActiveDockerRuns) {
     const activeJobs = await CiJobs.getActiveJobs();
     const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
 
@@ -80,6 +91,7 @@ export class Cleaner {
 
       const ageMs = Date.now() - lastTouchedSeconds * 1000;
       if (ageMs < staleThresholdMs) continue;
+      if (ActiveDockerRuns.has(activeRuns, jobId)) continue; // its run is still queued or running
 
       const queueBuilds = await CiBuilds.getQueueBuildsForJob(jobId);
       if (queueBuilds.length === 0) continue; // handled by requeueActiveJobsWithoutBuilds
