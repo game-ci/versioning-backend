@@ -1,6 +1,7 @@
 import semver from 'semver';
 import { RepoVersionInfo } from '../../model/repoVersionInfo';
 import { GitHub } from '../../service/github';
+import { settings } from '../../config/settings';
 
 export const scrapeVersions = async (
   githubPrivateKey: string,
@@ -9,8 +10,7 @@ export const scrapeVersions = async (
   const gitHub = await GitHub.init(githubPrivateKey, githubClientSecret);
 
   const releases = await gitHub.repos.listReleases({
-    owner: 'unity-ci',
-    repo: 'docker',
+    ...settings.github.dockerRepository,
   });
 
   const versions = releases.data.map((release) => {

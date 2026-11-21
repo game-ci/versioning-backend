@@ -25,6 +25,7 @@ export const settings = {
       installationId: 12321333,
       clientId: 'Iv1.fa93dce6a47c9357',
     },
+    dockerRepository: { owner: 'game-ci', repo: 'docker' },
   },
   dockerhub: {
     host: 'https://hub.docker.com/v2',

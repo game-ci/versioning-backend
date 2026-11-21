@@ -2,6 +2,11 @@ import { CiBuilds } from '../../model/ciBuilds';
 import { CiJobs } from '../../model/ciJobs';
 import { Discord } from '../../service/discord';
 import { Dockerhub } from '../../service/dockerhub';
+import { logger } from 'firebase-functions/v2';
+import { UnfinishedWorkflowRuns } from '../../model/unfinishedWorkflowRuns';
+
+/** Asks GitHub which workflow runs it has not finished. */
+export type FetchUnfinishedRuns = () => Promise<UnfinishedWorkflowRuns>;
 
 export class Cleaner {
   // Cronjob intentionally has a limited runtime, but it still needs enough
@@ -13,9 +18,9 @@ export class Cleaner {
 
   static buildsProcessed: number;
 
-  public static async cleanUp(latestRepoVersion: string) {
+  public static async cleanUp(latestRepoVersion: string, fetchUnfinishedRuns: FetchUnfinishedRuns) {
     this.buildsProcessed = 0;
-    await this.requeueActiveJobsWithoutBuilds();
+    await this.requeueActiveJobsWithoutBuilds(fetchUnfinishedRuns);
     await this.transitionStaleInProgressJobsToFailed();
     await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
     await this.reconcileStartedBuildsThatMayHavePublished();
@@ -35,14 +40,17 @@ export class Cleaner {
    * Jobs can get stuck in "scheduled" or "inProgress" without ever creating a
    * build record when the dispatch path flakes before reportNewBuild. Reset
    * those jobs back to created so the scheduler can dispatch them again.
+   *
+   * A job without build records is usually just waiting for a runner, so it
+   * is only reset once GitHub has no queued or running workflow run for it.
+   * Resetting a waiting job would dispatch its workflows a second time.
    */
-  private static async requeueActiveJobsWithoutBuilds() {
+  private static async requeueActiveJobsWithoutBuilds(fetchUnfinishedRuns: FetchUnfinishedRuns) {
     const activeJobs = await CiJobs.getActiveJobs();
     const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
+    const staleJobs = [];
 
     for (const activeJob of activeJobs) {
-      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
-
       const { id: jobId, data: job } = activeJob;
       const lastTouchedSeconds = job.modifiedDate?.seconds || job.addedDate?.seconds;
       if (!lastTouchedSeconds) continue;
@@ -53,11 +61,53 @@ export class Cleaner {
       const queueBuilds = await CiBuilds.getQueueBuildsForJob(jobId);
       if (queueBuilds.length > 0) continue;
 
+      staleJobs.push(activeJob);
+    }
+
+    if (staleJobs.length === 0) return;
+
+    const unfinishedRuns = await this.askGitHubForUnfinishedRuns(fetchUnfinishedRuns);
+
+    if (unfinishedRuns.unidentifiedDispatches > 0) {
+      await Discord.sendDebug(
+        `[Cleaner] ${unfinishedRuns.unidentifiedDispatches} queued or running dispatched run(s) cannot be matched to a job. Resetting none of ${staleJobs.length} stale job(s) this pass, as any of them may be waiting on one.`,
+      );
+      return;
+    }
+
+    for (const { id: jobId, data: job } of staleJobs) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      if (unfinishedRuns.jobIds.has(jobId)) {
+        logger.info(
+          `[Cleaner] Job "${jobId}" has no build records yet; its workflow run is still queued or running.`,
+        );
+        continue;
+      }
+
       this.buildsProcessed += 1;
       await CiJobs.resetJobToCreated(jobId);
       await Discord.sendAlert(
-        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records from the queue after ${this.activeJobWithoutBuildsAfterMinutes} minutes.`,
+        `[Cleaner] Reset stale ${job.status} job "${jobId}" back to created because it had no build records from the queue after ${this.activeJobWithoutBuildsAfterMinutes} minutes and no queued or running workflow run.`,
       );
+    }
+  }
+
+  /**
+   * When GitHub cannot be asked, no run is known, so stale jobs are reset as
+   * before: a duplicate dispatch beats a job that never builds.
+   */
+  private static async askGitHubForUnfinishedRuns(
+    fetchUnfinishedRuns: FetchUnfinishedRuns,
+  ): Promise<UnfinishedWorkflowRuns> {
+    try {
+      return await fetchUnfinishedRuns();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      await Discord.sendAlert(
+        `[Cleaner] Could not ask GitHub which jobs have queued or running workflow runs (${reason}). Resetting stale jobs without that check.`,
+      );
+      return { jobIds: new Set(), unidentifiedDispatches: 0 };
     }
   }
 
