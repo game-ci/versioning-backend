@@ -54,6 +54,8 @@ const { Scheduler } = await import('../src/logic/buildQueue/scheduler');
 const { Cleaner } = await import('../src/logic/buildQueue/cleaner');
 const { FakeTimestamp } = await import('./support/inMemoryFirestore');
 
+const noUnfinishedRuns = async () => ({ jobIds: new Set<string>(), unidentifiedDispatches: 0 });
+
 const repoVersionInfo = { version: '3.2.2', major: 3, minor: 2, patch: 2 } as any;
 const editorVersions = ['6000.0.1f1', '6000.0.2f1', '6000.0.3f1'];
 const jobIdFor = (editorVersion: string) => `editor-${editorVersion}-3.2.2`;
@@ -165,7 +167,7 @@ describe('reconciliation build failures', () => {
     firestore.read('ciBuilds', buildIdFor(editorVersion)).meta.lastBuildStart =
       FakeTimestamp.fromMillis(Date.now() - 7 * 60 * 60 * 1000);
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', noUnfinishedRuns);
 
     expect(build(editorVersion).status).toBe('failed');
     expect(job(editorVersion).status).toBe('completed');
@@ -188,7 +190,7 @@ describe('stale jobs and reconciliation builds', () => {
     await failBuild(editorVersion, { reconciliation: true });
     makeStale(editorVersion, 'scheduled');
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', noUnfinishedRuns);
 
     expect(job(editorVersion).status).toBe('created');
   });
@@ -209,7 +211,7 @@ describe('stale jobs and reconciliation builds', () => {
     firestore.read('ciBuilds', buildIdFor(editorVersion)).status = 'failed';
     makeStale(editorVersion, 'inProgress');
 
-    await Cleaner.cleanUp('3.2.2');
+    await Cleaner.cleanUp('3.2.2', noUnfinishedRuns);
 
     expect(job(editorVersion).status).toBe('failed');
   });
