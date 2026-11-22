@@ -133,7 +133,7 @@ describe('Cleaner, for active jobs without build records', () => {
     expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
   });
 
-  it('alerts and still resets stale jobs when GitHub cannot be asked', async () => {
+  it('alerts and resets no job when GitHub cannot be asked', async () => {
     vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
       scheduledJob('editor-2022.3.42f1-4.0.0', 90),
     ] as any);
@@ -144,6 +144,75 @@ describe('Cleaner, for active jobs without build records', () => {
     await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
     expect(Discord.sendAlert).toHaveBeenCalledWith(expect.stringContaining('Bad credentials'));
-    expect(CiJobs.resetJobToCreated).toHaveBeenCalledWith('editor-2022.3.42f1-4.0.0');
+    expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
+  });
+});
+
+const inProgressJob = (id: string, minutesSinceTouched: number) => ({
+  id,
+  data: { status: 'inProgress', modifiedDate: minutesAgo(minutesSinceTouched) },
+});
+
+describe('Cleaner, for in-progress jobs whose recorded builds have settled', () => {
+  const jobId = 'editor-2022.3.42f1-4.0.0';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([inProgressJob(jobId, 90)] as any);
+    vi.mocked(CiBuilds.getQueueBuildsForJob).mockResolvedValue([{ status: 'failed' }] as any);
+  });
+
+  it('leaves the job alone while its other platforms still wait for a runner', async () => {
+    await Cleaner.cleanUp(
+      '4.0.0',
+      vi.fn(async () => runs([jobId])),
+    );
+
+    expect(CiJobs.markFailureForJob).not.toHaveBeenCalled();
+  });
+
+  it('fails the job once GitHub has no unfinished run for it', async () => {
+    await Cleaner.cleanUp(
+      '4.0.0',
+      vi.fn(async () => runs([])),
+    );
+
+    expect(CiJobs.markFailureForJob).toHaveBeenCalledWith(jobId);
+  });
+
+  it('fails no job while a dispatched run cannot be matched to its job', async () => {
+    await Cleaner.cleanUp(
+      '4.0.0',
+      vi.fn(async () => runs([], 1)),
+    );
+
+    expect(CiJobs.markFailureForJob).not.toHaveBeenCalled();
+  });
+
+  it('fails no job when GitHub cannot be asked', async () => {
+    const fetchUnfinishedRuns = vi.fn(async () => {
+      throw new Error('Bad credentials');
+    });
+
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
+
+    expect(CiJobs.markFailureForJob).not.toHaveBeenCalled();
+  });
+
+  it('asks GitHub once per pass for scheduled and in-progress jobs together', async () => {
+    vi.mocked(CiJobs.getActiveJobs).mockResolvedValue([
+      scheduledJob('editor-2022.3.36f1-4.0.0', 90),
+      inProgressJob(jobId, 90),
+    ] as any);
+    vi.mocked(CiBuilds.getQueueBuildsForJob).mockImplementation(async (id: string) =>
+      id === jobId ? ([{ status: 'failed' }] as any) : [],
+    );
+    const fetchUnfinishedRuns = vi.fn(async () => runs([]));
+
+    await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
+
+    expect(fetchUnfinishedRuns).toHaveBeenCalledTimes(1);
+    expect(CiJobs.resetJobToCreated).toHaveBeenCalledWith('editor-2022.3.36f1-4.0.0');
+    expect(CiJobs.markFailureForJob).toHaveBeenCalledWith(jobId);
   });
 });

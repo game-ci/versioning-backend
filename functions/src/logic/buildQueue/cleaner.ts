@@ -8,6 +8,9 @@ import { UnfinishedWorkflowRuns } from '../../model/unfinishedWorkflowRuns';
 /** Asks GitHub which workflow runs it has not finished. */
 export type FetchUnfinishedRuns = () => Promise<UnfinishedWorkflowRuns>;
 
+/** The unfinished runs, asked of GitHub at most once per pass; null when GitHub could not be asked. */
+type UnfinishedRunsThisPass = () => Promise<UnfinishedWorkflowRuns | null>;
+
 export class Cleaner {
   // Cronjob intentionally has a limited runtime, but it still needs enough
   // throughput to drain queue backlogs without requiring manual intervention.
@@ -20,8 +23,9 @@ export class Cleaner {
 
   public static async cleanUp(latestRepoVersion: string, fetchUnfinishedRuns: FetchUnfinishedRuns) {
     this.buildsProcessed = 0;
-    await this.requeueActiveJobsWithoutBuilds(fetchUnfinishedRuns);
-    await this.transitionStaleInProgressJobsToFailed();
+    const unfinishedRuns = this.askGitHubOnceForUnfinishedRuns(fetchUnfinishedRuns);
+    await this.requeueActiveJobsWithoutBuilds(unfinishedRuns);
+    await this.transitionStaleInProgressJobsToFailed(unfinishedRuns);
     await this.recoverMaxedOutFailedBuilds(latestRepoVersion);
     await this.reconcileStartedBuildsThatMayHavePublished();
     await this.cleanUpBuildsThatDidntReportBack();
@@ -45,7 +49,9 @@ export class Cleaner {
    * is only reset once GitHub has no queued or running workflow run for it.
    * Resetting a waiting job would dispatch its workflows a second time.
    */
-  private static async requeueActiveJobsWithoutBuilds(fetchUnfinishedRuns: FetchUnfinishedRuns) {
+  private static async requeueActiveJobsWithoutBuilds(
+    unfinishedRunsThisPass: UnfinishedRunsThisPass,
+  ) {
     const activeJobs = await CiJobs.getActiveJobs();
     const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
     const staleJobs = [];
@@ -66,7 +72,8 @@ export class Cleaner {
 
     if (staleJobs.length === 0) return;
 
-    const unfinishedRuns = await this.askGitHubForUnfinishedRuns(fetchUnfinishedRuns);
+    const unfinishedRuns = await unfinishedRunsThisPass();
+    if (!unfinishedRuns) return;
 
     if (unfinishedRuns.unidentifiedDispatches > 0) {
       await Discord.sendDebug(
@@ -94,21 +101,24 @@ export class Cleaner {
   }
 
   /**
-   * When GitHub cannot be asked, no run is known, so stale jobs are reset as
-   * before: a duplicate dispatch beats a job that never builds.
+   * When GitHub cannot be asked, any stale job may still have a run waiting for a runner, so
+   * none is reset or failed this pass. The next pass asks again; an outage that lasts is
+   * visible in the alerts rather than in duplicate dispatches.
    */
-  private static async askGitHubForUnfinishedRuns(
+  private static askGitHubOnceForUnfinishedRuns(
     fetchUnfinishedRuns: FetchUnfinishedRuns,
-  ): Promise<UnfinishedWorkflowRuns> {
-    try {
-      return await fetchUnfinishedRuns();
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      await Discord.sendAlert(
-        `[Cleaner] Could not ask GitHub which jobs have queued or running workflow runs (${reason}). Resetting stale jobs without that check.`,
-      );
-      return { jobIds: new Set(), unidentifiedDispatches: 0 };
-    }
+  ): UnfinishedRunsThisPass {
+    let answer: Promise<UnfinishedWorkflowRuns | null> | undefined;
+    return () => {
+      answer ??= fetchUnfinishedRuns().catch(async (error: unknown) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        await Discord.sendAlert(
+          `[Cleaner] Could not ask GitHub which jobs have queued or running workflow runs (${reason}). Resetting and failing no stale job this pass.`,
+        );
+        return null;
+      });
+      return answer;
+    };
   }
 
   /**
@@ -116,14 +126,19 @@ export class Cleaner {
    * stuck — the job will never self-transition because only the build-report
    * path calls markFailureForJob. Move these to "failed" so the Ingeminator
    * can schedule retries and free up queue capacity for fresh jobs.
+   *
+   * Builds only report once a runner starts them, so a job whose recorded
+   * builds failed may still have other platforms queued; it is left alone
+   * while GitHub has an unfinished run for it.
    */
-  private static async transitionStaleInProgressJobsToFailed() {
+  private static async transitionStaleInProgressJobsToFailed(
+    unfinishedRunsThisPass: UnfinishedRunsThisPass,
+  ) {
     const activeJobs = await CiJobs.getActiveJobs();
     const staleThresholdMs = this.activeJobWithoutBuildsAfterMinutes * 60 * 1000;
+    const settledJobs = [];
 
     for (const activeJob of activeJobs) {
-      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
-
       const { id: jobId, data: job } = activeJob;
       const lastTouchedSeconds = job.modifiedDate?.seconds || job.addedDate?.seconds;
       if (!lastTouchedSeconds) continue;
@@ -136,6 +151,24 @@ export class Cleaner {
 
       const hasStartedBuilds = queueBuilds.some((build) => build.status === 'started');
       if (hasStartedBuilds) continue; // at least one build is still running
+
+      settledJobs.push(activeJob);
+    }
+
+    if (settledJobs.length === 0) return;
+
+    const unfinishedRuns = await unfinishedRunsThisPass();
+    if (!unfinishedRuns || unfinishedRuns.unidentifiedDispatches > 0) return;
+
+    for (const { id: jobId, data: job } of settledJobs) {
+      if (this.buildsProcessed >= this.maxBuildsProcessedPerRun) return;
+
+      if (unfinishedRuns.jobIds.has(jobId)) {
+        logger.info(
+          `[Cleaner] Job "${jobId}" has settled builds but its workflow run is still queued or running.`,
+        );
+        continue;
+      }
 
       this.buildsProcessed += 1;
       await CiJobs.markFailureForJob(jobId);
