@@ -144,6 +144,9 @@ describe('Cleaner, for active jobs without build records', () => {
     await Cleaner.cleanUp('4.0.0', fetchUnfinishedRuns);
 
     expect(Discord.sendAlert).toHaveBeenCalledWith(expect.stringContaining('Bad credentials'));
+    expect(Discord.sendAlert).toHaveBeenCalledWith(
+      expect.stringContaining('Skipping both stale-job checks this pass'),
+    );
     expect(CiJobs.resetJobToCreated).not.toHaveBeenCalled();
   });
 });

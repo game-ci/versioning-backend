@@ -102,8 +102,9 @@ export class Cleaner {
 
   /**
    * When GitHub cannot be asked, any stale job may still have a run waiting for a runner, so
-   * none is reset or failed this pass. The next pass asks again; an outage that lasts is
-   * visible in the alerts rather than in duplicate dispatches.
+   * neither stale-job check acts this pass. Builds that never reported back are still timed out
+   * by their own six-hour limit, as any build failure would fail its job. The next pass asks
+   * again; an outage that lasts is visible in the alerts rather than in duplicate dispatches.
    */
   private static askGitHubOnceForUnfinishedRuns(
     fetchUnfinishedRuns: FetchUnfinishedRuns,
@@ -113,7 +114,7 @@ export class Cleaner {
       answer ??= fetchUnfinishedRuns().catch(async (error: unknown) => {
         const reason = error instanceof Error ? error.message : String(error);
         await Discord.sendAlert(
-          `[Cleaner] Could not ask GitHub which jobs have queued or running workflow runs (${reason}). Resetting and failing no stale job this pass.`,
+          `[Cleaner] Could not ask GitHub which jobs have queued or running workflow runs (${reason}). Skipping both stale-job checks this pass: no job is requeued for lacking build records, and none is failed for having only settled builds.`,
         );
         return null;
       });
